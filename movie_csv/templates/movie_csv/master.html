@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{% block title %} {% endblock %}</title>
+         {% load bootstrap5 %}
+        {% bootstrap_css %}
+        {% bootstrap_javascript %} 
+        <link rel = "stylesheet" href="{% static 'mystyles.css' %}"> 
+        <link rel="stylesheet" href="{% static 'star-ratings/css/star-ratings.css' %}">
+        <script type="text/javascript" src="{% static 'star-ratings/js/dist/star-ratings.min.js' %}"></script>
+    </head>
+    <body>
+        <div class="container">
+            <ul class="nav bg-info">
+              <li class="nav-item">
+                <a class="nav-link link-light" href="/">HOME</a>
+              </li>
+              <li class = "nav-item">
+                <a class="nav-link link-light" href="/search">LOG A VIDEO</a>
+              </li>
+              {% if user.is_authenticated %}
+              <li class = "nav-item">
+                <a class = "nav-link link-light" href="{% url 'profile'%}">PROFILE</a>
+              </li>
+              <li class = "nav-item">
+                <a class = "nav-link link-light" href = "{% url 'logout' %}">LOG OUT</a>
+              </li>
+              {% else%}
+              <li class = "nav-item"> 
+                <a class = "nav-link link-light" href="/accounts/">SIGN UP</a>
+              </li>
+              {% endif%}
+            </ul>
+        </div>
+        <div class="col-md-8">
+          {% if messages %} {% for message in messages %}
+          <div class="alert alert-{{ message.tag }}">{{ message }}</div>
+          {% endfor%} {% endif %} 
+        </div>
+        
+          
+        {% block content %}
+        {% endblock %}
+    </body>
+</html>

@@ -1,0 +1,19 @@
+{% extends "movie_csv/master.html" %}
+{% block title %}
+    Letterboxd but for Video Essays 
+{% endblock %}
+
+    {% block content%}
+    <h1>Letterboxd but for Video Essays</h1>
+    <h2>Add a New Video Essay</h2>
+    <form method = "post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type = "submit">Add video essay</button>
+    </form>
+    
+   
+    <!-- <p><a href="{% url 'home' %}" download>Download Book Catalog (PDF)</a></p> -->
+    <p><a href="{% url 'submit_movie' %}" download>Download Movie Catalog (CSV)</a></p>
+<br>
+    {% endblock %}

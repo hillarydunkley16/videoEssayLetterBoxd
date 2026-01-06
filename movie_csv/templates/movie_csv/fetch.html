@@ -1,0 +1,16 @@
+{% extends "movie_csv/master.html" %}
+{% block title %}
+    Letterboxd but it's for video essays
+{% endblock %}
+
+    {% block content %}
+    <h1>Log a video essay</h1>
+    {{ video_essay.title }}
+    <form method = "post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type = "submit">Add movie</button>
+    </form>
+    <p><a href = "{% url 'testing' %}">View all logs</a></p>
+
+    {% endblock %}

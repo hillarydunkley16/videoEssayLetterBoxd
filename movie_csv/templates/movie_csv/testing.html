@@ -1,0 +1,29 @@
+{% extends "movie_csv/master.html" %}
+
+{% block title %}
+Bootleg Letterboxd
+{% endblock %}
+
+{% block content %}
+<form method="get">
+    {{ form.as_p }}
+    <button type="submit">Search</button>
+</form>
+
+
+{% if results.exists %}
+    <h2>Results for "{{ search }}"</h2>
+    <ul>
+        {% for video in results %}
+            <li><a href="{% url 'log_movie' video.id %}">{{ video.title }}</a></li>
+            
+        {% empty %}
+            <li>No results found.</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <h2>dsajfllakjldjlksdfljskldjksaf</h2>
+    <a href = "{% url 'home'%}">Submit url here</a>
+{% endif %}
+
+{% endblock %}

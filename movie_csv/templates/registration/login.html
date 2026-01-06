@@ -1,0 +1,14 @@
+
+{% extends "movie_csv/master.html" %}
+{% block title %}
+    Letterboxd but for Video Essays 
+{% endblock %}
+
+    {% block content%}
+<h2>Log In</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form }}
+  <button type="submit">Log In</button>
+</form>
+{% endblock %}

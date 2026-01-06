@@ -1,0 +1,14 @@
+{% extends "movie_csv/master.html" %}
+{% block content %}
+<h1>{{user.id}}</h1>
+<ul> 
+    <!-- <p>{{user}}</p> -->
+    {% for x in profiles %}
+    <li>{{x}}</li>
+    <!-- <li>{{x.user.username}}</li>
+    <li>{{x.user.email}}</li>
+    <li>{{x.user.is_active}}</li> -->
+  {% endfor %}
+</ul>
+{% endblock content %}
+
