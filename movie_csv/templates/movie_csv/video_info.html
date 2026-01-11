@@ -1,0 +1,16 @@
+{% extends "movie_csv/master.html" %}
+{% block title %}
+Visual Arguments
+{% endblock %}
+{% block content %}
+
+<div>
+   <p>Video Essay: {{video}}</p>
+    {% for log in logs %}
+    <p>By: {{log.user.username}}</p>
+    <p>review text: {{log.review_text}}</p>
+    <p>rating: {{log.rating}}</p>
+    {%endfor %}
+</div>
+{% endblock %}
+

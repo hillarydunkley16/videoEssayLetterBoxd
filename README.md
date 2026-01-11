@@ -70,6 +70,31 @@ Home page:
 Log a movie: 
 Current log_movie requires a video essay ID 
 Log movie should go to a video essay search (implemented already in testing.html)
-Search should later be a modal like in letterboxd
+**Search should later be a modal like in letterboxd**
 
+Use AWS Postgresql: https://www.w3schools.com/django/django_db_postgresql_intro.php 
 
+Future capabilities: 
+- 
+- Backend / Middle 
+    - Search/Log video flow: 
+        - bring back regular search for video in database --> if not found in database then call API
+    - Home: 
+        - For each video essay generate stats on number of logs 
+            - Will probably require changing the video essay model --> foriegn key with logs, calculate no. of logs that reference the youtube_id? 
+    
+
+- Frontend: 
+    - Profile stats
+        - Add a section on the profile template for personal info :check 
+
+    - Home 
+        - add modals for video essay details --> will call up last 5 logs associated with the video essay 
+
+    - General 
+        - Figure out styling issue --> why does the mystyles.css not actually work in the master.html? :check
+        - Add stars for rating instead of just numbers 
+        - Organize pages with html groupings, javascript, css 
+        -
+
+    

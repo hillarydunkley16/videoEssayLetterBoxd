@@ -1,29 +1,45 @@
-{% extends "movie_csv/master.html" %}
+<!-- {% extends "movie_csv/master.html" %}
 
 {% block title %}
-Bootleg Letterboxd
+Visual Arguments
 {% endblock %}
 
 {% block content %}
 <form method="get">
+    {% csrf_token %}
     {{ form.as_p }}
     <button type="submit">Search</button>
 </form>
-
-
-{% if results.exists %}
+<h1>HIHIHIGHIGHIGHI</h1>
+{% if indatabase %} 
     <h2>Results for "{{ search }}"</h2>
     <ul>
-        {% for video in results %}
-            <li><a href="{% url 'log_movie' video.id %}">{{ video.title }}</a></li>
-            
+        {% for video in indatabase %}
+            <img src="{{ video.thumbnail }}"alt="{{ video.title }}" width = 200>
+             <li>
+                <a href = "{% url 'log_movie' video_id %}"> 
+                    {{ video.title }}
+                </a>
+            </li>
         {% empty %}
             <li>No results found.</li>
         {% endfor %}
     </ul>
-{% else %}
-    <h2>dsajfllakjldjlksdfljskldjksaf</h2>
-    <a href = "{% url 'home'%}">Submit url here</a>
+{% elif results %}
+    <h2>Results for "{{ search }}"</h2>
+    <ul>
+        {% for video in results %}
+            <img src="{{ video.thumbnail.static }}"alt="{{ video.title }}" width = 200>
+             <li>
+                <a href="{% url 'select_video' video.link|cut:'https://www.youtube.com/watch?v=' %}">
+                    {{ video.title }}
+                </a>
+            </li>
+        {% empty %}
+            <li>No results found.</li>
+        {% endfor %}
+    </ul>
+
 {% endif %}
 
-{% endblock %}
+{% endblock %} -->

@@ -44,7 +44,12 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'serpapi', 
-    'dotenv'
+    'dotenv', 
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_email',  
+    # 'two_factor',
+    
 ]
 
 MIDDLEWARE = [
@@ -55,6 +60,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django_otp.middleware.OTPMiddleware',
 ]
 
 ROOT_URLCONF = 'csv_movie_downloader.urls'
@@ -106,8 +114,15 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-# LOGIN_REDIRECT_URL
 
+STATICFILES_DIRS = [
+    BASE_DIR / "movie_csv" / "static",
+]
+
+# LOGIN_REDIRECT_URL
+# LOGIN_URL = 'two_factor:login'
+# LOGIN_REDIRECT_URL = 'two_factor:profile'   
+LOGOUT_REDIRECT_URL = "home"   
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -123,7 +138,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

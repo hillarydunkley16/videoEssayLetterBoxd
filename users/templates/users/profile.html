@@ -4,33 +4,45 @@
     <div class="media-body">
       <h2 class="account-heading">{{ user.username }}</h2>
       <p class="text-secondary">{{ user.email }}</p>
+      {% if time_since_creation > 1%}
+        <p>{{time_since_creation}} days</p>
+      {% else %}
+      <p>{{time_since_creation}} day</p>
+      {% endif %}
+      <p>You have logged {{user_logs.count}} video essay(s)</p>
     </div>
   </div>
   <div>
     <h2>Your video essay diary</h2>
+    {% if user_logs%}
     <ul> 
         {% for x in user_logs %}
         <div>
-            <li>{{x.essay.title}}</li>
-            <li>{{x.essay.creator}}</li>
-            <li>{{x.rating}}</li>
+            <p>{{x.essay.title}}</p>
+            <img src="{{ x.essay.thumbnail }}"alt="{{ video.title }}" width = 200>
+            <p>{{x.essay.channel_name}}</p>
+            <p>{{x.rating}}/10</p>
+            
         </div>
       {% endfor %}
     </ul>
-  <form method="POST" enctype="multipart/form-data">
+    {% else %}
+    <p>No logs yet!</p>
+    {% endif %}
+  <!-- <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
     <fieldset class="form-group">
       <legend class="border-bottom mb-4">Profile Info</legend>
       {{ u_form|crispy }}
     
-    </fieldset>
+    </fieldset> -->
    
-    <div class="form-group">
+    <!-- <div class="form-group">
       <button class="btn btn-outline-info" type="submit">Update</button>
     </div>
     
        
     </div>
-  </form>
+  </form> -->
 </div>
 {% endblock content %}

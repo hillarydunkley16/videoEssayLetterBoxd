@@ -1,21 +1,32 @@
 {% extends "movie_csv/master.html" %}
 {% block title %}
-    Letterboxd but it's for video essays
+Visual Arguments
 {% endblock %}
 {% block content %}
-<h2>Add a video essay</h2>
-{% if user.is_authenticated %}
-    <p>Welcome! {{user.username}}</p>
-    <h3>Popular Video Essays </h3>
-    {% for video in videoessays %}
-       <li>{{video.title}} </li> 
-       <img src="{{ video.thumbnail }}"alt="{{ video.title }}" width = 200>
-    {% empty %}
-       <li>No video essays yet.</li>
-    {% endfor %}
 
-{% else %}
+    {% if user.is_authenticated %}
+    <p>Welcome! {{user.username}}</p>
+    {% else %}
     <h1>Talk about your favorite topics and video essays.</h1>
     <a href = "accounts">Sign up</a>
 {% endif %}   
+    <h3>Popular Video Essays </h3>
+    <div class = "scrollmenu">
+    {% for video in videoessays %}
+        <a href = "{% url 'video_info' video.id %}"> 
+        <div class = "mycard"> 
+            <h4>{{video.title}} </h4> 
+            <img src="{{ video.thumbnail }}"alt="{{ video.title }}" width = 200>
+            <!-- <button type="button" hx-get="{% url 'video_info' video.id %}" hx-swap="beforeend" hx-target="body" -->
+    <!-- class="btn btn-primary btn-lg">Show Modal</button> -->
+        </div>
+        </a>
+    {% empty %}
+       <li>No video essays yet.</li>
+    {% endfor %}
+    </div>  
+
+  
+
+
 {% endblock %}

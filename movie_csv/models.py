@@ -3,8 +3,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
 # Create your models here.
 class VideoEssay(models.Model):
-    youtube_url = models.CharField(max_length=255,null=True, blank = True )
-    youtube_id = models.CharField(max_length=20 , unique = True, null=True, blank = True)
+    youtube_url = models.CharField(max_length=255 )
+    youtube_id = models.CharField(max_length=32 , unique = True, null=True, blank = True)
     title = models.CharField(max_length=255)
     thumbnail = models.URLField(null=True, blank = True)
     views = models.IntegerField(null=True, blank = True)
