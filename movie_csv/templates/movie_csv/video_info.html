@@ -6,6 +6,12 @@ Visual Arguments
 
 <div>
    <p>Video Essay: {{video}}</p>
+   <img src="{{ video.thumbnail }}"alt="{{ video.title }}" width = 300>
+   {% if logs.count < 1 %}
+    <p>No one has logged this yet.<a href = "{% url 'log_movie' video.id %}">Log it now</a></p> 
+   {%else%}
+    <p>{{logs.count}} log(s)</p>
+    {% endif %}
     {% for log in logs %}
     <p>By: {{log.user.username}}</p>
     <p>review text: {{log.review_text}}</p>

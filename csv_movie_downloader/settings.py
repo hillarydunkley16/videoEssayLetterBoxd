@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django_otp',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_email',  
+    'rest_framework', 
     # 'two_factor',
     
 ]
@@ -149,3 +150,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Directory where uploaded media is
 MEDIA_URL = '/media/' # Public URL at the browser
 
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+# tutorial/settings.py
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+}

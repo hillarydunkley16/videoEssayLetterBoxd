@@ -9,7 +9,11 @@
       {% else %}
       <p>{{time_since_creation}} day</p>
       {% endif %}
-      <p>You have logged {{user_logs.count}} video essay(s)</p>
+      {% if user_logs.count > 1 %}
+      <p>You have logged {{user_logs.count}} video essays</p>
+      {% else %}
+      <p>You have logged {{user_logs.count}} video essay</p>
+      {% endif %}
     </div>
   </div>
   <div>

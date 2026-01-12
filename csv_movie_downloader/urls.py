@@ -29,6 +29,7 @@ urlpatterns = [
     path('users/testing/', user_views.testing, name='user_testing'),
     path('accounts/profile/', user_views.profile, name = 'profile'),
     path("accounts/", include("django.contrib.auth.urls")),
+    path("api-auth/", include("rest_framework.urls")),
     
     # path('', include(tf_urls)),
 ] 

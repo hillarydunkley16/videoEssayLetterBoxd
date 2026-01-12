@@ -1,17 +1,29 @@
 from django.shortcuts import redirect, render
-import csv
 from django.http import HttpResponse
 from .models import VideoEssay, Log
 from .forms import LogForm, VideoEssayForm, VideoSearchForm, VideoURLForm
 from django.contrib.auth.decorators import login_required
 from django.template import loader
-import os
 from .services.youtube_search import youtube_search
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 from django.contrib.auth.models import User
-from django_htmx.http import trigger_client_event
+from django.http import JsonResponse
+from .serializers import VideoEssaySerializer, LogSerializer, UserSerializer
+from rest_framework import generics, permissions
+from .permissions import IsOwnerOrReadOnly
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
 
+@api_view(["GET"])
+def api_root(request, format=None): 
+    return Response(
+        {
+            "users": reverse("user-list", request=request, format=format),
+            "logs": reverse("log-list", request=request, format=format)
+        }
+    )
 # Create your views here.
 def home(request): 
     videoessays = VideoEssay.objects.all()
@@ -22,20 +34,6 @@ def home(request):
     
     return render(request, 'movie_csv/home.html', context)
 
-
-def generate_csv(request): 
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename = "movie_catalog.csv"'
-
-    writer = csv.writer(response)
-
-    writer.writerow(['Title', 'Creator', 'Creator Country', 'Release Date'])
-
-    movies = VideoEssay.objects.all()
-
-    for movie in movies: 
-        writer.writerow([movie.title, movie.director, movie.country, movie.budget])
-    return response 
 @login_required
 def fetch_video(request, youtube_id): 
 
@@ -94,7 +92,7 @@ def search(request):
         query = form.cleaned_data["query"]
         indatabase = VideoEssay.objects.filter(title__icontains=query)
         if indatabase.exists(): 
-            print("exists! yay")
+            print("exists")
             
         else: 
             print("DOES NOT EXIST")
@@ -120,6 +118,36 @@ def search(request):
             "search": query,
         }
     )
+
+class testing(generics.ListCreateAPIView):
+    queryset = VideoEssay.objects.all()
+    serializer_class = VideoEssaySerializer
+
+class testingdetail(generics.RetrieveUpdateDestroyAPIView): 
+    queryset = VideoEssay.objects.all()
+    serializer_class = VideoEssaySerializer
+
+class logList (generics.ListCreateAPIView): 
+    queryset = Log.objects.all()
+    serializer_class = LogSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    def perform_create(self, serializer): 
+        serializer.save(owner=self.request.user)
+
+class logDetail(generics.RetrieveUpdateDestroyAPIView): 
+    queryset = Log.objects.all()
+    serializer_class = LogSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+        IsOwnerOrReadOnly,
+         )
+class UserList(generics.ListAPIView): 
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+class UserDetail(generics.RetrieveAPIView): 
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 def video_info(request, video_id): 
     print("video info function")

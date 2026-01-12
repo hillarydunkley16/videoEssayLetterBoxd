@@ -82,6 +82,8 @@ Future capabilities:
     - Home: 
         - For each video essay generate stats on number of logs 
             - Will probably require changing the video essay model --> foriegn key with logs, calculate no. of logs that reference the youtube_id? 
+        - Have a section that shows the most recently added video essays 
+        - Have a section that shows the video essays with the most logs associated with it in the past week 
     
 
 - Frontend: 
@@ -91,10 +93,11 @@ Future capabilities:
     - Home 
         - add modals for video essay details --> will call up last 5 logs associated with the video essay 
 
+
     - General 
         - Figure out styling issue --> why does the mystyles.css not actually work in the master.html? :check
         - Add stars for rating instead of just numbers 
         - Organize pages with html groupings, javascript, css 
         -
 
-    
+    Use AWS Postgresql: https://www.w3schools.com/django/django_db_postgresql_intro.php
