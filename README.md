@@ -78,17 +78,22 @@ Future capabilities:
 - 
 - Backend / Middle 
     - Search/Log video flow: 
-        - bring back regular search for video in database --> if not found in database then call API
+        - bring back regular search for video in database --> if not found in database then call API ✅
     - Home: 
         - For each video essay generate stats on number of logs 
-            - Will probably require changing the video essay model --> foriegn key with logs, calculate no. of logs that reference the youtube_id? 
+            - Will probably require changing the video essay model ✅ --> foriegn key with logs, calculate no. of logs that reference the youtube_id? 
         - Have a section that shows the most recently added video essays 
         - Have a section that shows the video essays with the most logs associated with it in the past week 
     
 
 - Frontend: 
     - Profile stats
-        - Add a section on the profile template for personal info :check 
+        - Add a section on the profile template for personal info ✅
+            - Number of days since joining platform 
+            - Number of days since last log 
+            - Number of total logs ✅
+            - Top rated videos 
+        - Add profile picture!! Big one that I have been avoiding 
 
     - Home 
         - add modals for video essay details --> will call up last 5 logs associated with the video essay 
@@ -99,5 +104,13 @@ Future capabilities:
         - Add stars for rating instead of just numbers 
         - Organize pages with html groupings, javascript, css 
         -
-
+    
+    Django REST (REpresentational State Transfer) framework for the API
+    - implemented django rest framework so superusers can interact with and manage the data and the APIs easily. 
+    - the data can be viewed and managed on the browser rather than the shell, which makes administration of the application more user-friendly. 
+    JWT (JSON Web Token) authentication: 
+    - implemented JWT authentication so the APIs are protected from potential bad actors. It is used in tandem with the REST framework 
+    - Token based access
+    Deployment: 
+    --
     Use AWS Postgresql: https://www.w3schools.com/django/django_db_postgresql_intro.php

@@ -8,7 +8,15 @@ Visual Arguments
     <p>Welcome! {{user.username}}</p>
     {% else %}
     <h1>Talk about your favorite topics and video essays.</h1>
-{% endif %}   
+{% endif %}  
+    {% for video in top_rated %}
+    <p>{{top_rated}}</p>
+    <p>{{top_rated.essay.title}}</p>
+    {% endfor %}
+    {% for video in last_10_records %}
+    <p>{{last_10_records.title}}</p>
+    <p>{{last_10_records}}</p>
+    {% endfor %}
     <h3>Popular Video Essays </h3>
     <div class = "scrollmenu">
     {% for video in videoessays %}

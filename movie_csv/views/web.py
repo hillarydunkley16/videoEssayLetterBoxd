@@ -1,35 +1,29 @@
 from django.shortcuts import redirect, render
 from django.http import HttpResponse
-from .models import VideoEssay, Log
-from .forms import LogForm, VideoEssayForm, VideoSearchForm, VideoURLForm
+from ..models import VideoEssay, Log
+from ..forms import LogForm, VideoEssayForm, VideoSearchForm, VideoURLForm
 from django.contrib.auth.decorators import login_required
 from django.template import loader
-from .services.youtube_search import youtube_search
+from ..services.youtube_search import youtube_search
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 from django.contrib.auth.models import User
 from django.http import JsonResponse
-from .serializers import VideoEssaySerializer, LogSerializer, UserSerializer
-from rest_framework import generics, permissions
-from .permissions import IsOwnerOrReadOnly
 from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework.reverse import reverse
 
-@api_view(["GET"])
-def api_root(request, format=None): 
-    return Response(
-        {
-            "users": reverse("user-list", request=request, format=format),
-            "logs": reverse("log-list", request=request, format=format)
-        }
-    )
+
 # Create your views here.
 def home(request): 
     videoessays = VideoEssay.objects.all()
+    logs = Log.objects.all()
+    top_rated = logs.filter(rating__range=[8,10])
+    last_10_records = videoessays.order_by('-pk')[:10]
     # print(thumbnails)
+    print(logs)
     context = {
-        'videoessays': videoessays
+        'videoessays': videoessays, 
+        'top_rated': top_rated, 
+        'last_10_records': last_10_records
     }
     
     return render(request, 'movie_csv/home.html', context)
@@ -119,36 +113,6 @@ def search(request):
         }
     )
 
-class testing(generics.ListCreateAPIView):
-    queryset = VideoEssay.objects.all()
-    serializer_class = VideoEssaySerializer
-
-class testingdetail(generics.RetrieveUpdateDestroyAPIView): 
-    queryset = VideoEssay.objects.all()
-    serializer_class = VideoEssaySerializer
-
-class logList (generics.ListCreateAPIView): 
-    queryset = Log.objects.all()
-    serializer_class = LogSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    def perform_create(self, serializer): 
-        serializer.save(owner=self.request.user)
-
-class logDetail(generics.RetrieveUpdateDestroyAPIView): 
-    queryset = Log.objects.all()
-    serializer_class = LogSerializer
-    permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly,
-        IsOwnerOrReadOnly,
-         )
-class UserList(generics.ListAPIView): 
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-class UserDetail(generics.RetrieveAPIView): 
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
 def video_info(request, video_id): 
     print("video info function")
     logs = Log.objects.filter(essay_id = video_id)
@@ -160,10 +124,3 @@ def video_info(request, video_id):
     response = render(request, 'movie_csv/video_info.html', context)
     
     return response
-    
-
-        
-           
-
-   
-

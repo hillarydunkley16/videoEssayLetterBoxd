@@ -36,8 +36,12 @@ def signin(request):
     # Update it here
 @login_required
 def profile(request):
+    #add automatic profile picture 
+    #option to add profile picture or maybe pick among a few profile pictures? 
     loggedin_user = request.user
-    user_logs = Log.objects.filter(user=loggedin_user)
+    user_logs = Log.objects.filter(owner=loggedin_user)
+    most_recent_log = user_logs.latest("date")
+    top_rated = user_logs.filter(rating__range=[8,10])
     time_since_creation = (datetime.now(timezone.utc) - loggedin_user.date_joined).days
     if request.method == 'POST':
         u_form = UserUpdateForm(request.POST, instance=request.user)
@@ -49,13 +53,16 @@ def profile(request):
 
     else:
         u_form = UserUpdateForm(instance=request.user)
-       
-
+    print("most recent log: ")
+    print(most_recent_log.essay.title)
+    print(f"top rated logs {top_rated.first().essay.title}")
     context = {
         'u_form': u_form,
         'user_logs': user_logs,
         'user': loggedin_user, 
-        'time_since_creation': time_since_creation
+        'time_since_creation': time_since_creation, 
+        'most_recent': most_recent_log, 
+        'top_rated': top_rated
     }
 
     return render(request, 'users/profile.html', context)

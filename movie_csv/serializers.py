@@ -19,6 +19,9 @@ class VideoEssaySerializer(serializers.ModelSerializer):
 
 class LogSerializer(serializers.HyperlinkedModelSerializer): 
     owner = serializers.ReadOnlyField(source="owner.username")
+    essay = serializers.PrimaryKeyRelatedField(
+        queryset=VideoEssay.objects.all()
+    )
     class Meta: 
         model = Log
         fields = (

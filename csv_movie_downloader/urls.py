@@ -21,6 +21,12 @@ from django.conf.urls.static import static
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from rest_framework_simplejwt import views as jwt_views
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+
 # from two_factor.urls import urlpatterns as tf_urls
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,6 +36,7 @@ urlpatterns = [
     path('accounts/profile/', user_views.profile, name = 'profile'),
     path("accounts/", include("django.contrib.auth.urls")),
     path("api-auth/", include("rest_framework.urls")),
-    
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),    
     # path('', include(tf_urls)),
 ] 
