@@ -1,0 +1,55 @@
+{% extends "movie_csv/master.html" %} {% load crispy_forms_tags %} {% block content %}
+<div class="content-section">
+  <div class="media">
+    <div class="media-body">
+      <h2 class="account-heading">{{ user.username }}</h2>
+      <p class="text-secondary">{{ user.email }}</p>
+      {% if time_since_creation > 1%}
+        <p>{{time_since_creation}} days</p>
+      {% else %}
+      <p>{{time_since_creation}} day</p>
+      {% endif %}
+      {% if user_logs.count > 0 %}
+      <p>You have logged {{user_logs.count}} video essays</p>
+      {% else %}
+      <p>You have not logged anything yet.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div>
+    <h2>Your video essay diary</h2>
+    {% if user_logs%}
+    <ul> 
+        {% for x in user_logs %}
+        <div>
+            <p>{{x.essay.title}}</p>
+            <img src="{{ x.essay.thumbnail }}"alt="{{ video.title }}" width = 200>
+            <p>{{x.essay.channel_name}}</p>
+            <p>{{x.rating}}/10</p>
+            
+        </div>
+      {% endfor %}
+
+      <!-- <ul> 
+      {% for x in last_10_records %}
+        <div>
+          <p>{{x}}</p>
+          <img src="{{ x.essay.thumbnail }}"alt="{{ video.title }}" width = 200>
+          <p>{{x.channel_name}}</p>
+        </div>
+      {% endfor %}
+    </ul> -->
+    <h3>Top Rated</h3>
+    <ul> 
+
+      {% for x in top_rated %}
+        <p>{{x.title}}</p>
+        <img src="{{ x.thumbnail }}"alt="{{ x.title }}" width = 200>
+      {% endfor %}
+    </ul>
+
+    {% else %}
+    <p>No logs yet!</p>
+    {% endif %}
+</div>
+{% endblock content %}

@@ -79,6 +79,8 @@ Future capabilities:
 - Backend / Middle 
     - Search/Log video flow: 
         - bring back regular search for video in database --> if not found in database then call API ✅
+        - need to check for repeat log w/o rewatch checked ==> ask if they meant to log it, and if it is a rewatch. 
+            - would need to check if associated user (user_id) has already logged the video (video_id)
     - Home: 
         - For each video essay generate stats on number of logs 
             - Will probably require changing the video essay model ✅ --> foriegn key with logs, calculate no. of logs that reference the youtube_id? 
@@ -114,3 +116,21 @@ Future capabilities:
     Deployment: 
     --
     Use AWS Postgresql: https://www.w3schools.com/django/django_db_postgresql_intro.php
+
+
+Writing through the issue: 
+I want to display the videos with the most positive aggregate logs associated with it (most positive overall). This is a one-to-many relationship. 
+
+However, only the logs have an associated video id via a foreign key. The logs point to a video, the manys point to the one. the video doesn't have associated log ids. 
+
+At the moment, I am trying to use django.db.models imports Avg, Count and Q. When I try to filter logs by rating it doesn't work. 
+
+I am filtering **logs**, not video essays. 
+
+create a subset for each video essay id, and filter those based on # of positive reviews? 
+From chatgpt: 
+That’s because you were filtering logs in isolation, then trying to infer video-level meaning.
+
+Aggregation logic must live at the VideoEssay level, not in Python loops.
+
+

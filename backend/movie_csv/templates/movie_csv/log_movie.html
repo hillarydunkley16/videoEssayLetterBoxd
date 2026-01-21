@@ -1,0 +1,17 @@
+{% extends "movie_csv/master.html" %}
+{% block title %}
+Visual Arguments
+{% endblock %}
+
+    {% block content %}
+    <h1>Log a video essay</h1>
+    {{ video_essay.title }}
+    {{ video_essay.channel_name}}
+    <form method = "post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type = "submit">Add video essay</button>
+    </form>
+    <p><a href = "{% url 'home' %}">View all logs</a></p>
+
+    {% endblock %}
