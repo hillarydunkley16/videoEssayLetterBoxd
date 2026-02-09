@@ -15,6 +15,7 @@ from django.db.models import Sum, Avg, Q, Count
 # Create your views here.
 def home(request): 
     videoessays = VideoEssay.objects.all()
+    print(videoessays)
     last_10_records = videoessays.order_by('-pk')[:10]
     top_rated = videoessays.annotate(avg_rating=Avg("log__rating"), log_count = Count("log")).filter(log_count__gte=2).order_by("-log_count")
     most_rated = videoessays.annotate(log_count = Count("log")).filter(log_count__gte=2).order_by("-log_count").order_by("-log_count")
@@ -35,6 +36,7 @@ def fetch_video(request, youtube_id):
 
         # youtube_url = request.POST.get("youtube_url")
         # data = fetch_youtube_data(youtube_url)
+        data = json.loads(request.body)
         data = request.session["youtube_results"][youtube_id]
         print(data)
         videoEssay, created = VideoEssay.objects.get_or_create(

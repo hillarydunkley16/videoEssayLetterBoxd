@@ -1,27 +1,25 @@
 from rest_framework import serializers 
 from .models import VideoEssay, Log
 from django.contrib.auth.models import User
+#a serializer defines the columns/data that will be used in the views. 
 class VideoEssaySerializer(serializers.ModelSerializer): 
+    # id = serializers.CharField(source = 'public_id', read_only=True)
     class Meta: 
         model = VideoEssay
         fields = (
-            "id", 
-            "youtube_url",
-            "youtube_id", 
+            "id",
+            "public_id",
             "title", 
+            "youtube_url",
             "thumbnail", 
             "views", 
-            "likes", 
             "channel_name", 
             "channel_url", 
-            "subscribers", 
         )
 
 class LogSerializer(serializers.HyperlinkedModelSerializer): 
     owner = serializers.ReadOnlyField(source="owner.username")
-    essay = serializers.PrimaryKeyRelatedField(
-        queryset=VideoEssay.objects.all()
-    )
+    essay = VideoEssaySerializer(read_only=True)
     class Meta: 
         model = Log
         fields = (

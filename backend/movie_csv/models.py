@@ -1,19 +1,21 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
-
+import uuid
 
 # Create your models here.
 class VideoEssay(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True,)
     youtube_url = models.CharField(max_length=255, null=True, blank=True)
     youtube_id = models.CharField(max_length=32 , unique = True, null=True, blank = True)
     title = models.CharField(max_length=255)
     thumbnail = models.URLField(null=True, blank = True)
     views = models.IntegerField(null=True, blank = True)
-    likes = models.IntegerField(null=True, blank = True)
+    # likes = models.IntegerField(null=True, blank = True)
     channel_name = models.CharField(max_length=255, null=True, blank = True)
     channel_url = models.URLField(null=True, blank = True)
-    subscribers = models.IntegerField(null=True, blank = True)
+    # subscribers = models.IntegerField(null=True, blank = True)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, related_name = "VideoEssays", on_delete = models.CASCADE
@@ -22,6 +24,8 @@ class VideoEssay(models.Model):
         ordering = ("created_at",)
     def __str__(self): 
         return self.title
+    def get_by_public_id(self, public_id):
+        return self.get(public_id=public_id)
 
 class Log(models.Model): 
     date = models.DateField()

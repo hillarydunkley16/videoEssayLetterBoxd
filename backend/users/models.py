@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE) # Delete profile when user is deleted
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null = True, blank = True) # Delete profile when user is deleted
     
 
     def __str__(self):

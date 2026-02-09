@@ -26,7 +26,8 @@ SECRET_KEY = 'django-insecure-@=3_kijefkqhk#(1m#f*%zxu6c3by($9$7vt--zks0ypudzcuk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
+
 
 
 # Application definition
@@ -51,11 +52,15 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_email',  
     'rest_framework', 
     'rest_framework_simplejwt',
+    'rest_framework.authtoken',
+    # "typomatic",
+    'corsheaders',
     # 'two_factor',
     
 ]
 
 MIDDLEWARE = [
+     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -66,6 +71,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django_otp.middleware.OTPMiddleware',
+   
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -88,7 +94,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8081",
+    # "localhost"
+]
 
+CORS_ALLOW_ALL_ORIGINS = True
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -161,9 +177,19 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 10,
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication'
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        "movie_csv.authentication.ClerkAuthentication",
+       "rest_framework.authentication.BasicAuthentication",
     ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+
 }
+CLERK_ISSUER = "https://splendid-sunbird-55.clerk.accounts.dev"
+CLERK_JWKS_URL = f"{CLERK_ISSUER}/.well-known/jwks.json"
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),

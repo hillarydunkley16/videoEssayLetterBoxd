@@ -6,7 +6,7 @@ from rest_framework_simplejwt.views import(
 )
 urlpatterns = [
     path("VideoEssays/", VideoEssays.as_view()), 
-    path("VideoEssays/<int:pk>/", VideoEssayDetail.as_view()),
+    path("VideoEssays/<uuid:public_id>/", VideoInfo.as_view()),
     path("logList", logList.as_view(), name = "log-list"), 
     path("logList/<int:pk>/", logDetail.as_view()),
     path("users/", UserList.as_view(), name = "user-list"),
@@ -15,4 +15,7 @@ urlpatterns = [
     path("home", Home.as_view()),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('search/', youtube_search, name = "youtube_search"),
+    path('fetch/', VideoEssays.as_view(),name = "fetch" ), 
+    path("video-essays/", VideoEssayCreateView.as_view(), name="video-essays"),
 ]

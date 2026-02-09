@@ -131,6 +131,35 @@ create a subset for each video essay id, and filter those based on # of positive
 From chatgpt: 
 That’s because you were filtering logs in isolation, then trying to infer video-level meaning.
 
-Aggregation logic must live at the VideoEssay level, not in Python loops.
+**Aggregation logic must live at the VideoEssay level, not in Python loops.**
+
+1/21/2026 
+
+Now adding expo front end 
+Need to recreate my existing django templates for front-end expo/react-native development 
+
+List of pages to recreate: 
+1. home.html
+2. master.html (figure out what the equivalent of this is in react-native)
+3. search.html 
+4. submit_movie.html 
+5. video_info.html
+6. log_movie.html
+7. login.html 
+8. logged_out.html
+9. profile.html 
+10. register.html
 
 
+PK stands for primary key
+
+Why I had to delete my database this time: 
+I made public_id, deleted the ID which is the foreign key for log 
+I assigned public_id as the primary key assuming that SQLite would adapt easily to this. 
+
+
+ --legacy-peer-deps helps with difficulty with npm package things
+
+  {Platform.OS === 'web' ? (
+                <input type = "date"/>
+            ): <DatePicker/>}
