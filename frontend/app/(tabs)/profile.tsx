@@ -6,7 +6,7 @@ import { Link } from 'expo-router'
 import { StyleSheet } from 'react-native'
 import VideoEssayListScreen from '@/src/screens/VideoEssayListScreen'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import SwitchComponent from '@/src/screens/SearchScreen';
+
 export default function Page() {
   const { user } = useUser()
 
@@ -15,7 +15,7 @@ export default function Page() {
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
   const { session } = useSession()
   console.log(session?.currentTask)
-  // console.log(user)
+  console.log(user)
   return (
     <SafeAreaProvider>
       <ThemedView>
@@ -32,13 +32,11 @@ export default function Page() {
       </SignedOut>
       Show the sign-out button when the user is signed in */}
       <SignedIn>
-        {/* <ThemedText>Hello {user?.emailAddresses[0].emailAddress}</ThemedText> */}
-        <ThemedText>Hello {user?.username}</ThemedText>
+        <ThemedText>Hello {user?.emailAddresses[0].emailAddress}</ThemedText>
+      
         <SignOutButton />
       </SignedIn>
-      <VideoEssayListScreen/>
-      </SafeAreaView>
-         
+      </SafeAreaView>   
       </ThemedView>
       
     </SafeAreaProvider>
@@ -47,9 +45,9 @@ export default function Page() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    gap: 16,
-  },
-})
+    container: {
+      flex: 1,
+      padding: 20,
+      gap: 16,
+    },
+  })

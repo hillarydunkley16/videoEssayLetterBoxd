@@ -163,3 +163,31 @@ I assigned public_id as the primary key assuming that SQLite would adapt easily 
   {Platform.OS === 'web' ? (
                 <input type = "date"/>
             ): <DatePicker/>}
+
+2/11 problem 
+successfully making log and video essay exists in the api 
+HOWEVER the video essay is not added to the videoessay group
+Basically you don't get it if you do a get request for all fo the video essays you can only get it if you do a get request for that specific video esay with it's UUID
+Not good. 
+
+
+Progress as of 2/16 
+
+User can sign up/ sign in 
+Log video flow is finished 
+Search video --> Log review --> view logs by video 
+
+
+Features to implement 
+
+Make each review a page where you can look at more details --> style as a modal that overlays over the video info screen 
+Add profile page: 
+- user can view their previous logs 
+- add profile picture 
+- change username
+- delete their account 
+
+Add watchlist feature for videos users want to see 
+Link youtube videos to the original video on youtube 
+
+Make page for an individual log 

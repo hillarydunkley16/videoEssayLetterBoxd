@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from django.db.models import Sum, Avg, Q, Count
-
+import json 
 # Create your views here.
 def home(request): 
     videoessays = VideoEssay.objects.all()

@@ -19,18 +19,26 @@ class VideoEssaySerializer(serializers.ModelSerializer):
 
 class LogSerializer(serializers.HyperlinkedModelSerializer): 
     owner = serializers.ReadOnlyField(source="owner.username")
-    essay = VideoEssaySerializer(read_only=True)
+    essay = serializers.SlugRelatedField(
+        slug_field='public_id',
+        queryset=VideoEssay.objects.all()
+    )
+    # Optional: return full essay details when reading
+    essay_details = VideoEssaySerializer(source='essay', read_only=True)
+    
     class Meta: 
         model = Log
         fields = (
             "id",
             "date",
             "essay",
+            "essay_details",  # Optional
             "review_text",
             "rating",
             "rewatch",
             "owner",
         )
+        
 
 class UserSerializer(serializers.ModelSerializer):
     logs = serializers.PrimaryKeyRelatedField(

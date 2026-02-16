@@ -44,8 +44,9 @@ export default function GetVideoEssayScreen(id: Props){
           {video.thumbnail && (
             <Image
               source={{ uri: video.thumbnail }}
-              style={{ width: "100%", height: 180 }}
+              style={{ width: 200, height: 150 }}
             />
+            
           )}
 
           <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>

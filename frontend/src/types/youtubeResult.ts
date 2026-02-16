@@ -19,11 +19,18 @@ export type SearchResult = databaseResult | APIResult
   
   export interface YouTubeVideoResult {
     // video: Omit<VideoEssay, "id">;
-    youtube_url: string;
+    link: string;
     title: string;
-    thumbnail: string;
+    thumbnail: {
+      rich: string, 
+      static: string,
+    }
     channel_name: string;
     views: number;
     channel_url: string;
+    channel: {
+      link: string, 
+      name: string, 
+    }
   }
     

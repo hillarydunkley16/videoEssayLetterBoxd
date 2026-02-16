@@ -3,12 +3,12 @@ export interface VideoEssay {
     //question mark next to name means it is not necessary
     id: number;
     public_id: string;
-    youtube_url: string | null; 
+    youtube_url: string; 
     title: string; 
-    thumbnail: string | null; 
+    thumbnail: string; 
     views: number | null; 
-    channel_name: string | null; 
-    channel_url: string | null;
+    channel_name: string; 
+    channel_url: string;
 }
 
         

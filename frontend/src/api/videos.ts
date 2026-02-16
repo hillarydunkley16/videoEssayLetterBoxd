@@ -43,21 +43,21 @@ export const fetchYoutubeResults = async(query: string, location='us', language=
               "language": language,
           }
       );
-      // console.log(response)
-      // console.log(response.data.video_results)
+      console.log(response)
+      console.log(response.data.video_results)
       const results: SearchResult[] = response.data.video_results.map((v) => ({
         source : "api", 
         video: {
-          youtube_url: v.youtube_url,
+          youtube_url: v.link,
           title: v.title, 
-          thumbnail: v.thumbnail,
-          channel_name: v.channel_name,
+          thumbnail: v.thumbnail.static,
+          channel_name: v.channel.name,
           views: v.views,
-          channel_url: v.channel_url,
+          channel_url: v.channel.link,
         },
       }))
-      console.log(results)
-      
+      console.log("fetchYoutubeResult results: ", results)
+      console.log("thumbnail: ", results[0].video.thumbnail)
       return results
       
   } catch(error){
@@ -106,6 +106,7 @@ export const useVideoApi = () => {
   const convertYouTubeResultToVideoEssay = async (
     result: Omit<VideoEssay, "id" | "public_id">
   ): Promise<SearchResult> => {
+    console.log("result in convertYoutubeResultToVideoEssay: ", result)
     const payload = {
       youtube_url: result.youtube_url ?? null,
       title: result.title,

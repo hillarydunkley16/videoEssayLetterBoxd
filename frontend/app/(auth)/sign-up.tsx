@@ -11,6 +11,9 @@ export default function Page() {
 
   const [emailAddress, setEmailAddress] = React.useState('')
   const [password, setPassword] = React.useState('')
+  const [firstName, setFirstName] = React.useState('')
+  const [lastName, setLastName] = React.useState('')
+  const [username, setUsername] = React.useState('')
   const [pendingVerification, setPendingVerification] = React.useState(false)
   const [code, setCode] = React.useState('')
 
@@ -23,6 +26,9 @@ export default function Page() {
       await signUp.create({
         emailAddress,
         password,
+        firstName, 
+        lastName,
+        username
       })
 
       // Send user an email with verification code
@@ -108,6 +114,34 @@ export default function Page() {
       <ThemedText type="title" style={styles.title}>
         Sign up
       </ThemedText>
+      <ThemedText style = {styles.label}>First Name</ThemedText>
+      <TextInput
+        style={styles.input}
+        autoCapitalize="none"
+        value={firstName}
+        placeholder="Enter first name"
+        placeholderTextColor="#666666"
+        onChangeText={(firstName) => setFirstName(firstName)}
+        
+      />
+      <ThemedText style = {styles.label}>Last Name</ThemedText>
+      <TextInput
+        style={styles.input}
+        autoCapitalize="none"
+        value={lastName}
+        placeholder="Enter last name"
+        placeholderTextColor="#666666"
+        onChangeText={(lastName) => setLastName(lastName)}
+      />
+      <ThemedText style = {styles.label}>Username</ThemedText>
+      <TextInput
+        style={styles.input}
+        autoCapitalize="none"
+        value={username}
+        placeholder="Enter username"
+        placeholderTextColor="#666666"
+        onChangeText={(username) => setUsername(username)}
+      />
       <ThemedText style={styles.label}>Email address</ThemedText>
       <TextInput
         style={styles.input}

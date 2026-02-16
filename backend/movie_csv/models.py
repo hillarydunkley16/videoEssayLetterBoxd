@@ -21,7 +21,7 @@ class VideoEssay(models.Model):
         settings.AUTH_USER_MODEL, related_name = "VideoEssays", on_delete = models.CASCADE
     )
     class Meta: 
-        ordering = ("created_at",)
+        ordering = ("-created_at",)
     def __str__(self): 
         return self.title
     def get_by_public_id(self, public_id):

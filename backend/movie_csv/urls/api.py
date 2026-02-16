@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import(
 urlpatterns = [
     path("VideoEssays/", VideoEssays.as_view()), 
     path("VideoEssays/<uuid:public_id>/", VideoInfo.as_view()),
-    path("logList", logList.as_view(), name = "log-list"), 
+    path("logList/", logList.as_view(), name = "log-list"), 
     path("logList/<int:pk>/", logDetail.as_view()),
     path("users/", UserList.as_view(), name = "user-list"),
     path("users/<int:pk>/", UserDetail.as_view()),

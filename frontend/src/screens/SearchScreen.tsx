@@ -11,6 +11,7 @@ import { Link } from 'expo-router'
 import {router, useLocalSearchParams} from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useVideoApi } from '../api/videos';
+import { Image } from 'react-native';
 type SearchBarComponentProps = {};
 /** if id is null create new video object in database when logging 
  *  
@@ -72,9 +73,16 @@ return (
       }
     }}
   >
-      <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
-        {item.video.title}
-      </ThemedText>
+        <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
+      {item.video.title}
+    </ThemedText>
+    {item.video.thumbnail && (
+      <Image 
+        source={{ uri: item.video.thumbnail }} 
+        style={{ width: 200, height: 150 }} // Add dimensions!
+      />
+    )}
+      
 
       {item.source === "api" && (
         <Text style={{ opacity: 0.6, fontSize: 12 }}>

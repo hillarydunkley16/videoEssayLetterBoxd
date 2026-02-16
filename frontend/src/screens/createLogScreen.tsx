@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import {View, Text, TextInput, Button, Switch , Platform} from 'react-native'
+import { useRouter, useFocusEffect } from 'expo-router';
 import { createLog } from '../api/logs';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import DatePicker  from 'react-native-date-picker'
+import { useClerkAuthFetch } from '../api/authFetch';
 type Props = {
     id: String;
 }
-export default function CreateLogScreen( id: Props){
+export default function CreateLogScreen( { id }: Props){
+    const authFetch = useClerkAuthFetch();
     const [rating, setRating] = useState(""); 
     const [reviewText, setReviewText] = useState(""); 
     const [rewatch, setRewatch] = useState(false); 
@@ -23,7 +26,7 @@ export default function CreateLogScreen( id: Props){
         setDate(value);
   
     };
-
+    const router = useRouter();
     async function handleSubmit() {
         setError("")
         const ratingNumber = Number(rating); 
@@ -38,18 +41,20 @@ export default function CreateLogScreen( id: Props){
         }
         try {
             setLoading(true); 
-
-            await createLog({
-                date: date,
-                essay: id.id, 
+            console.log(id)
+            await createLog(authFetch, {
+                essay: id, 
+                date: date, // Format as YYYY-MM-DD
                 rating: ratingNumber, 
                 review_text: reviewText, 
                 rewatch: rewatch         
             });
+           
             setRating("");
             setReviewText("");
             setRewatch(false);
             alert("log created!");
+            router.replace('/');
         } catch(err){
             setError("failed to create log");
             console.error(err)
@@ -60,7 +65,7 @@ export default function CreateLogScreen( id: Props){
     return (
         <ThemedView style = {{padding: 16}}>
             <ThemedText>
-                {id.id}
+                {id}
             </ThemedText>
             <ThemedText>
                 Add a log

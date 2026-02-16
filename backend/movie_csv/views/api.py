@@ -30,6 +30,7 @@ from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from movie_csv.authentication import ClerkAuthentication
+
 def get_anonymous_user():
     user, created = User.objects.get_or_create(
         username='anonymous',
@@ -81,9 +82,11 @@ class logList (generics.ListCreateAPIView):
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
     # permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    def perform_create(self, serializer): 
-        print(self.request.user)
+    def perform_create(self, serializer):
+        print("Request data:", self.request.data)
+        print("User:", self.request.user)
         serializer.save(owner=self.request.user)
+   
 
 class logDetail(generics.RetrieveUpdateDestroyAPIView): 
     # authentication_classes = [JWTAuthentication]
@@ -96,6 +99,16 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
 class logFormView():
     serializerClass = LogSerializer
     def post(self, request, *args, **kwargs):
+        #  videoEssay = VideoEssay.objects.create(
+        #     title =data["title"],
+        #     youtube_url=data["youtube_url"],
+        #     thumbnail=data["thumbnail"],
+        #     views=data["views"],
+        #     channel_name=data["channel_name"],
+        #     channel_url=data["channel_url"],
+        #     owner = request.user 
+        # )
+
         data = request.data
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception = True)
@@ -168,21 +181,7 @@ class LoginView(GenericAPIView):
 @login_required
 def log_movie(request, videoEssay_id): 
     video_essay = VideoEssay.objects.get(id=videoEssay_id)
-    # form = LogForm()
-    # if request.method == 'POST': 
-    #     # form = LogForm(request.POST)
-    #     if form.is_valid(): 
-    #         post = form.save(commit=False)
-    #         post.essay_id = videoEssay_id
-    #         post.user = request.user
-    #         post.video_essay = video_essay
-    #         post.save()
-    #         return redirect('profile')
-    # else: 
-    #     # form = LogForm()
-    # return render(request,
-    #     "movie_csv/log_movie.html",
-    #     {"form": form, "video_essay": video_essay})
+    
 def search(request):
     # form = VideoSearchForm(request.GET or None)
     results = None
@@ -239,9 +238,16 @@ class VideoEssayCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     
     def perform_create(self, serializer):
-        
         print("AUTH HEADER:", self.request.headers.get("Authorization"))
         print("USER:", self.request.user)
-        # serializer.is_valid(raise_exception = True)
-        print(self.request.user)
-        serializer.save(owner=self.request.user)
+        print("CREATING VIDEO ESSAY WITH DATA:", serializer.validated_data)
+        
+        instance = serializer.save(owner=self.request.user)
+        
+        print("CREATED VIDEO ESSAY ID:", instance.id)
+        print("CREATED VIDEO ESSAY PUBLIC_ID:", instance.public_id)
+        print("CREATED VIDEO ESSAY OWNER:", instance.owner)
+        
+        # Verify it's in the database
+        exists = VideoEssay.objects.filter(public_id=instance.public_id).exists()
+        print("EXISTS IN DATABASE:", exists)
