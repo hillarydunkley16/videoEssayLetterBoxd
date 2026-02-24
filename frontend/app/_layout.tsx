@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native'
 import { WebNav } from '../components/ui/WebNav'
 import { ClerkProvider } from '@clerk/clerk-expo'
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
-
+import '../global.css';
 export default function RootLayout() {
   return (
     <ClerkProvider tokenCache={tokenCache}>
@@ -14,6 +14,7 @@ export default function RootLayout() {
             headerShown: false, // IMPORTANT
           }}
         />
+       
       </View>
     </ClerkProvider>
   )

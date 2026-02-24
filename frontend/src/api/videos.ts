@@ -5,7 +5,8 @@ import { PaginatedResponse } from "../types/api";
 import axios from "axios";
 import { SearchOrHash } from "expo-router";
 import * as Crypto from 'expo-crypto';
-import { useClerkAuthFetch } from "./authFetch";
+
+import { useAuthPost } from "./authPost";
 import { useAuth } from "@clerk/clerk-expo";
 
 /**
@@ -13,18 +14,18 @@ import { useAuth } from "@clerk/clerk-expo";
  * Calls: GET /api/videoessays/
  * Do an API call to create video essay object from YouTubeResults?? 
  */
-export async function fetchVideoEssays(): Promise<PaginatedResponse<VideoEssay>> {
+export async function fetchVideoEssays(token: string): Promise<PaginatedResponse<VideoEssay>> {
   // const clerk = useClerkAuthFetch();
   // console.log(clerk)
   
   console.log("fetch videos essays functin called!!!");
-  return authFetch("/VideoEssays/");
+  return authFetch("/VideoEssays/", {}, token);
 }
 
-export async function getAVideoEssay(publicId: string): Promise<VideoEssayData> {
+export async function getAVideoEssay(publicId: string, token: string): Promise<VideoEssayData> {
     console.log("id received: ", publicId); 
     console.log("get a video essay function called!");
-    return authFetch(`/VideoEssays/${publicId}/`)
+    return authFetch(`/VideoEssays/${publicId}/`, {}, token)
 }
 /** 
  * fetch youtube results
@@ -67,10 +68,10 @@ export const fetchYoutubeResults = async(query: string, location='us', language=
 };
 
 export const searchDataBase = async (
-  query: string
+  query: string, token: string
 ): Promise<SearchResult[]>  => {
   try {
-      const response = await fetchVideoEssays();
+      const response = await fetchVideoEssays(token!);
       const lastID = response.results[response.results.length-1]?.public_id;
       if (!lastID) {
         throw new Error("No video essays in database");
@@ -101,7 +102,7 @@ export const searchDataBase = async (
 }
 //this function will call django api /api/fetch with the params from YouTubeResult
 export const useVideoApi = () => {
-  const authFetch = useClerkAuthFetch();
+  const authFetch = useAuthPost();
 
   const convertYouTubeResultToVideoEssay = async (
     result: Omit<VideoEssay, "id" | "public_id">

@@ -1,5 +1,5 @@
 import { Link,  router , useLocalSearchParams} from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen';
 import VideoInfoLogs from '@/src/screens/VideoInfoLogs';
 import { useEffect } from 'react';
@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view'
 export default function Modal() {
   const isPresented = router.canGoBack();
   const essayId= useLocalSearchParams<{ essayId: string }>()
+  console.log(essayId.essayId)
   // console.log("params: ", params)
   // console.log(params.essayId)
   // const essayId = params.essayId
@@ -22,9 +23,15 @@ export default function Modal() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <GetVideoEssayScreen essayId={essayId} />
-      <VideoInfoLogs essayId={essayId}/>
+    <ThemedView style = {styles.largeContainer} >
+      <ThemedView style = {styles.container}>
+      <GetVideoEssayScreen id={essayId.essayId} />
+      <VideoInfoLogs id={essayId.essayId}/>
+      </ThemedView>
+      
+      <TouchableOpacity onPress = {() => router.push(`/logVideoModal?essayId=${essayId.essayId}`)}>
+        <ThemedText>Add a review</ThemedText>
+      </TouchableOpacity>
       <Link href="../">
         Dismiss
       </Link>
@@ -34,8 +41,17 @@ export default function Modal() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    flexDirection: 'row',
+    gap: 10,
+  }, 
+  thumbnail: {
+    width: 350, 
+    height: 200
+  }, 
+  largeContainer: {
+    // margin: 30,
+    // gap: 30, 
+    padding: 50
+  }
+  
 });

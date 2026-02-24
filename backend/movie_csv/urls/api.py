@@ -4,11 +4,13 @@ from rest_framework_simplejwt.views import(
     TokenObtainPairView,
     TokenRefreshView,
 )
+from django.conf import settings
+from django.conf.urls.static import static
 urlpatterns = [
     path("VideoEssays/", VideoEssays.as_view()), 
     path("VideoEssays/<uuid:public_id>/", VideoInfo.as_view()),
     path("logList/", logList.as_view(), name = "log-list"), 
-    path("logList/<int:pk>/", logDetail.as_view()),
+    path("logList/<uuid:public_id>/", logDetail.as_view()),
     path("users/", UserList.as_view(), name = "user-list"),
     path("users/<int:pk>/", UserDetail.as_view()),
     path("api-root", api_root, name="api-root"),
@@ -19,3 +21,6 @@ urlpatterns = [
     path('fetch/', VideoEssays.as_view(),name = "fetch" ), 
     path("video-essays/", VideoEssayCreateView.as_view(), name="video-essays"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

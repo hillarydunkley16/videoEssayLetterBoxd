@@ -4,13 +4,14 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { createLog } from '../api/logs';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+
 import DatePicker  from 'react-native-date-picker'
-import { useClerkAuthFetch } from '../api/authFetch';
+import { useAuthPost} from '../api/authPost';
 type Props = {
     id: String;
 }
 export default function CreateLogScreen( { id }: Props){
-    const authFetch = useClerkAuthFetch();
+    const authFetch = useAuthPost();
     const [rating, setRating] = useState(""); 
     const [reviewText, setReviewText] = useState(""); 
     const [rewatch, setRewatch] = useState(false); 
@@ -89,7 +90,7 @@ export default function CreateLogScreen( { id }: Props){
                 keyboardType='numeric'
                 style={{
                     borderWidth: 1,
-                    borderColor: "#ccc",
+                    borderColor: "black",
                     padding: 8,
                     marginBottom: 12,
                   }}
@@ -101,7 +102,7 @@ export default function CreateLogScreen( { id }: Props){
                 multiline
                 style={{
                     borderWidth: 1,
-                    borderColor: "#ccc",
+                    borderColor: "black",
                     padding: 8,
                     marginBottom: 12,
                   }}

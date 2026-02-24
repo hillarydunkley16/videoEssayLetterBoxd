@@ -5,7 +5,7 @@ import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import {useAuth} from '@clerk/clerk-expo'
-
+import { SignOutButton } from '@/app/components/sign-out-button'
 export function WebNav() {
     
   return (
@@ -25,6 +25,10 @@ export function WebNav() {
         <Link href =  "/(tabs)/search">
             <ThemedText>Log a Video</ThemedText>
         </Link>
+        <Link href = "/(tabs)/profile">
+            <ThemedText>Profile</ThemedText>
+        </Link>
+        <SignOutButton />
       </SignedIn>
       {/* <Link href="/videos">
         <Text style={styles.link}>Videos</Text>

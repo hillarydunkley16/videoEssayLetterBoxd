@@ -12,6 +12,7 @@ import {router, useLocalSearchParams} from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useVideoApi } from '../api/videos';
 import { Image } from 'react-native';
+import { useAuth } from '@clerk/clerk-expo';
 type SearchBarComponentProps = {};
 /** if id is null create new video object in database when logging 
  *  
@@ -23,10 +24,11 @@ const [search, setSearch] = useState("");
 const [videos, setVideos] = useState<VideoEssay[]>([]);
 const [loading, setLoading] = useState(true);
 const [database, setDatabase] = useState<SearchResult[]>([]);
-
+const {getToken} = useAuth(); 
 const updateSearch = async (search: string) => {
+  const token = await getToken();
   setSearch(search);
-  const data = await searchDataBase(search)
+  const data = await searchDataBase(search, token!)
   setDatabase(data)
     
 };

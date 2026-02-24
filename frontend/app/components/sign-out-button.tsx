@@ -1,6 +1,7 @@
 import { useClerk } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
 import { Text, TouchableOpacity } from 'react-native'
+import { ThemedText } from '@/components/themed-text'
 
 export const SignOutButton = () => {
   // Use `useClerk()` to access the `signOut()` function
@@ -21,7 +22,7 @@ export const SignOutButton = () => {
 
   return (
     <TouchableOpacity onPress={handleSignOut}>
-      <Text>Sign out</Text>
+      <ThemedText>Sign out</ThemedText>
     </TouchableOpacity>
   )
 }

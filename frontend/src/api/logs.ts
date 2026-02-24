@@ -2,20 +2,29 @@
 // fetch log details 
 // create log 
 // update log 
-import { authFetch } from "./client";
+// import { authFetch } from "./client";
+
 import { Log } from "../types/log";
 import { PaginatedResponse } from "../types/api";
 import { VideoEssay } from "../types/videoEssay";
-import { useClerkAuthFetch } from "./authFetch";
-export async function fetchLogs(): Promise<PaginatedResponse<Log>> {
+import { useAuthPost } from "./authPost";
+import { authFetch } from "./client";
+export async function fetchLogs(token: string): Promise<PaginatedResponse<Log>> {
     console.log("fetch logs functin called!!!");
-  return authFetch("/logList");
+  return authFetch("/logList", {}, token);
 }
+// export async function fetchLogsFromUser(): Promise<PaginatedResponse<Log>> {
+//     const logs = authFetch("/logList"); 
+//     console.log(logs)
+//     // const userLogs = 
+//     return logs
 
-// export async function fetchALog()
-export async function fetchALog(id: string): Promise<Log> {
-    console.log(`fetching ${id}`)
-    return authFetch(`/logList/${id}`);
+// }
+
+export async function fetchALog(id: string, token: string): Promise<Log> {
+    console.log(`fetching log with this ID:  ${id}`)
+    const data = await authFetch(`/logList/${id}/`, {}, token);
+    return data.log;
 }
 export type CreateLogPayload = {
     essay: String; 
@@ -25,7 +34,7 @@ export type CreateLogPayload = {
     rewatch?: boolean;
 }
 export async function createLog(
-    authFetch: ReturnType<typeof useClerkAuthFetch>,
+    authFetch: ReturnType<typeof useAuthPost>,
     payload: CreateLogPayload
 ): Promise<Log> {
     console.log('Creating log with payload:', payload);

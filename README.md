@@ -190,4 +190,8 @@ Add profile page:
 Add watchlist feature for videos users want to see 
 Link youtube videos to the original video on youtube 
 
-Make page for an individual log 
+Make page for an individual log :check 
+
+
+
+

@@ -1,7 +1,7 @@
 
 export interface User {
     "id": number, 
-    "username": string | null, 
+    "username": string, 
     "logs": number | null,
 }
 

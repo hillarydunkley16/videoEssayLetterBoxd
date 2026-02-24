@@ -81,10 +81,13 @@ class logList (generics.ListCreateAPIView):
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
+
     # permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     def perform_create(self, serializer):
+        
         print("Request data:", self.request.data)
         print("User:", self.request.user)
+        
         serializer.save(owner=self.request.user)
    
 
@@ -92,10 +95,21 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
     # authentication_classes = [JWTAuthentication]
     queryset = Log.objects.all()
     serializer_class = LogSerializer
-    permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly,
-        IsOwnerOrReadOnly,
-         )
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    # permission_classes = [AllowAny]
+    lookup_field = "public_id"
+    def get(self, request, public_id):
+        print("Headers:", request.headers)
+        print("Auth user:", request.user)
+        print("Is authenticated:", request.user.is_authenticated)
+        log = self.get_object()
+        print(log.owner_id)
+        # user = User.objects.filter(id = log.owner_id)
+        return Response({
+            "log": LogSerializer(log).data
+        })
+
 class logFormView():
     serializerClass = LogSerializer
     def post(self, request, *args, **kwargs):

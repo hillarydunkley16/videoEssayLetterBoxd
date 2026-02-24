@@ -30,6 +30,7 @@ class LogSerializer(serializers.HyperlinkedModelSerializer):
         model = Log
         fields = (
             "id",
+            "public_id",
             "date",
             "essay",
             "essay_details",  # Optional

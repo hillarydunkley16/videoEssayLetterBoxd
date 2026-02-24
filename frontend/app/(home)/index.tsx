@@ -6,6 +6,7 @@ import { Link } from 'expo-router'
 import { StyleSheet } from 'react-native'
 import VideoEssayListScreen from '@/src/screens/VideoEssayListScreen'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import '../../global.css';
 import SwitchComponent from '@/src/screens/SearchScreen';
 export default function Page() {
   const { user } = useUser()
@@ -20,21 +21,10 @@ export default function Page() {
     <SafeAreaProvider>
       <ThemedView>
       <SafeAreaView style = {styles.container}>
-      <ThemedText>Welcome!</ThemedText>
-      {/* Show the sign-in and sign-up buttons when the user is signed out */}
-      {/* <SignedOut>
-        <Link href="/(auth)/sign-in">
-          <ThemedText>Sign in</ThemedText>
-        </Link>
-        <Link href="/(auth)/sign-up">
-          <ThemedText>Sign up</ThemedText>
-        </Link>
-      </SignedOut>
-      Show the sign-out button when the user is signed in */}
+      <ThemedText style = {styles.text}>Welcome!</ThemedText>
+      
       <SignedIn>
-        {/* <ThemedText>Hello {user?.emailAddresses[0].emailAddress}</ThemedText> */}
         <ThemedText>Hello {user?.username}</ThemedText>
-        <SignOutButton />
       </SignedIn>
       <VideoEssayListScreen/>
       </SafeAreaView>
@@ -52,4 +42,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
   },
+  text : {
+    fontSize: 35
+  }
 })

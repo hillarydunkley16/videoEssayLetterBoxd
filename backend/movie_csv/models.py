@@ -28,6 +28,8 @@ class VideoEssay(models.Model):
         return self.get(public_id=public_id)
 
 class Log(models.Model): 
+    id = models.BigAutoField(primary_key=True)
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True,)
     date = models.DateField()
     essay = models.ForeignKey("VideoEssay", on_delete= models.CASCADE)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name = "logs", on_delete= models.CASCADE)

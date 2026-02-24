@@ -1,22 +1,27 @@
 import { useEffect, useState } from "react";
-import { View, Text, FlatList, Image, Pressable, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, Image, Pressable, TouchableOpacity, StyleSheet } from "react-native";
 import { fetchVideoEssays } from "../api/videos";
 import { VideoEssay } from "../types/videoEssay";
 import {Link} from "@react-navigation/native";
 import {router} from 'expo-router';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useAuth } from "@clerk/clerk-expo";
 export default function VideoEssayListScreen() {
   // Holds data returned from the API
   const [videos, setVideos] = useState<VideoEssay[]>([]);
   const [loading, setLoading] = useState(true);
-    
+  const {getToken,  isSignedIn} = useAuth(); 
   // Runs once when the screen loads
   useEffect(() => {
+    console.log("isSignedIn: ", isSignedIn); 
+    if (!isSignedIn) return;
     async function loadVideos() {
       try {
+        const token = await getToken();
+        console.log("token: ", token);
         console.log("load videos function")
-        const data = await fetchVideoEssays();
+        const data = await fetchVideoEssays(token!);
         console.log(data.results)
         setVideos(data.results);
         console.log("IDS: ",data.results.map(v => v.id) );
@@ -29,7 +34,7 @@ export default function VideoEssayListScreen() {
     }
 
     loadVideos();
-  }, []);
+  }, [isSignedIn]);
 
   if (loading) {
     return <Text>Loading…</Text>;
@@ -46,15 +51,16 @@ export default function VideoEssayListScreen() {
     keyExtractor={(item: VideoEssay) => item.public_id}
     renderItem={({ item }) => (
       <TouchableOpacity onPress={() => router.push(`/modal?essayId=${item.public_id}`)}>
-          <ThemedText style={{ fontWeight: "bold" }}>{item.title}</ThemedText>
+          {/* <ThemedText style={{ fontWeight: "bold" }}>{item.title}</ThemedText> */}
           <View style={{ padding: 12 }}>
+            
         {item.thumbnail && (
           <Image
             source={{ uri: item.thumbnail }}
-            style={{ width: "100%", height: 180 }}
+            style={style.thumbnail}
           />
         )}
-
+        
         <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
           {item.title}
         </ThemedText>
@@ -71,3 +77,14 @@ export default function VideoEssayListScreen() {
    
   );
 }
+
+const style = StyleSheet.create({
+  container: {
+    alignItems: 'flex-start', 
+    gap: 12
+  }, 
+  thumbnail: {
+    width: 350, 
+    height: 200
+  }
+})

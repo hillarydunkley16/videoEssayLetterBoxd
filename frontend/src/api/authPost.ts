@@ -1,11 +1,17 @@
 import { useAuth } from "@clerk/clerk-expo";
 import axios from "axios";
 import { SearchResult } from "../types/youtubeResult";
-export function useClerkAuthFetch() {
+import { getAccessToken } from "../helpers/jwt";
+// import { getAccessToken } from "../helpers/jwt";
+export function useAuthPost() {
   const { getToken } = useAuth();
 
   return async (url: string, data?: any, options: any = {}) => {
     const token = await getToken();
+    console.log("token: ", token)
+    const access = await getAccessToken(); 
+    console.log("access: ", access);
+    // console.log("ACCESS token: ", access);
     console.log("CLERK TOKEN:", token);
     //need to define method as POST or GET etc. 
     return axios({

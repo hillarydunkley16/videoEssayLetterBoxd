@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Image } from "react-native";
+import { View, Text, FlatList, Image, StyleSheet } from "react-native";
 import { fetchVideoEssays, getAVideoEssay } from "../api/videos";
 import { VideoEssay } from "../types/videoEssay";
 import { Log } from "../types/log";
@@ -8,6 +8,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useLocalSearchParams} from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "@clerk/clerk-expo";
 // import { View, Text, FlatList, Image } from "react-native";
 type Props = {
   id: string;
@@ -18,10 +19,13 @@ export default function GetVideoEssayScreen(id: Props){
     const [loading, setLoading] = useState(true); 
     const [logCount, setLogCount] = useState<number>(0); 
     const {essayId}= useLocalSearchParams<{ essayId: string }>()
+    const {getToken} = useAuth();
     useEffect(() => {
         async function loadVideo() {
           try {
-            const data = await getAVideoEssay(essayId);
+            const token = await getToken();
+            console.log("load videos function")
+            const data = await getAVideoEssay(essayId, token!);
             console.log(data);
             console.log("data.logs: ", data.logs)
             setVideo(data.video);
@@ -40,13 +44,14 @@ export default function GetVideoEssayScreen(id: Props){
     return (
         <SafeAreaProvider>
           <SafeAreaView>
-            <ThemedView style={{ padding: 12 }}>
+            <ThemedView style={style.container}>
           {video.thumbnail && (
+            <a href={video.youtube_url}> 
             <Image
               source={{ uri: video.thumbnail }}
-              style={{ width: 200, height: 150 }}
+              style={style.thumbnail}
             />
-            
+            </a>
           )}
 
           <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
@@ -65,3 +70,13 @@ export default function GetVideoEssayScreen(id: Props){
     )
 }
 
+const style = StyleSheet.create({
+  container: {
+    alignItems: 'flex-start', 
+    gap: 12
+  }, 
+  thumbnail: {
+    width: 350, 
+    height: 200
+  }
+})

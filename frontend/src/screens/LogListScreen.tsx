@@ -4,17 +4,20 @@ import { fetchLogs } from "../api/logs";
 import { Log } from "../types/log";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
+import { useAuth } from '@clerk/clerk-expo'
 export default function LogListScreen() {
   // Holds data returned from the API
   const [logs, setlogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const {getToken} = useAuth(); 
   // Runs once when the screen loads
   useEffect(() => {
-    async function loadVideos() {
+    async function loadLogs() {
       try {
+        const token = await getToken();
+        console.log("token: ", token);
         console.log("load videos function")
-        const data = await fetchLogs();
+        const data = await fetchLogs(token!);
         console.log(data.results)
         setlogs(data.results);
         console.log("set videos: ", data);
@@ -25,7 +28,7 @@ export default function LogListScreen() {
       }
     }
 
-    loadVideos();
+    loadLogs();
   }, []);
 
   if (loading) {
@@ -47,9 +50,9 @@ export default function LogListScreen() {
           <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
             {item.owner.username}
           </ThemedText>
-          {item.essay.title && (
+          {item.essay_details.title && (
               <ThemedText> 
-              {item.essay.title}
+              {item.essay_details.title}
               </ThemedText>
           )}
           
@@ -66,16 +69,3 @@ export default function LogListScreen() {
     
   );
 }
-// {logs.length == 0 ? (
-//   <ThemedText>No logs yet...</ThemedText>
-// ):<FlatList 
-// data = {logs}
-// keyExtractor={(item) => item.id.toString()}
-// renderItem={({item}) => (
-//   <>
-//   <ThemedText>{item.date?.toString()}</ThemedText>
-//   <ThemedText>{item.owner?.toString()}</ThemedText>
-//   <ThemedText>{item.review_text}</ThemedText>
-//   </>
-// )}
-// /> } 
