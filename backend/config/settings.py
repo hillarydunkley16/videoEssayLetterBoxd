@@ -104,6 +104,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://172.20.10.2:8081"
     # "localhost"
 ]
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:8081",
+    "http://172.20.10.2:8081"]
 
 CORS_ALLOW_ALL_ORIGINS = True
 # Database

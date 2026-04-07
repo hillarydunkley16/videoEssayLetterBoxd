@@ -1,0 +1,21 @@
+{
+  "name": "csv_movie_downloader",
+  "version": "1.0.0",
+  "description": "Bootleg Letterboxd Based off of CSV movie downloader from GFG  Letterboxd but for video essays Profile  - fetch profile details  Sign up account  - form  - database for details  Log a movie  - form  Write a review",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hillarydunkley16/videoEssayLetterBoxd.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hillarydunkley16/videoEssayLetterBoxd/issues"
+  },
+  "homepage": "https://github.com/hillarydunkley16/videoEssayLetterBoxd#readme"
+}

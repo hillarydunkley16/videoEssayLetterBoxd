@@ -50,10 +50,11 @@ def api_root(request, format=None):
     )
 
 class  VideoEssays(generics.ListCreateAPIView):
+    # @csrf_exempt
     queryset = VideoEssay.objects.all()
     serializer_class = VideoEssaySerializer
     permission_classes = [AllowAny]
-    
+    @csrf_exempt
     def  post(self, request, *args, **kwargs): 
         data = request.data
         
@@ -187,6 +188,8 @@ class ProfileDetail(generics.RetrieveAPIView):
             
             serializer = ProfileSerializer(profile)
             print("SERIALIZER!!: ", ProfileSerializer(profile))
+            print("FOLLOWERS: ", profile.followers.count())
+            print("FOLLOWING: ", profile.following.count())
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Profile.DoesNotExist:
             return Response({"message": "Profile not found"}, status=404)

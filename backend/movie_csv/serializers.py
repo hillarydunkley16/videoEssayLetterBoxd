@@ -92,12 +92,23 @@ class ProfileSerializer(serializers.ModelSerializer):
     #     many = True, 
     #     read_only = True
     # )
+    
+    
+    
     user_logs = serializers.SerializerMethodField()
+    followers = serializers.SerializerMethodField()
+    following = serializers.SerializerMethodField()
     def get_user_logs(self, obj): 
        
         logs = Log.objects.filter(owner = obj.user)
         return LogSerializer(logs, many = True, context = self.context).data
-    
+    def get_followers(self, obj):
+        followers = obj.followers.all()
+        return UserSerializer(followers, many=True, context=self.context).data
+    def get_following(self, obj):
+        following = obj.following.all()
+        return UserSerializer(following, many=True, context=self.context).data
+
     class Meta: 
         model = Profile
-        fields = ("user", "imageUrl", "user_logs")
+        fields = ("user", "imageUrl", "user_logs", "followers", "following")

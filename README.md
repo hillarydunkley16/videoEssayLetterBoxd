@@ -272,5 +272,27 @@ change the api view for getting info
 more features/requirements: 
 - enable remember me for log in --> not possible on clerk
 - add following/followers 
+    - 3/23 implemented in the backend 
+    - need to implement following action 
 - track number of logs associated with user  :check
-- view other's profile pages, rn you can only view your own // when you click on a profile picture on logInfo have it take you to that user's profile page. 
+- view other's profile pages
+    - need this in order to implement following action 
+    - , rn you can only view your own // when you click on a profile picture on logInfo have it take you to that user's profile page. 
+
+Make a section that shows the most popular video essays 
+Make a section that shows the most popular log / users `
+
+query ai model to categorize the genre/topic of video essay
+
+expo link push asChild
+index >> videoInfo >> logInfo 
+
+libFontParser.dylib] FontParser could not open filePath
+/Library/Developer/CoreSimulator/Volumes/iOS_23D8133/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS
+26.3.simruntime/Contents/Resources/RuntimeRoot/System/Library/Fonts/Core/AppleColorEmoji.ttc: [2: No such file or directory]
+
+Module provider RNDatePickerManager does not conform to RCTModuleProvider
+
+## Future Extension Project
+Chrome extension so you can write your review in the browser when you're done watching your YT video 
+On phone maybe as part of share feature on YT?  
