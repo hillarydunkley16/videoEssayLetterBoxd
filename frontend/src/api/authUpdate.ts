@@ -3,7 +3,7 @@ import axios from "axios";
 import { SearchResult } from "../types/youtubeResult";
 import { getAccessToken } from "../helpers/jwt";
 // import { getAccessToken } from "../helpers/jwt";
-export function useAuthPost() {
+export function useAuthUpdate() {
   const { getToken } = useAuth();
 
   return async (url: string, data?: any, options: any = {}) => {
@@ -16,7 +16,7 @@ export function useAuthPost() {
     //need to define method as POST or GET etc. 
     return axios({
       url: `http://127.0.0.1:8000${url}`,
-      method: 'POST',
+      method: 'PATCH',
       data,
       headers: {
         Authorization: `Bearer ${token}`,

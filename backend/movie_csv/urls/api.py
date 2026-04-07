@@ -20,6 +20,13 @@ urlpatterns = [
     path('search/', youtube_search, name = "youtube_search"),
     path('fetch/', VideoEssays.as_view(),name = "fetch" ), 
     path("video-essays/", VideoEssayCreateView.as_view(), name="video-essays"),
+    path("userLogs/", userLogs.as_view()),
+    path("logList/<uuid:public_id>/like/", LikePost.as_view() ),
+    path("logList/<uuid:public_id>/like/delete/<int:pk>/", UnLikePost.as_view()),
+    path("logList/<uuid:public_id>/comment/", CommentOnPost.as_view()),
+    path("users/updatePic", updateProfileImage.as_view()), 
+    path("users/profile", ProfileDetail.as_view()), 
+    path("logList/<uuid:public_id>/delete", DeleteLog.as_view())
 ]
 
 if settings.DEBUG:

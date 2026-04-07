@@ -1,5 +1,8 @@
 import { VideoEssay } from "./videoEssay"
 import {User} from "./user"
+import { Comment } from "./comment";
+import { Like } from "./like";
+import { Profile } from "./profile";
 export interface Log {
     // "id": number,
     id: number;
@@ -10,15 +13,10 @@ export interface Log {
     review_text: string | null;
     rating: number;
     rewatch: boolean;
-    owner: User;
+    owner: string;        // just a username string
+    owner_id: number;     // the numeric Django ID
+    owner_image: string | null;  // the profile image URL
+    likes: Like[];
+    comments: Comment[]
 }
 
-// "id",
-// "public_id",
-// "date",
-// "essay",
-// "essay_details",  # Optional
-// "review_text",
-// "rating",
-// "rewatch",
-// "owner",xw

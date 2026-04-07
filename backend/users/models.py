@@ -3,7 +3,9 @@ from django.contrib.auth.models import User
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null = True, blank = True) # Delete profile when user is deleted
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null = True, blank = True) 
+    imageUrl = models.URLField(blank = True, null = True)
+    # Delete profile when user is deleted
     # photo = models.ImageField(upload_to='profile_pics/', null=True, blank=True, default='profile_pics/default.jpg')
     # display_username = models.CharField(max_length=50, blank = True, null = True, default = None)
     def __str__(self):
@@ -14,7 +16,7 @@ class Profile(models.Model):
     # class Meta:
     #     constraints = [
     #         models.UniqueConstraint(
-    #             fields=["display_username"],
+    #             fields=["display_username"]
     #             condition=models.Q(display_username__isnull=False),
     #             name="unique_display_username_when_set"
     #         )

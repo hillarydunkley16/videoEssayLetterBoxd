@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, FlatList, Image, Pressable, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, FlatList, Image, Pressable, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { fetchVideoEssays } from "../api/videos";
 import { VideoEssay } from "../types/videoEssay";
 import {Link} from "@react-navigation/native";
@@ -7,25 +7,31 @@ import {router} from 'expo-router';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@clerk/clerk-expo";
+import { tokenCache } from "../helpers/tokenCache";
 export default function VideoEssayListScreen() {
   // Holds data returned from the API
   const [videos, setVideos] = useState<VideoEssay[]>([]);
   const [loading, setLoading] = useState(true);
-  const {getToken,  isSignedIn} = useAuth(); 
+  const {getToken,  isSignedIn, isLoaded} = useAuth(); 
   // Runs once when the screen loads
   useEffect(() => {
-    console.log("isSignedIn: ", isSignedIn); 
-    if (!isSignedIn) return;
+    if (!isLoaded || !isSignedIn) return;
     async function loadVideos() {
       try {
         const token = await getToken();
-        console.log("token: ", token);
+        if (!token) {
+          console.warn("No token found");
+          return;
+        }
+        console.log("!!token!!: ", token);
+        console.log("Is signed in: ", isSignedIn);
+        console.log("Is auth loaded: ", isLoaded);
         console.log("load videos function")
         const data = await fetchVideoEssays(token!);
         console.log(data.results)
         setVideos(data.results);
         console.log("IDS: ",data.results.map(v => v.id) );
-        console.log("set videos: ", data);
+        console.log("set videos: ", data); 
       } catch (error) {
         console.error("Failed to load videos:", error);
       } finally {
@@ -34,7 +40,7 @@ export default function VideoEssayListScreen() {
     }
 
     loadVideos();
-  }, [isSignedIn]);
+  }, [isLoaded, isSignedIn]);
 
   if (loading) {
     return <Text>Loading…</Text>;
@@ -43,36 +49,30 @@ export default function VideoEssayListScreen() {
 
 
   return (
-    <ThemedView>
-       
-       <FlatList
-    data={videos}
-    horizontal
-    keyExtractor={(item: VideoEssay) => item.public_id}
-    renderItem={({ item }) => (
-      <TouchableOpacity onPress={() => router.push(`/modal?essayId=${item.public_id}`)}>
-          {/* <ThemedText style={{ fontWeight: "bold" }}>{item.title}</ThemedText> */}
-          <View style={{ padding: 12 }}>
-            
-        {item.thumbnail && (
-          <Image
-            source={{ uri: item.thumbnail }}
-            style={style.thumbnail}
-          />
-        )}
-        
-        <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
-          {item.title}
-        </ThemedText>
-
-        {item.channel_name && (
-          <ThemedText>{item.channel_name}</ThemedText>
-        )}
-      </View>
-      </TouchableOpacity>
-  
-    )}
-    />
+    <ThemedView style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: 12 }}>
+        {videos.map((item) => (
+          <TouchableOpacity 
+            key={item.public_id}
+            onPress={() => router.push(`/modal?essayId=${item.public_id}`)}
+          >
+            <View style={{ width: '100%', padding: 12, marginBottom: 12 }}>
+              {item.thumbnail && (
+                <Image
+                  source={{ uri: item.thumbnail }}
+                  style={style.thumbnail}
+                />
+              )}
+              <ThemedText style={{ fontWeight: 'bold', marginTop: 8 }}>
+                {item.title}
+              </ThemedText>
+              {item.channel_name && (
+                <ThemedText>{item.channel_name}</ThemedText>
+              )}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </ThemedView>
    
   );
@@ -80,8 +80,9 @@ export default function VideoEssayListScreen() {
 
 const style = StyleSheet.create({
   container: {
-    alignItems: 'flex-start', 
-    gap: 12
+    // alignItems: 'flex-start', 
+    // gap: 12, 
+    // flex: 1,
   }, 
   thumbnail: {
     width: 350, 

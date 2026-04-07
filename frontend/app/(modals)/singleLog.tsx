@@ -18,7 +18,7 @@ export default function singleLog(){
         </ThemedView>
     ); 
     return(
-       <ThemedView style = {styles.container}>
+       <ThemedView style = {styles.largeContainer}>
         <LogInfo id = {params.logId}/>
        </ThemedView>
     )
@@ -26,10 +26,15 @@ export default function singleLog(){
 
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+    largeContainer: {
+        flex: 1,
+        paddingHorizontal: 20,
+        paddingTop: 30,
+        paddingBottom: 20,
+        
     },
-  });
-  
+    container: {
+        width: '100%',
+        marginBottom: 16,
+    }
+});

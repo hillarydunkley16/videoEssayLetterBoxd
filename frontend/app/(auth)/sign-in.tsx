@@ -168,10 +168,8 @@ export default function Page() {
         <ThemedText style={styles.buttonText}>Sign in</ThemedText>
       </Pressable>
       {errors && (
-        <ul>
-           <li>{errors}</li>
-        </ul>
-      )}
+    <ThemedText style={{ color: 'red', marginTop: 8 }}>{errors}</ThemedText>
+)}
       <View style={styles.linkContainer}>
         <ThemedText>Don't have an account? </ThemedText>
         <Link href="/sign-up">

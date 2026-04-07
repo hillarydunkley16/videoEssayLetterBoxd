@@ -9,22 +9,41 @@ import { PaginatedResponse } from "../types/api";
 import { VideoEssay } from "../types/videoEssay";
 import { useAuthPost } from "./authPost";
 import { authFetch } from "./client";
+import { useAuthDelete } from "./authDelete";
+
 export async function fetchLogs(token: string): Promise<PaginatedResponse<Log>> {
     console.log("fetch logs functin called!!!");
   return authFetch("/logList", {}, token);
 }
-// export async function fetchLogsFromUser(): Promise<PaginatedResponse<Log>> {
-//     const logs = authFetch("/logList"); 
-//     console.log(logs)
-//     // const userLogs = 
-//     return logs
+export async function fetchUserLogs(token: string): Promise<PaginatedResponse<Log>> {
+    return authFetch(`/userLogs/`, {}, token);
+}
+export async function likeLog( id: string, authFetch: ReturnType<typeof useAuthPost>,) {
+    return authFetch(`/api/logList/${id}/like/`);
+}
+export type CreateCommentPayLoad = {
+    log_id: string, 
+    text: string, 
+    user: string
+}
 
-// }
-
+export async function commentOnLog(log: Log, authFetch: ReturnType<typeof useAuthPost>, payload: CreateCommentPayLoad): Promise<Comment>{
+    console.log('Creating comment with payload: ', payload); 
+    // const id = log?.public_id
+    const response = await authFetch(`/api/logList/${log?.public_id}/comment/`, payload)
+    console.log(response); 
+    return response.data
+}
 export async function fetchALog(id: string, token: string): Promise<Log> {
     console.log(`fetching log with this ID:  ${id}`)
     const data = await authFetch(`/logList/${id}/`, {}, token);
     return data.log;
+}
+
+export async function deleteLog(id: string, token: string, authFetch: ReturnType<typeof useAuthDelete>){
+    console.log(`deleting log with this ID: ${id}`); 
+    const response = await authFetch(`/api/logList/${id}/delete`);
+    return response; 
 }
 export type CreateLogPayload = {
     essay: String; 

@@ -19,16 +19,16 @@ import LogListScreen from '@/src/screens/LogListScreen'
 import { useAuthUpdate } from '@/src/api/authUpdate'
 import { fetchProfile } from '@/src/api/users'
 import { useAuthDelete } from '@/src/api/authDelete'
-export default function Page() {
-  const { user } = useUser()
+export default function Page({id}: {id:string}) {
+//   const { user } = useUser()
   // const [profileImage, setProfileImage] = useState<String>();
   // If your user isn't appearing as signed in,
   // it's possible they have session tasks to complete.
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
 
-  const { session } = useSession()
+//   const { session } = useSession()
   const authDelete = useAuthDelete();
-  console.log(session?.createdAt)
+//   console.log(session?.createdAt)
   // console.log(user)
   // console.log(user?.id)
   const [logs, setlogs] = useState<Log[]>([]);
@@ -53,7 +53,6 @@ export default function Page() {
           const uniqueCount = new Set(profile.user_logs.map(item => item.essay)).size;
           // console.log(`USER HAS LOGGED ${uniqueCount} VIDEOESSAYS`);
           setUserLogs(profile.user_logs);
-         
           // console.log(`USER HAS ${profile.user_logs.length} LOGS`);
           setNumLogs(profile.user_logs.length); 
           setNumEssays(uniqueCount);

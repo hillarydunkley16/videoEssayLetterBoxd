@@ -192,6 +192,85 @@ Link youtube videos to the original video on youtube
 
 Make page for an individual log :check 
 
+Progress as of Feb 25 
+Profile page 
+- Profile now sort of works 
+
+- Improve filter logs 
+- At the moment it only allows for 1 log per user
+- can't do a normal .filter() operation because previous logs/users have undefined for id 
+- can't access django rest backend, and unsure why this is happening --> getting 403 error 
+- probably because i have clerk auth before jwt auth, so the superuser doesn't exist on the clerk auth end 
+
+
+Log likes and comments 
+
+
+Issues 3/10
+1. Filtering logs in profile isn't working for specific users
+johndoe11 --> user_id = 4 but the logs aren't showing up 
+need to investigate further 
+
+2. imageUrl for profile is being saved only upon user creation. I would like to be able to update it when the user updates their profile photo on the profile page. 
+
+upon loading log info check if imageUrl is None. If None, set imageUrl to be the clerk auto image 
+
+when user updates their profile image post the url to the Profile model on the backend 
+
+File "/Users/hillarydunkley/csv_movie_downloader/backend/movie_csv/views/api.py", line 274, in update
+    profile.imageUrl = request.data.get('imageUrl', profile.imageUrl)
+                       ^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+[11/Mar/2026 16:00:24] "PATCH /api/users/updatePic HTTP/1.1" 500 102476
+
+
+The error is because you're passing imageUrl as a plain string to authFetch, but request.data expects a JSON object. When axios receives a string it sends it as-is, so request.data becomes the string "http://..." instead of a dict.
+
+Fix the frontend to send an object:
+
+typescript
+export async function updateProfileImageAPI(imageUrl: string, authFetch: ReturnType<typeof useAuthUpdate>) {
+    const response = await authFetch(`/api/users/updatePic`, { imageUrl });  // wrap in object
+    return response;
+}
+That's the only fix needed — your Django view is correct, it just wasn't receiving a dict.
 
 
 
+i am setting the imageUrl to a blob: 'blob:http://localhost:8081/9fc96078-7987-48b2-9fb5-761d1865e7a6'
+if i try to get the imageUrl and set it to the user profile image on the frontend will it work? for clerk it's a clerk url, like http://www.clerk.com/stringofnumbersandletters
+
+5:11 PM
+No, a blob: URL won't work for your profile image. Blob URLs are temporary and only exist in the browser's memory for the current session — they can't be stored in a database or accessed later.
+
+
+The problem is you're sending uri (the local file path) to your backend before Clerk has processed it. You need to wait for Clerk to finish uploading and then get the new URL:
+
+ if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        
+        // upload to Clerk first
+        await user?.setProfileImage({ file: blob });
+        
+        // reload the user to get the updated imageUrl from Clerk
+        await user?.reload();
+        
+        // now send the Clerk URL to your backend
+        const clerkImageUrl = user?.imageUrl;
+        console.log("clerk image url: ", clerkImageUrl);
+        await updateProfileImageAPI(clerkImageUrl!, authUpdate);
+    }
+}
+user?.reload() forces Clerk to refresh the user object with the newly uploaded image URL, then user?.imageUrl will have the real Clerk CDN URL to save to your backend. 
+
+default clerk img url is https://img.clerk.com/eyJ0eXBlIjoiZGVmYXVsdCIsImlpZCI6Imluc18zOHFPakFDRkhNV1FPNXVBSTdBV20yQnY5YkgiLCJyaWQiOiJ1c2VyXzM5R2w1OFp2OGhZWHhjbTYzYjRUYnpuaElWbiJ9
+
+change the api view for getting info 
+
+more features/requirements: 
+- enable remember me for log in --> not possible on clerk
+- add following/followers 
+- track number of logs associated with user  :check
+- view other's profile pages, rn you can only view your own // when you click on a profile picture on logInfo have it take you to that user's profile page. 

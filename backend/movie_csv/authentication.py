@@ -4,15 +4,26 @@ from rest_framework.exceptions import AuthenticationFailed
 from jose import jwt
 from django.contrib.auth import get_user_model
 import requests
+from users.models import Profile
 
 User = get_user_model()
 
 CLERK_ISSUER = "https://splendid-sunbird-55.clerk.accounts.dev"
 CLERK_JWKS_URL = f"{CLERK_ISSUER}/.well-known/jwks.json"
 
-JWKS = requests.get(CLERK_JWKS_URL).json()["keys"]
+# JWKS = requests.get(CLERK_JWKS_URL).json()["keys"]
+_jwks_cache = None
+def get_jwks():
+    global _jwks_cache
+    if _jwks_cache is None:
+        response = requests.get(CLERK_JWKS_URL, timeout=10)
+        _jwks_cache = response.json()["keys"]
+    return _jwks_cache
 
-
+def refresh_jwks():
+    global _jwks_cache
+    _jwks_cache = None
+    return get_jwks()
 class ClerkAuthentication(BaseAuthentication):
     def authenticate(self, request):
         auth = request.headers.get("Authorization")
@@ -28,11 +39,12 @@ class ClerkAuthentication(BaseAuthentication):
                 raise AuthenticationFailed("Missing kid in token header")
 
             # fetch fresh keys each time instead of caching
-            jwks = requests.get(CLERK_JWKS_URL).json()["keys"]
+            jwks = get_jwks()
             jwk = next((k for k in jwks if k["kid"] == kid), None)
 
             if not jwk:
-                raise AuthenticationFailed("Public key not found")
+                jwks = refresh_jwks()  # retry with fresh keys
+                jwk = next((k for k in jwks if k["kid"] == kid), None)
 
             payload = jwt.decode(
                 token,
@@ -43,10 +55,17 @@ class ClerkAuthentication(BaseAuthentication):
             )
 
             clerk_id = payload["sub"]
+            print("CLERK PAYLOAD KEYS:", payload.keys())
             user, _ = User.objects.get_or_create(
                 username=clerk_id,
                 defaults={"email": payload.get("email", "")},
             )
+            imageUrl = payload.get("imageUrl", "")
+            if imageUrl: 
+                Profile.objects.update_or_create(
+                    user = user,
+                    defaults = {"imageUrl": imageUrl}
+                )
             return (user, None)
 
         except Exception as e:

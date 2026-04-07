@@ -10,39 +10,39 @@ import '../../global.css';
 import SwitchComponent from '@/src/screens/SearchScreen';
 export default function Page() {
   const { user } = useUser()
-
+  console.log("User is undefined: ", user == undefined); 
   // If your user isn't appearing as signed in,
   // it's possible they have session tasks to complete.
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
   const { session } = useSession()
-  console.log(session?.currentTask)
+  console.log("SESSION  CURRENT TASK: " , session?.currentTask)
   // console.log(user)
   return (
-    <SafeAreaProvider>
-      <ThemedView>
-      <SafeAreaView style = {styles.container}>
-      <ThemedText style = {styles.text}>Welcome!</ThemedText>
-      
-      <SignedIn>
-        <ThemedText>Hello {user?.username}</ThemedText>
-      </SignedIn>
-      <VideoEssayListScreen/>
+  <SafeAreaProvider>
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={{ flex: 1, width: '100%' }}>
+        {/* <ThemedText style={styles.text}>Welcome!</ThemedText> */}
+        <SignedOut>
+          <ThemedText>USER IS UNDEFINED/ NOT SIGNED IN</ThemedText>
+        </SignedOut>
+        <SignedIn>
+          {/* <ThemedText>Hello {user?.username}</ThemedText> */}
+           <VideoEssayListScreen/>
+        </SignedIn>
+       
       </SafeAreaView>
-         
-      </ThemedView>
-      
-    </SafeAreaProvider>
-    
-  )
+    </ThemedView>
+  </SafeAreaProvider>
+)
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    gap: 16,
+    width: '100%',
   },
-  text : {
-    fontSize: 35
+  text: {
+    fontSize: 35,
+    paddingHorizontal: 20,
   }
 })

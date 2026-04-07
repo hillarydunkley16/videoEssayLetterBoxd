@@ -6,6 +6,7 @@ import { ThemedView } from "@/components/themed-view";
 import { searchDataBase} from "../api/videos";
 import { VideoEssay } from '../types/videoEssay';
 import { SearchResult } from '../types/youtubeResult';
+
 import { FlatList } from 'react-native';
 import { Link } from 'expo-router'
 import {router, useLocalSearchParams} from 'expo-router';

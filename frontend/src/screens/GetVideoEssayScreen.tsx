@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Image, StyleSheet } from "react-native";
+import { View, Text, FlatList, Image, StyleSheet, Linking, TouchableOpacity, Platform } from "react-native";
 import { fetchVideoEssays, getAVideoEssay } from "../api/videos";
 import { VideoEssay } from "../types/videoEssay";
 import { Log } from "../types/log";
@@ -6,9 +6,9 @@ import {VideoEssayData} from "../types/videoEssay";
 import {useEffect, useState} from "react";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useLocalSearchParams} from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@clerk/clerk-expo";
+import { useLocalSearchParams } from "expo-router";
 // import { View, Text, FlatList, Image } from "react-native";
 type Props = {
   id: string;
@@ -19,7 +19,7 @@ export default function GetVideoEssayScreen(id: Props){
     const [loading, setLoading] = useState(true); 
     const [logCount, setLogCount] = useState<number>(0); 
     const {essayId}= useLocalSearchParams<{ essayId: string }>()
-    const {getToken} = useAuth();
+    const {getToken} = useAuth(); 
     useEffect(() => {
         async function loadVideo() {
           try {
@@ -39,19 +39,20 @@ export default function GetVideoEssayScreen(id: Props){
       
         loadVideo();
       }, [essayId]);
-    
+      
     if (!video) return <Text>Loading...</Text>;
     return (
-        <SafeAreaProvider>
-          <SafeAreaView>
+       
             <ThemedView style={style.container}>
           {video.thumbnail && (
-            <a href={video.youtube_url}> 
+            
+           <TouchableOpacity onPress = {() => Linking.openURL(video.youtube_url)}> 
             <Image
               source={{ uri: video.thumbnail }}
               style={style.thumbnail}
+              resizeMode="cover"
             />
-            </a>
+           </TouchableOpacity>
           )}
 
           <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
@@ -63,20 +64,32 @@ export default function GetVideoEssayScreen(id: Props){
           )}
           </ThemedView>
 
-          </SafeAreaView>
-
-        </SafeAreaProvider>
+         
         
     )
 }
 
 const style = StyleSheet.create({
-  container: {
-    alignItems: 'flex-start', 
-    gap: 12
-  }, 
-  thumbnail: {
-    width: 350, 
-    height: 200
-  }
+    container: {
+        width: '100%',
+        maxWidth: 350,
+        alignItems: 'flex-start',
+        gap: 12,
+        ...Platform.select({
+            web: {
+                width: 350,  // explicit width on web
+            }
+        })
+    },
+    thumbnail: {
+        width: '100%',
+        aspectRatio: 3 / 2,
+        borderRadius: 12,
+        ...Platform.select({
+            web: {
+                width: 350,  // explicit width on web
+                height: 233,
+            }
+        })
+    }
 })

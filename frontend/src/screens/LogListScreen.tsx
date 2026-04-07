@@ -48,7 +48,7 @@ export default function LogListScreen() {
         <ThemedView style={{ padding: 12 }}>
 
           <ThemedText style={{ fontWeight: "bold", marginTop: 8 }}>
-            {item.owner.username}
+            {item.owner.user.id}
           </ThemedText>
           {item.essay_details.title && (
               <ThemedText> 

@@ -9,4 +9,4 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "username", "logs", "photo")
+        fields = ("id", "username", "logs", "imageUrl")

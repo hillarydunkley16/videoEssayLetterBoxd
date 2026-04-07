@@ -2,6 +2,8 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
 import uuid
+from django.contrib.auth.models import User
+from users.models import Profile
 
 # Create your models here.
 class VideoEssay(models.Model):
@@ -38,4 +40,23 @@ class Log(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(10)]
     )
     rewatch = models.BooleanField(default=False)
+   
 
+
+class Like(models.Model): 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="likes", on_delete=  models.CASCADE)
+    date = models.DateField(auto_now_add=True)
+    post = models.ForeignKey ("Log", related_name="likes",on_delete= models.CASCADE)
+    class Meta:
+        unique_together = ('user', 'post') 
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     # Update the post's like_count when a like is saved
+    #     self.post.update_like_count()
+    
+class Comment(models.Model): 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="comment", on_delete= models.CASCADE)
+    date = models.DateField(auto_now_add=True)
+    log = models.ForeignKey("Log", related_name= "comments", on_delete= models.CASCADE)
+    text = models.CharField(max_length = 200, blank = True, unique = False, editable=True, null = True)
+    

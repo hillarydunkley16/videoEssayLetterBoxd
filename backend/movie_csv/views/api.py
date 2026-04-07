@@ -4,9 +4,10 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from ..models import VideoEssay, Log
-from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer
+# from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.generics import DestroyAPIView
+from ..models import VideoEssay, Log, Like, Comment
+from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer
 from rest_framework import generics, permissions
 from ..permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
@@ -30,6 +31,8 @@ from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from movie_csv.authentication import ClerkAuthentication
+from django.db.models import Count
+from users.models import Profile
 
 def get_anonymous_user():
     user, created = User.objects.get_or_create(
@@ -81,7 +84,7 @@ class logList (generics.ListCreateAPIView):
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
-
+    print(permission_classes)
     # permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     def perform_create(self, serializer):
         
@@ -90,24 +93,49 @@ class logList (generics.ListCreateAPIView):
         
         serializer.save(owner=self.request.user)
    
+class userLogs(generics.ListCreateAPIView): 
+    serializer_class = LogSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        print("USER ID: ", self.request.user.id)
+       
+
+        print("USER LOGS: ", Log.objects.filter(owner_id =self.request.user.id))
+        return Log.objects.filter(owner=self.request.user)
 class logDetail(generics.RetrieveUpdateDestroyAPIView): 
     # authentication_classes = [JWTAuthentication]
     queryset = Log.objects.all()
+    profile_queryset = Profile.objects.all()
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
     # permission_classes = [AllowAny]
     lookup_field = "public_id"
     def get(self, request, public_id):
-        print("Headers:", request.headers)
-        print("Auth user:", request.user)
-        print("Is authenticated:", request.user.is_authenticated)
+        # print("Headers:", request.headers)
+        # print("Auth user:", request.user)
+        # print("Is authenticated:", request.user.is_authenticated)
+        print(public_id)
+        print(request.data)
         log = self.get_object()
+        print(log)
+        # userInfo = Profile.objects.get(user_id = request.user.id)
+        # print("USERINFO IMAGEURL: ", userInfo.imageUrl)
+        # print("USERINFO USERID: ", userInfo.user_id)
         print(log.owner_id)
-        # user = User.objects.filter(id = log.owner_id)
+        print(log.likes)
+        # print(LogSerializer(log).data.likes)
+        # print("number of likes: ", log.likes.count())
+        # print("number of comments: ", log.comments.count())
+        # print("user profile image: ",log.__dict__)
+        # print("USER INFO: ",ProfileSerializer(userInfo).data )
+        # Thelog = LogSerializer(log).data
+        # print(Thelog)
+        # print("CORROBORATE FROM LOGS: ", log.owner_id)
         return Response({
-            "log": LogSerializer(log).data
+            "log": LogSerializer(log).data,
         })
 
 class logFormView():
@@ -133,13 +161,38 @@ class UserList(generics.ListAPIView):
     # authentication_classes = [JWTAuthentication]
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
+#combine user detail with profile so you just get the user info once, comes with user model class, user logs, profile details (imageurl etc)
 class UserDetail(generics.RetrieveAPIView): 
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    def get(self,request): 
+        print(request.user)
+        print(request.user.id)
+        userLogs = Log.objects.get(owner_id = request.user.id)
+        return userLogs
+    
+class ProfileDetail(generics.RetrieveAPIView): 
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request): 
+        try:
+            print("THE REQUEST USER: ", request.user)
+            profile = Profile.objects.get(user=request.user)
+            # print(profile.__dict__)
+            
+            serializer = ProfileSerializer(profile)
+            print("SERIALIZER!!: ", ProfileSerializer(profile))
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Profile.DoesNotExist:
+            return Response({"message": "Profile not found"}, status=404)
+        
 class Home(APIView):
-    authentication_classes = [JWTAuthentication]
+    # authentication_classes = [JWTAuthentication]
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -156,7 +209,7 @@ class VideoInfo(generics.RetrieveAPIView):
     def get(self, request, public_id):
         video = self.get_object()
         logs = Log.objects.filter(essay=video)
-
+        print(logs)
         return Response({
             "video": VideoEssaySerializer(video).data,
             "logs": LogSerializer(logs, many=True).data,
@@ -187,11 +240,86 @@ class LoginView(GenericAPIView):
                 'token': token.key,
             },
         )
+class LikePost(generics.ListCreateAPIView): 
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer = LogSerializer
+    def post(self, request, public_id, *args, **kwargs): 
+        try: 
+           post = Log.objects.get(public_id=public_id) 
+        except Log.DoesNotExist:
+            return Response({"message": "404"})
+        new_like, created = Like.objects.get_or_create(user=request.user, post=post)
+        if created:
+            print(post.likes.count()) 
+            return Response({"liked": True, "likes_count": post.likes.count() })
+        else: 
+            new_like.delete()
+            print("ALREADY LIKED THE POST")
+            return Response({"liked": False, "likes_count": post.likes.count()})
 
-# @login_required
+class UnLikePost(DestroyAPIView):
+    queryset = Like.objects.all(); 
+    serializer_class = LikeSerializer
+    def delete(self, request, public_id, pk): 
+        try: 
+            log = Log.objects.get(public_id = public_id)
+
+        except Log.DoesNotExist: 
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+class DeleteLog(DestroyAPIView): 
+    queryset = Log.objects.all(); 
+    serializer_class = LogSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'public_id'
+
+class CommentOnPost(generics.CreateAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    def post(self, request, public_id, *args, **kwargs):
+        try: 
+            log = Log.objects.get(public_id = public_id)
+        except Log.DoesNotExist: 
+            return Response({"message": "Log not found"}, status=404)
+        print(self.request.user)
+        comment = Comment.objects.create(
+            user = self.request.user, 
+            # date = data["date"],
+            log = log,
+            text = request.data.get("text", "")
+        )
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+#  @login_required
 
     # return render(request, 'movie_csv/fetch.html', {'form': form})
+class updateProfileImage(generics.UpdateAPIView):
+    query_set = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def update(self, request, *args, **kwargs):
+        try: 
+            profile = Profile.objects.get(user=request.user)
+        except Profile.DoesNotExist:
+            return Response({"message": "Profile does not exist!"}, status=404) 
+        
+        print("BEFORE SAVE: ", profile.imageUrl)
+        profile.imageUrl = request.data.get('imageUrl', profile.imageUrl)
+        print("AFTER ASSIGNMENT: ", profile.imageUrl)
+        profile.save()
+        
+        # re-fetch from DB to confirm it was actually saved
+        profile.refresh_from_db()
+        print("AFTER REFRESH FROM DB: ", profile.imageUrl)
+        
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 @login_required
 def log_movie(request, videoEssay_id): 
     video_essay = VideoEssay.objects.get(id=videoEssay_id)

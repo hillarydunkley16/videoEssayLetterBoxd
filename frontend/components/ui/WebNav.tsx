@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import {useAuth} from '@clerk/clerk-expo'
 import { SignOutButton } from '@/app/components/sign-out-button'
+import { MaterialCommunityIcons } from 'expo-vector-icons';
 export function WebNav() {
     
   return (
@@ -15,7 +16,12 @@ export function WebNav() {
       </Link>
       <SignedOut>
         <Link href="/(auth)/sign-in">
-          <ThemedText>Sign in</ThemedText>
+          <Pressable>
+            <MaterialCommunityIcons name="home" size={24} color="#666" />
+            <ThemedText>Log in</ThemedText>
+
+           </Pressable>
+          
         </Link>
         <Link href="/(auth)/sign-up">
           <ThemedText>Sign up</ThemedText>
@@ -52,5 +58,12 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 16,
+  },
+  navItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  navLabel: {
+    fontSize: 12,
   },
 })
