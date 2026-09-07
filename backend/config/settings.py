@@ -41,12 +41,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bootstrap5',
-    'star_ratings',
-    'crispy_forms',
-    'crispy_bootstrap5',
-    'serpapi', 
-    'dotenv', 
+    # Legacy Django-template web UI packages (bootstrap5 / star_ratings / crispy)
+    # removed: the deployed backend serves the DRF API + admin only; the Expo web
+    # app is the frontend. Legacy templates/views under movie_csv/ remain on disk
+    # but are no longer mounted (see movie_csv/urls/__init__.py).
+    # 'serpapi' / 'dotenv' were never real Django apps — imported directly in code.
     'django_otp',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_email',  
@@ -145,9 +144,9 @@ STATICFILES_DIRS = [
 # LOGIN_REDIRECT_URL
 # LOGIN_URL = 'two_factor:login'
 # LOGIN_REDIRECT_URL = 'two_factor:profile' 
-LOGIN_REDIRECT_URL = "home"  
-LOGOUT_REDIRECT_URL = "home" 
-LOGIN_URL = "/accounts/login/"  
+LOGIN_REDIRECT_URL = "/admin/"
+LOGOUT_REDIRECT_URL = "/admin/"
+LOGIN_URL = "/admin/login/"
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -172,8 +171,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Directory where uploaded media is saved.
 MEDIA_URL = '/media/' # Public URL at the browser
-
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 # tutorial/settings.py
 REST_FRAMEWORK = {
