@@ -26,6 +26,7 @@ _SETTINGS_ENV_KEYS = {
     "DATABASE_URL",
     "CLERK_ISSUER",
     "CLERK_ISSUER_LEGACY",
+    "RENDER_EXTERNAL_HOSTNAME",
 }
 
 _PROD_ENV = {
@@ -150,6 +151,14 @@ class ProductionEnvTests(SimpleTestCase):
         self.assertEqual(
             _setting("settings.ALLOWED_HOSTS", _PROD_ENV), "['app.example.com']"
         )
+
+    def test_render_external_hostname_is_auto_added_to_allowed_hosts(self):
+        hosts = _setting(
+            "settings.ALLOWED_HOSTS",
+            {**_PROD_ENV, "RENDER_EXTERNAL_HOSTNAME": "svc.onrender.com"},
+        )
+        self.assertIn("svc.onrender.com", hosts)
+        self.assertIn("app.example.com", hosts)
 
     def test_secret_key_comes_from_env(self):
         self.assertEqual(
