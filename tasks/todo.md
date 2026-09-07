@@ -450,34 +450,33 @@ once Render has assigned `videoessay-web.onrender.com`.
 
 ---
 
-## Task 11: [operator] Provision backend + Postgres on Render, run migrations
+## Task 11: [operator] Provision backend + Postgres on Render, run migrations  ✅ DONE
 
-**Prereq DONE:** local `v2` rebased onto `origin/v2` (which had a stray
-`46c72cd Delete .env`) and **pushed** — `render.yaml` is now on GitHub `v2`.
-NOTE: the rebase rewrote local commit SHAs; SHA references elsewhere in this
-file (pre-Task-11) are stale — commit *messages* are the source of truth.
+**Backend live at:** `https://videoessay-backend.onrender.com`
 
-**Description:** Render dashboard → New → Blueprint → repo
-`hillarydunkley16/videoEssayLetterBoxd`, branch `v2` → Apply. The only
-`sync: false` var that must be filled now is **`CLERK_ISSUER` =
-`https://splendid-sunbird-55.clerk.accounts.dev`** (settings.py raises if it's
-unset when DEBUG is off). Leave `DJANGO_ALLOWED_HOSTS` / CSRF / CORS blank
-(settings auto-trusts `RENDER_EXTERNAL_HOSTNAME`); set `SERPAPI_KEY` to a fresh
-key (rotate). `DJANGO_SECRET_KEY` / `DJANGO_DEBUG` / `DATABASE_URL` are wired by
-the Blueprint. Then create a superuser via the service Shell.
+**Deploy failures fixed en route (3 pushes):**
+1. `origin/v2` had a stray `46c72cd Delete .env` → rebased local `v2` onto it +
+   pushed (rebase rewrote local SHAs; pre-Task-11 SHA refs in this file are stale).
+2. `collectstatic` in `buildCommand` imported settings → `RuntimeError` on unset
+   `CLERK_ISSUER` (sync:false vars absent at build). Moved `migrate` +
+   `collectstatic` into `startCommand`. Also Render ignored `runtime.txt` and
+   used Python 3.14 → pinned `PYTHON_VERSION="3.13.7"`.
+3. `CLERK_ISSUER` still blank at runtime (never set in dashboard) → made it a
+   literal `value:` in render.yaml (dev-instance issuer is a public URL).
 
 **Acceptance criteria:**
-- [ ] Blueprint apply creates 3 resources; backend build + deploy → "live"
-- [ ] Deploy logs show `Applying … OK` (migrate runs in startCommand)
-- [ ] `GET /admin/login/` loads with CSS over HTTPS; `Strict-Transport-Security` header present
-- [ ] `GET /api/VideoEssays/` → 200 JSON (DB reachable); `GET /api/logList/` → 403
-- [ ] Superuser created; can log into `/admin/`
+- [x] Build + deploy → "live" on Python 3.13.7
+- [x] `startCommand` migrate ran (API returns real Postgres data, not a 500)
+- [x] `GET /admin/login/` → Django login form; `/static/admin/css/base.css` → CSS body (WhiteNoise serving)
+- [x] `GET /api/VideoEssays/` → `200 {"count":0,"results":[]}` (DB reachable)
+- [x] `GET /api/logList/` → `403` (auth enforced)
+- [ ] Superuser created + `/admin/` login — **user to confirm** (Shell tab →
+      `python manage.py createsuperuser`)
 
-**Verification:** user runs the 3 `curl`s from the runbook (agent can't reach
-the network) OR checks in a browser; paste results back.
+**Verified via WebFetch** (curl is sandboxed for the agent).
 
-**Watch for:** `runtime.txt` `python-3.13.7` rejected by Render → bump to a
-supported patch + re-push; free Postgres lifetime; ~50s cold start.
+**Not yet checked:** `Strict-Transport-Security` header + non-wildcard CORS
+(WebFetch strips headers) — confirm at Task 14 against the live web app.
 
 **Dependencies:** 8, 9, 10
 
@@ -485,10 +484,10 @@ supported patch + re-push; free Postgres lifetime; ~50s cold start.
 
 ---
 
-### CHECKPOINT C — backend live
-- [ ] Backend reachable at `*.onrender.com`; `/admin/` styled
-- [ ] Auth: prod Clerk token → 200; no token → 401
-- [ ] Headers: HTTPS redirect + HSTS; `Access-Control-Allow-Origin` specific, not `*`
+### CHECKPOINT C — backend live  ✅ (headers + token-auth deferred to Task 14)
+- [x] Backend reachable at `https://videoessay-backend.onrender.com`; `/admin/` renders, CSS serves
+- [x] Auth: no token → 403 on `/api/logList/`. Clerk-token → 200 verified end-to-end at Task 14 (live web app)
+- [ ] Headers: HSTS + non-wildcard CORS — check at Task 14 (WebFetch can't see headers)
 
 ---
 
