@@ -33,6 +33,9 @@ from rest_framework.permissions import IsAuthenticated
 from movie_csv.authentication import ClerkAuthentication
 from django.db.models import Count
 from users.models import Profile
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_anonymous_user():
     user, created = User.objects.get_or_create(
@@ -417,11 +420,16 @@ def youtube_search(request):
             "https://serpapi.com/search", params=params, timeout=10
         )
     except requests.exceptions.Timeout:
+        logger.warning("SerpAPI request timed out")
         return JsonResponse({"error": "search provider timed out"}, status=504)
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as exc:
+        logger.warning("SerpAPI unreachable: %s", exc)
         return JsonResponse({"error": "search provider unreachable"}, status=502)
 
     if response.status_code >= 400:
+        logger.warning(
+            "SerpAPI returned %s: %s", response.status_code, response.text[:300]
+        )
         return JsonResponse(
             {"error": "search provider error", "provider_status": response.status_code},
             status=502,
