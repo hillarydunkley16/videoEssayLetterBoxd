@@ -390,23 +390,42 @@ def search(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def youtube_search(request):
-    print(request.user)
-    
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "invalid JSON body"}, status=400)
 
     search_query = data.get("q")
     if not search_query:
         return JsonResponse({"error": "q is required"}, status=400)
 
+    api_key = os.getenv("SERPAPI_KEY")
+    if not api_key:
+        return JsonResponse(
+            {"error": "YouTube search is not configured on the server"}, status=503
+        )
+
     params = {
         "engine": "youtube",
-        "search_query": search_query,  # ← IMPORTANT
+        "search_query": search_query,
         "location": data.get("location", "us"),
         "hl": data.get("language", "en"),
-        "api_key": os.getenv("SERPAPI_KEY"),
+        "api_key": api_key,
     }
+    try:
+        response = requests.get(
+            "https://serpapi.com/search", params=params, timeout=10
+        )
+    except requests.exceptions.Timeout:
+        return JsonResponse({"error": "search provider timed out"}, status=504)
+    except requests.exceptions.RequestException:
+        return JsonResponse({"error": "search provider unreachable"}, status=502)
 
-    response = requests.get("https://serpapi.com/search", params=params)
+    if response.status_code >= 400:
+        return JsonResponse(
+            {"error": "search provider error", "provider_status": response.status_code},
+            status=502,
+        )
     return JsonResponse(response.json())
 
 class VideoEssayCreateView(generics.CreateAPIView):

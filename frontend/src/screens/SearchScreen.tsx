@@ -3,7 +3,7 @@ import { SearchBar } from '@rneui/themed';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator  } from 'react-native';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { searchDataBase} from "../api/videos";
+import { searchDataBase, callSerpAPI } from "../api/videos";
 import { VideoEssay } from '../types/videoEssay';
 import { SearchResult } from '../types/youtubeResult';
 
@@ -26,16 +26,44 @@ const [videos, setVideos] = useState<VideoEssay[]>([]);
 const [loading, setLoading] = useState(false);
 const [database, setDatabase] = useState<SearchResult[]>([]);
 const {getToken} = useAuth(); 
-const updateSearch = async (search: string) => {
-    const token = await getToken();
-    setSearch(search);
-    setLoading(true);  // start loading
-    try {
-        const data = await searchDataBase(search, token!);
-        setDatabase(data);
-    } finally {
-        setLoading(false);  // stop loading
+const updateSearch = async (query: string) => {
+    setSearch(query);
+    if (!query.trim()) {
+        setDatabase([]);
+        return;
     }
+    setLoading(true);
+
+    // Existing video essays (needs auth) and a YouTube search run independently
+    // so one failing doesn't take out the other.
+    let dbResults: SearchResult[] = [];
+    try {
+        const token = await getToken();
+        if (token) {
+            dbResults = (await searchDataBase(query, token)) ?? [];
+        }
+    } catch (err) {
+        console.warn("database search failed", err);
+    }
+
+    let ytResults: SearchResult[] = [];
+    try {
+        ytResults = await callSerpAPI(query);
+    } catch (err) {
+        console.warn("youtube search failed", err);
+    }
+
+    const seenTitles = new Set(
+        dbResults.map((r) => (r.video.title ?? "").toLowerCase())
+    );
+    const merged = [
+        ...dbResults,
+        ...ytResults.filter(
+            (r) => !seenTitles.has((r.video.title ?? "").toLowerCase())
+        ),
+    ];
+    setDatabase(merged);
+    setLoading(false);
 };
 console.log("search: ", search);
 

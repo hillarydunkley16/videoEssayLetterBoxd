@@ -45,30 +45,27 @@ export const fetchYoutubeResults = async(query: string, location='us', language=
       console.log(location);
       console.log(language);
 
-      const response = await axios.post<YouTubeSearchResponse>(`${API_BASE_URL}/search/`, 
+      const response = await axios.post<YouTubeSearchResponse>(`${API_BASE_URL}/search/`,
           {
-              "q": query, 
-              "location": location, 
+              "q": query,
+              "location": location,
               "language": language,
           }
       );
-      console.log(response)
-      console.log(response.data.video_results)
-      const results: SearchResult[] = response.data.video_results.map((v) => ({
-        source : "api", 
+      const videoResults = response.data?.video_results ?? [];
+      const results: SearchResult[] = videoResults.map((v) => ({
+        source : "api",
         video: {
           youtube_url: v.link,
-          title: v.title, 
-          thumbnail: v.thumbnail.static,
-          channel_name: v.channel.name,
+          title: v.title,
+          thumbnail: v.thumbnail?.static,
+          channel_name: v.channel?.name,
           views: v.views,
-          channel_url: v.channel.link,
+          channel_url: v.channel?.link,
         },
       }))
-      console.log("fetchYoutubeResult results: ", results)
-      console.log("thumbnail: ", results[0].video.thumbnail)
       return results
-      
+
   } catch(error){
       console.error("Error fetching Youtube data: ", error);
       return [];
@@ -90,20 +87,19 @@ export const searchDataBase = async (
       toLowerCase().includes(query.toLowerCase()));
       // add each result in filtered to search result array and then return search result array 
       if (filtered.length > 0){
-        //add : SearchResult to force the results to be of type SearchResult instead of a string? 
+        //add : SearchResult to force the results to be of type SearchResult instead of a string?
         const results: SearchResult[] = filtered.map((v) => ({
-          source: "database", 
+          source: "database",
           video: v,
         }))
-        console.log("filtered results: ", filtered)
         return results
-      } 
-      
+      }
+      return []
+
   } catch(error){
       console.error("Error fetching Youtube Data: " , error);
       return []
   }
- 
 }
 export const callSerpAPI = async (query: string) => {
   

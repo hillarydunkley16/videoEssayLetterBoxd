@@ -528,29 +528,56 @@ no hardcoded hosts.
 
 ---
 
-## Task 13: [operator] Deploy frontend static site on Render
+## Task 13: [operator] Deploy frontend static site on Render  — IN PROGRESS
 
-**Description:** In the Render Blueprint, set the static site's env vars:
-`EXPO_PUBLIC_API_BASE_URL` = the backend Render URL, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
-= Task 10 prod key. Trigger a build. Then add the static-site origin to the
-backend's `CORS_ALLOWED_ORIGINS` / `DJANGO_CSRF_TRUSTED_ORIGINS` and to Clerk's
-allowed origins; redeploy backend.
+**Description:** Set `videoessay-web` env vars (`EXPO_PUBLIC_API_BASE_URL` =
+`https://videoessay-backend.onrender.com`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` =
+`pk_test_c3BsZW5kaWQ…`), deploy. Then add the web origin to backend
+`CORS_ALLOWED_ORIGINS` / `DJANGO_CSRF_TRUSTED_ORIGINS` + redeploy backend.
 
 **Acceptance criteria:**
-- [ ] Static site builds and serves at its `*.onrender.com` URL
-- [ ] Page loads; no CORS errors in browser console on API calls
-- [ ] Backend CORS/CSRF now list the frontend origin (not wildcard)
-- [ ] Clerk prod instance lists the frontend origin as allowed
-
-**Verification:**
-- [ ] Open the frontend URL in a fresh browser → app renders, no console CORS/network errors
-- [ ] `curl -sI -H "Origin: https://<frontend>.onrender.com" https://<backend>.onrender.com/api/videoessays/` → `Access-Control-Allow-Origin` echoes that specific origin
+- [x] Static site builds + serves at `https://videoessay-web.onrender.com`
+- [ ] Page loads; no CORS errors on API calls (backend CORS/CSRF env set)
+- [~] Clerk: dev instances allow all origins — no config needed/possible
+- [ ] `/search` returns results (see Task 13a — needed SerpAPI wiring + `SERPAPI_KEY`)
 
 **Dependencies:** 12
 
-**Files likely touched:** none (dashboard); possibly re-set backend env vars
-
 **Estimated scope:** S
+
+---
+
+## Task 13a: Wire SerpAPI YouTube search into the search screen  ✅ CODE DONE
+
+**Why:** `/search` `SearchScreen.tsx` only queried the local DB (`searchDataBase`)
+and never called SerpAPI — so with the fresh empty prod DB every search returned
+nothing. Discovered during Task 13.
+
+**Changes:**
+- `SearchScreen.tsx` `updateSearch`: runs `searchDataBase` (auth) **and**
+  `callSerpAPI` independently, merges (DB hits first, YouTube hits de-duped by
+  title); empty query clears results.
+- `src/api/videos.ts`: `fetchYoutubeResults` guards `response.data?.video_results`
+  + optional-chains `v.thumbnail?.static` / `v.channel?.` (SerpAPI error bodies no
+  longer crash the `.map`); removed crash-prone debug `console.log`s.
+  `searchDataBase` now `return []` on the no-match path (was `undefined` → also
+  cleared 1 tsc error, 20→19).
+- `backend/movie_csv/views/api.py` `youtube_search`: invalid JSON → 400 (was 500);
+  missing `SERPAPI_KEY` → 503 without calling SerpAPI; `requests.get(timeout=10)`;
+  `Timeout` → 504, `RequestException` → 502, provider 4xx/5xx → 502; dropped
+  `print(request.user)`.
+
+**Tests:** `movie_csv/test_youtube_search.py` (8) — validation, missing key,
+timeout/unreachable/4xx, happy-path passthrough + timeout-arg. Suite 61/61.
+`expo export --platform web` still succeeds.
+
+**Operator step still needed:** set **`SERPAPI_KEY`** on `videoessay-backend` (a
+fresh key from serpapi.com). Without it `/api/search/` returns 503 and the
+YouTube results stay empty — the frontend degrades cleanly (shows DB results /
+"no results") but can't fetch new videos.
+
+**Files:** `frontend/src/screens/SearchScreen.tsx`, `frontend/src/api/videos.ts`,
+`backend/movie_csv/views/api.py`, `backend/movie_csv/test_youtube_search.py`
 
 ---
 
