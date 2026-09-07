@@ -92,17 +92,31 @@ class logList(generics.ListCreateAPIView):
     # permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     
     def create(self, request, *args, **kwargs):
-        print("Request data:", request.data)
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
-            print("Serializer errors:", serializer.errors)
+            logger.warning("Log create validation failed: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Idempotency guard: a double-tapped "Save Log" posts the same payload
+        # more than once. If this user already has an identical log, return it
+        # instead of inserting a duplicate row.
+        v = serializer.validated_data
+        existing = Log.objects.filter(
+            owner=request.user,
+            essay=v["essay"],
+            date=v["date"],
+            rating=v["rating"],
+            review_text=v.get("review_text", ""),
+            rewatch=v.get("rewatch", False),
+        ).first()
+        if existing is not None:
+            return Response(self.get_serializer(existing).data, status=status.HTTP_200_OK)
+
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-    
+
     def perform_create(self, serializer):
-        print("User:", self.request.user)
         serializer.save(owner=self.request.user)
 
 # class logList(generics.ListCreateAPIView): 

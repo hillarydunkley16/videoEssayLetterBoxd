@@ -2,7 +2,7 @@ import { Link,  router , useLocalSearchParams} from 'expo-router';
 import { StyleSheet, Text, Button, View } from 'react-native';
 import CreateLogScreen from '@/src/screens/createLogScreen';
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen';
-import { useEffect, useState} from 'react';
+import { useEffect, useRef, useState} from 'react';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 // import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
@@ -13,6 +13,7 @@ import { useAuthPost } from '@/src/api/authPost';
 export default function logVideoModal() {
   const authFetch = useAuthPost();  // ← use this instead of imported authFetch
     const [loading, setLoading] = useState(false);
+    const submittingRef = useRef(false);
     const [ratingValue, setRatingValue] = useState(0);
     const [rewatch, setRewatch] = useState(false);
     const [reviewText, setReviewText] = useState("");
@@ -44,6 +45,10 @@ export default function logVideoModal() {
         router.replace('/');
       }
     const handleSubmit = async () => {
+        // Guard against double-taps creating duplicate logs.
+        if (submittingRef.current) return;
+        submittingRef.current = true;
+        setLoading(true);
         try{
             const payload = {
                 essay: essayId,
@@ -52,11 +57,14 @@ export default function logVideoModal() {
                 review_text: reviewText,
                 rewatch: rewatch
             }
-          
+
             await createLog(authFetch, payload);
             console.log("Log created successfully");
+            router.back();
         } catch (error) {
             console.error("Error creating log:", error);
+            submittingRef.current = false;
+            setLoading(false);
         }
     }
     return(
