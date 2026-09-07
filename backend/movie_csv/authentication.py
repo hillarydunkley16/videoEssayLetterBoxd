@@ -27,6 +27,7 @@ def refresh_jwks():
 class ClerkAuthentication(BaseAuthentication):
     def authenticate(self, request):
         auth = request.headers.get("Authorization")
+        print("AUTH HEADER: ", auth[:50] if auth else "NONE") 
         if not auth or not auth.startswith("Bearer "):
             return None
 

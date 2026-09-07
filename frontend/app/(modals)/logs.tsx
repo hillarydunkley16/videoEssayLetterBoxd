@@ -1,15 +1,14 @@
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams, useNavigation } from 'expo-router'
 import { StyleSheet, Text, TouchableOpacity } from 'react-native'
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen'
 import VideoInfoLogs from '@/src/screens/VideoInfoLogs'
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { useEffect } from 'react'
-import { useNavigation } from 'expo-router'
+import LogListScreen from '@/src/screens/LogListScreen'
 import { ReviewsTopNav } from '@/components/ui/reviewsTopNav'
 export default function Modal() {
-  const params = useLocalSearchParams<{ essayId?: string | string[] }>(); 
+  const params = useLocalSearchParams<{ essayId?: string | string[] }>()
   const navigation = useNavigation();
   const essayId =
     typeof params.essayId === 'string'
@@ -25,7 +24,6 @@ export default function Modal() {
       </ThemedView>
     )
   }
-  
 
   return (
     <ThemedView style={styles.largeContainer}>
@@ -35,20 +33,20 @@ export default function Modal() {
         color="blue"
         onPress={() => router.replace('/')}
       /> */}
-      <GetVideoEssayScreen id={essayId}
-      onTitleLoaded = {(title) => {
-            navigation.setOptions({
-                header: () => <ReviewsTopNav title = {`${title}`}/>
-            })
-        }} 
+      
+      <LogListScreen id = {essayId} 
+      onTitleLoaded={(title) => {
+        navigation.setOptions({
+          header: () => <ReviewsTopNav title={`Reviews of ${title}`} />
+        })
+      }}
       />
+      {/* <GetVideoEssayScreen id={essayId} />
       <VideoInfoLogs id={essayId} />
-       {/* <TouchableOpacity style = {styles.button} onPress={() => router.push(`/logs?essayId=${essayId}`)}>
-        <ThemedText style={styles.buttonText}>See Logs</ThemedText>
-        </TouchableOpacity> */}
-      <TouchableOpacity style = {styles.button} onPress={() => router.push(`/quickLog?essayId=${essayId}`)}>
-        <ThemedText style={styles.buttonText}>Log or Review</ThemedText>
-      </TouchableOpacity>
+       
+      <TouchableOpacity style = {styles.button} onPress={() => router.push(`/logVideoModal?essayId=${essayId}`)}>
+        <ThemedText style={styles.buttonText}>Add a review</ThemedText>
+      </TouchableOpacity> */}
     </ThemedView>
   )
 }

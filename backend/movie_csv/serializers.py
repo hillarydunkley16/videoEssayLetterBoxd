@@ -1,5 +1,5 @@
 from rest_framework import serializers 
-from .models import VideoEssay, Log, Like, Comment
+from .models import VideoEssay, Log, Like, Comment, Collection
 from django.contrib.auth.models import User
 from users.models import Profile
 #a serializer defines the columns/data that will be used in the views. 
@@ -98,6 +98,13 @@ class ProfileSerializer(serializers.ModelSerializer):
     user_logs = serializers.SerializerMethodField()
     followers = serializers.SerializerMethodField()
     following = serializers.SerializerMethodField()
+    watchList = serializers.SerializerMethodField()
+    def get_watchList(self, obj): 
+        watchList, created = Collection.objects.get_or_create(
+        name=f"{obj.user.username}'s Watchlist", 
+        owner=obj.user
+        )
+        return CollectionSerializer(watchList).data
     def get_user_logs(self, obj): 
        
         logs = Log.objects.filter(owner = obj.user)
@@ -108,7 +115,21 @@ class ProfileSerializer(serializers.ModelSerializer):
     def get_following(self, obj):
         following = obj.following.all()
         return UserSerializer(following, many=True, context=self.context).data
-
+    
     class Meta: 
         model = Profile
-        fields = ("user", "imageUrl", "user_logs", "followers", "following")
+        fields = ("user", "imageUrl", "user_logs", "followers", "following", "watchList")
+
+class CollectionSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source="owner.username")
+    essays = VideoEssaySerializer(many=True, read_only=True)
+    class Meta: 
+        model = Collection
+        fields = (
+            "id",
+            "public_id",
+            "name",
+            "owner",
+            "essays"
+        )
+

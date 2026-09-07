@@ -2,6 +2,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import axios from "axios";
 import { SearchResult } from "../types/youtubeResult";
 import { getAccessToken } from "../helpers/jwt";
+import { API_HOST } from "./client";
 // import { getAccessToken } from "../helpers/jwt";
 export function useAuthDelete() {
   const { getToken } = useAuth();
@@ -15,7 +16,7 @@ export function useAuthDelete() {
     console.log("CLERK TOKEN:", token);
     //need to define method as POST or GET etc. 
     return axios({
-      url: `http://127.0.0.1:8000${url}`,
+      url: `${API_HOST}${url}`,
       method: 'DELETE',
       data,
       headers: {

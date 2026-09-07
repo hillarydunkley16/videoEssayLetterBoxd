@@ -26,7 +26,18 @@ urlpatterns = [
     path("logList/<uuid:public_id>/comment/", CommentOnPost.as_view()),
     path("users/updatePic", updateProfileImage.as_view()), 
     path("users/profile", ProfileDetail.as_view()), 
-    path("logList/<uuid:public_id>/delete", DeleteLog.as_view())
+    path("logList/<uuid:public_id>/delete", DeleteLog.as_view()),
+    path("users/profile/<int:user_id>/", ProfileDetailById.as_view()), 
+    path("collections/", CollectionList.as_view(), name="collection-list"),
+    path("collections/<uuid:public_id>/", CollectionDetail.as_view(), name="collection-detail"),
+    path("collections/<uuid:collection_public_id>/add/<uuid:videoessay_public_id>/", AddVideoEssayToCollection.as_view(), name="update-collection"),
+    path("collections/user/", CollectionByUser.as_view(), name="collections-by-user"),
+    # path("collections/<uuid:public_id>/", CollectionDetail.as_view(), name="collection-detail"),
+    path("collections/<uuid:collection_public_id>/remove/<uuid:videoessay_public_id>/", RemoveEssayFromCollection.as_view(), name="remove-from-collection"),
+    path("collections/<uuid:collection_public_id>/remove/", RemoveCollection.as_view(), name="delete-collection"),
+    # path("collections/")
+    # path("lists/", ListCreateView.as_view(), name="lists"),
+    # path("lists/<uuid:public_id>/", ListDetailView.as_view(), name="list-detail"),
 ]
 
 if settings.DEBUG:

@@ -7,7 +7,7 @@ export interface Log {
     // "id": number,
     id: number;
     public_id: string; 
-    date: string;
+    date: Date;
     essay: string;
     essay_details: VideoEssay
     review_text: string | null;

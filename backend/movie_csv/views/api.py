@@ -6,8 +6,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 # from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.generics import DestroyAPIView
-from ..models import VideoEssay, Log, Like, Comment
-from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer
+from ..models import VideoEssay, Log, Like, Comment, Collection
+from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer, CollectionSerializer
 from rest_framework import generics, permissions
 from ..permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
@@ -78,7 +78,7 @@ class  VideoEssays(generics.ListCreateAPIView):
         serializer = VideoEssaySerializer(videoEssay)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-class logList (generics.ListCreateAPIView): 
+class logList(generics.ListCreateAPIView): 
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [AllowAny]
     queryset = Log.objects.all()
@@ -87,13 +87,41 @@ class logList (generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     print(permission_classes)
     # permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    
+    def create(self, request, *args, **kwargs):
+        print("Request data:", request.data)
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print("Serializer errors:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
     def perform_create(self, serializer):
-        
-        print("Request data:", self.request.data)
         print("User:", self.request.user)
-        
         serializer.save(owner=self.request.user)
-   
+
+# class logList(generics.ListCreateAPIView): 
+#     queryset = Log.objects.all()
+#     serializer_class = LogSerializer
+#     authentication_classes = [ClerkAuthentication]
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         return Log.objects.filter(owner=self.request.user)
+
+#     def create(self, request, *args, **kwargs):
+#         print("REQUEST DATA: ", request.data)  # add this
+#         serializer = self.get_serializer(data=request.data)
+#         if not serializer.is_valid():
+#             print("SERIALIZER ERRORS: ", serializer.errors)  # add this
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         self.perform_create(serializer)
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+#     def perform_create(self, serializer):
+#         serializer.save(owner=self.request.user)
 class userLogs(generics.ListCreateAPIView): 
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
@@ -127,14 +155,7 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
         # print("USERINFO USERID: ", userInfo.user_id)
         print(log.owner_id)
         print(log.likes)
-        # print(LogSerializer(log).data.likes)
-        # print("number of likes: ", log.likes.count())
-        # print("number of comments: ", log.comments.count())
-        # print("user profile image: ",log.__dict__)
-        # print("USER INFO: ",ProfileSerializer(userInfo).data )
-        # Thelog = LogSerializer(log).data
-        # print(Thelog)
-        # print("CORROBORATE FROM LOGS: ", log.owner_id)
+        
         return Response({
             "log": LogSerializer(log).data,
         })
@@ -142,16 +163,6 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
 class logFormView():
     serializerClass = LogSerializer
     def post(self, request, *args, **kwargs):
-        #  videoEssay = VideoEssay.objects.create(
-        #     title =data["title"],
-        #     youtube_url=data["youtube_url"],
-        #     thumbnail=data["thumbnail"],
-        #     views=data["views"],
-        #     channel_name=data["channel_name"],
-        #     channel_url=data["channel_url"],
-        #     owner = request.user 
-        # )
-
         data = request.data
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception = True)
@@ -188,12 +199,30 @@ class ProfileDetail(generics.RetrieveAPIView):
             
             serializer = ProfileSerializer(profile)
             print("SERIALIZER!!: ", ProfileSerializer(profile))
+            print("PROFILE DATA: ", serializer.data)
             print("FOLLOWERS: ", profile.followers.count())
             print("FOLLOWING: ", profile.following.count())
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Profile.DoesNotExist:
             return Response({"message": "Profile not found"}, status=404)
-        
+
+class ProfileDetailById(generics.RetrieveAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    lookup_field = "user_id"
+    def get(self, request, user_id):
+        try:
+            print("USER ID FROM URL: ", user_id)
+            profile = Profile.objects.get(user_id=user_id)
+            serializer = ProfileSerializer(profile)
+            print("SERIALIZER!!: ", ProfileSerializer(profile))
+            print("FOLLOWERS: ", profile.followers.count())
+            print("FOLLOWING: ", profile.following.count())
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Profile.DoesNotExist:
+            return Response({"message": "Profile not found"}, status=404)
 class Home(APIView):
     # authentication_classes = [JWTAuthentication]
     permission_classes = [AllowAny]
@@ -202,7 +231,7 @@ class Home(APIView):
         print(request.user)
         content = {'message': 'Hello, World!'}
         return Response(content)
-    
+
 class VideoInfo(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     queryset = VideoEssay.objects.all()
@@ -218,7 +247,10 @@ class VideoInfo(generics.RetrieveAPIView):
             "logs": LogSerializer(logs, many=True).data,
             "log_count": logs.count(),
         })
-
+class VideoEssayList(generics.ListAPIView):
+    queryset = VideoEssay.objects.all()
+    serializer_class = VideoEssaySerializer
+    permission_classes = [AllowAny]
 
 class LoginView(GenericAPIView):
     serializer_class = UserSerializer
@@ -396,3 +428,93 @@ class VideoEssayCreateView(generics.CreateAPIView):
         # Verify it's in the database
         exists = VideoEssay.objects.filter(public_id=instance.public_id).exists()
         print("EXISTS IN DATABASE:", exists)
+class VideoEssaySearch(APIView): 
+    serializer_class = VideoEssaySerializer
+    def get_queryset(self, request, query):
+        VideoEssay.objects.filter(title__icontains = query)
+
+class CollectionList(generics.ListCreateAPIView):
+    serializer_class = CollectionSerializer
+    # authentication_classes = [ClerkAuthentication]
+    # permission_classes = [IsAuthenticated]
+    queryset = Collection.objects.all()
+    permission_classes = [AllowAny]
+    def get_queryset(self):
+        return Collection.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+class CollectionDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CollectionSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    lookup_field = "public_id"
+
+    def get_queryset(self):
+        return Collection.objects.all()
+    
+class CollectionByUser(generics.ListAPIView):
+    serializer_class = CollectionSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Collection.objects.filter(owner=self.request.user)
+
+    
+class AddVideoEssayToCollection(APIView): 
+    serializer_class = CollectionSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    lookup_field = "public_id"
+    # need publicID for collection and separate publicID for videoEssay 
+    
+    def post(self, request, collection_public_id, videoessay_public_id, *args, **kwargs):
+        try: 
+            collection = Collection.objects.get(owner=self.request.user, public_id=collection_public_id)
+        except: 
+            return Response({"message": "Collection not found"}, status=404)
+        try: 
+            videoEssay = VideoEssay.objects.get(public_id = videoessay_public_id)
+        except: 
+            return Response({"message": "VideoEssay not found"}, status=404)
+        print("COLLECTION ESSAYS BEFORE ADDING: ", collection.essays.all())
+        print("ADDING VIDEO ESSAY: ", videoEssay)
+        collection.essays.add(videoEssay)  
+        print("COLLECTION ESSAYS AFTER ADDING: ", collection.essays.all())
+        return Response({"message": "VideoEssay added to collection"}, status=200) 
+
+class RemoveEssayFromCollection(APIView): 
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request,  collection_public_id, videoessay_public_id, *args, **kwargs): 
+        try: 
+            collection = Collection.objects.get(owner=self.request.user, public_id=collection_public_id)
+        except: 
+            return Response({"message": "Collection not found"}, status=404)
+        try: 
+            videoEssay = VideoEssay.objects.get(public_id = videoessay_public_id)
+        except: 
+            return Response({"message": "VideoEssay not found"}, status=404)
+        print("COLLECTION ESSAYS BEFORE REMOVING: ", collection.essays.all())
+        print("REMOVING VIDEO ESSAY: ", videoEssay)
+        collection.essays.remove(videoEssay)  
+        print("COLLECTION ESSAYS AFTER REMOVING: ", collection.essays.all())
+        return Response({"message": "VideoEssay removed from collection"}, status=200)
+
+class RemoveCollection(APIView): 
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, collection_public_id): 
+        try: 
+            collection = Collection.objects.get(owner = self.request.user, public_id = collection_public_id)
+        except: 
+            return Response({"message": "Collection not found"}, status = 404)
+        if "Watchlist" in collection.name: 
+            return Response({"message": "Watchlist Collection cannot be Deleted"}, status = 403)
+        else: 
+            collection.delete()
+            return Response({"message": "Collection deleted"}, status=200)

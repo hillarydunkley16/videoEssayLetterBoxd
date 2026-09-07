@@ -37,7 +37,7 @@ class Log(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name = "logs", on_delete= models.CASCADE)
     review_text = models.CharField(max_length=200)
     rating = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(10)]
+        validators=[MinValueValidator(0), MaxValueValidator(5)]
     )
     rewatch = models.BooleanField(default=False)
    
@@ -59,4 +59,12 @@ class Comment(models.Model):
     date = models.DateField(auto_now_add=True)
     log = models.ForeignKey("Log", related_name= "comments", on_delete= models.CASCADE)
     text = models.CharField(max_length = 200, blank = True, unique = False, editable=True, null = True)
-    
+
+class Collection(models.Model): 
+    id = models.BigAutoField(primary_key=True)
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True,)
+    name = models.CharField(max_length=255)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="lists", on_delete= models.CASCADE)
+    essays = models.ManyToManyField("VideoEssay", related_name="lists")
+    is_watchlist = models.BooleanField(default = False)
+

@@ -21,7 +21,9 @@ export default function Page() {
   <SafeAreaProvider>
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1, width: '100%' }}>
+        
         {/* <ThemedText style={styles.text}>Welcome!</ThemedText> */}
+        {/* this should be a slick slideshow evetually */}
         <SignedOut>
           <ThemedText>USER IS UNDEFINED/ NOT SIGNED IN</ThemedText>
         </SignedOut>

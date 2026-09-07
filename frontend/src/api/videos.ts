@@ -1,4 +1,4 @@
-import { authFetch } from "./client";
+import { authFetch, API_BASE_URL } from "./client";
 import { VideoEssay, VideoEssayData } from "../types/videoEssay";
 import { SearchResult, YouTubeSearchResponse, YouTubeVideoResult} from "../types/youtubeResult"; 
 import { PaginatedResponse } from "../types/api";
@@ -27,6 +27,14 @@ export async function getAVideoEssay(publicId: string, token: string): Promise<V
     console.log("get a video essay function called!");
     return authFetch(`/VideoEssays/${publicId}/`, {}, token)
 }
+
+// export async function getLogData(publicId: string, token: string): Promise<VideoEssayData> {
+//     console.log("id received: ", publicId); 
+//     console.log("get a video essay function called!");
+//     const response =  authFetch(`/VideoEssays/${publicId}`, {}, token)
+//     console.log("response:", response);
+//    return response;
+// }
 /** 
  * fetch youtube results
  * does axios post for search
@@ -37,7 +45,7 @@ export const fetchYoutubeResults = async(query: string, location='us', language=
       console.log(location);
       console.log(language);
 
-      const response = await axios.post<YouTubeSearchResponse>('http://127.0.0.1:8000/api/search/', 
+      const response = await axios.post<YouTubeSearchResponse>(`${API_BASE_URL}/search/`, 
           {
               "q": query, 
               "location": location, 
@@ -70,6 +78,7 @@ export const fetchYoutubeResults = async(query: string, location='us', language=
 export const searchDataBase = async (
   query: string, token: string
 ): Promise<SearchResult[]>  => {
+  // this needs to be done on the backend i think 
   try {
       const response = await fetchVideoEssays(token!);
       const lastID = response.results[response.results.length-1]?.public_id;
@@ -88,18 +97,22 @@ export const searchDataBase = async (
         }))
         console.log("filtered results: ", filtered)
         return results
-      } else {
-        // const lastID = Number(response.results[response.count-1].id);
-        const apiCall =  await fetchYoutubeResults(query)
-        return apiCall;
-      }
-
+      } 
+      
   } catch(error){
       console.error("Error fetching Youtube Data: " , error);
       return []
   }
  
 }
+export const callSerpAPI = async (query: string) => {
+  
+  // const lastID = Number(response.results[response.count-1].id);
+  const apiCall =  await fetchYoutubeResults(query)
+  return apiCall;
+      
+}
+// as user is typing search existing database. if no video is found require user to submit query to serpapi 
 //this function will call django api /api/fetch with the params from YouTubeResult
 export const useVideoApi = () => {
   const authFetch = useAuthPost();

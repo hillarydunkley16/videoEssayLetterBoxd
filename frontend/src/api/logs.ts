@@ -47,7 +47,7 @@ export async function deleteLog(id: string, token: string, authFetch: ReturnType
 }
 export type CreateLogPayload = {
     essay: String; 
-    date: String;
+    date: string;
     rating: number; 
     review_text?: string;
     rewatch?: boolean;

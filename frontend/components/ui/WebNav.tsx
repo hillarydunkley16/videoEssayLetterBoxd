@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import {useAuth} from '@clerk/clerk-expo'
 import { SignOutButton } from '@/app/components/sign-out-button'
-import { MaterialCommunityIcons } from 'expo-vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 export function WebNav() {
     
   return (

@@ -24,6 +24,11 @@ export async function fetchProfile( token: string): Promise<Profile>{
     const response = await authFetch(`/users/profile`, {}, token)
     return response
 }
+export async function fetchAProfileById(id: number, token: string): Promise<Profile>{
+    console.log("fetch a profile by id: ", id); 
+    const response = await authFetch(`/users/profile/${id}/`, {}, token)
+    return response
+}
 export async function updateProfileImageAPI( imageUrl: string,  authFetch: ReturnType<typeof useAuthUpdate>){
     console.log("UPDATE user PROFILE IMAGE");
     const response = await authFetch(`/api/users/updatePic`, {imageUrl});

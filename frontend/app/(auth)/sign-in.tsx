@@ -14,7 +14,7 @@ export default function Page() {
   const [password, setPassword] = React.useState('')
   const [code, setCode] = React.useState('')
   const [showEmailCode, setShowEmailCode] = React.useState(false)
-  
+
   // Handle the submission of the sign-in form
   const onSignInPress = React.useCallback(async () => {
     if (!isLoaded) return
@@ -64,11 +64,17 @@ export default function Page() {
         
         console.error(JSON.stringify(signInAttempt, null, 2))
       }
-    } catch (err) {
+    } catch (err: any) {
       // See https://clerk.com/docs/guides/development/custom-flows/error-handling
       // for more info on error handling
-      console.error(JSON.stringify(err, null, 2));
-      setErrors(JSON.stringify(err, null, 2));
+      if (err.errors && Array.isArray(err.errors)) {
+        console.log('Errors array:', err.errors)
+        setErrors(err.errors.map((e: any) => e.message).join('\n'))
+      }else{
+        setErrors(err.message || 'An unexpected error occurred')
+      }
+      // console.error(JSON.stringify(err, null, 2));
+      // setErrors(JSON.stringify(err, null, 2));
     }
   }, [isLoaded, signIn, setActive, router, emailAddress, password])
 
@@ -137,6 +143,11 @@ export default function Page() {
       <ThemedText type="title" style={styles.title}>
         Sign in
       </ThemedText>
+      {errors ? (
+        <View style = {styles.errorContainer}>
+          <ThemedText style = {styles.errorText}>{errors}</ThemedText>
+        </View>
+      ): null}
       <ThemedText style={styles.label}>Email address</ThemedText>
       <TextInput
         style={styles.input}
@@ -144,7 +155,10 @@ export default function Page() {
         value={emailAddress}
         placeholder="Enter email"
         placeholderTextColor="#666666"
-        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
+        onChangeText={(text) => {
+          setEmailAddress(text)
+          setErrors('')  // Clear error when user types
+        }}
         keyboardType="email-address"
       />
       <ThemedText style={styles.label}>Password</ThemedText>
@@ -229,5 +243,16 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 12,
     alignItems: 'center',
+  },
+   errorContainer: {
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    textAlign: 'center',
   },
 })

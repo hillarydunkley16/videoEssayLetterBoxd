@@ -5,12 +5,9 @@ import VideoInfoLogs from '@/src/screens/VideoInfoLogs'
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { useEffect } from 'react'
-import { useNavigation } from 'expo-router'
-import { ReviewsTopNav } from '@/components/ui/reviewsTopNav'
+
 export default function Modal() {
-  const params = useLocalSearchParams<{ essayId?: string | string[] }>(); 
-  const navigation = useNavigation();
+  const params = useLocalSearchParams<{ essayId?: string | string[] }>()
   const essayId =
     typeof params.essayId === 'string'
       ? params.essayId
@@ -25,7 +22,6 @@ export default function Modal() {
       </ThemedView>
     )
   }
-  
 
   return (
     <ThemedView style={styles.largeContainer}>
@@ -35,19 +31,11 @@ export default function Modal() {
         color="blue"
         onPress={() => router.replace('/')}
       /> */}
-      <GetVideoEssayScreen id={essayId}
-      onTitleLoaded = {(title) => {
-            navigation.setOptions({
-                header: () => <ReviewsTopNav title = {`${title}`}/>
-            })
-        }} 
-      />
+
       <VideoInfoLogs id={essayId} />
-       {/* <TouchableOpacity style = {styles.button} onPress={() => router.push(`/logs?essayId=${essayId}`)}>
-        <ThemedText style={styles.buttonText}>See Logs</ThemedText>
-        </TouchableOpacity> */}
-      <TouchableOpacity style = {styles.button} onPress={() => router.push(`/quickLog?essayId=${essayId}`)}>
-        <ThemedText style={styles.buttonText}>Log or Review</ThemedText>
+
+      <TouchableOpacity onPress={() => router.push(`/quickLog?essayId=${essayId}`)}>
+        <ThemedText>!!Add a review!!</ThemedText>
       </TouchableOpacity>
     </ThemedView>
   )
@@ -65,20 +53,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  button: {
-  
-    fontSize: 16,
-    fontWeight: '600',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: '#7accff',
-    marginTop: 20,
-  },
-  buttonText:{
-    // color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  }
 })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, FlatList, Image, Pressable, TouchableOpacity, TextInput, Button, } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, Image, Pressable, TouchableOpacity, TextInput, Button, } from "react-native";
 import { fetchUsers } from "../api/users";
 import { User} from "../types/user";
 import {Link} from "@react-navigation/native";
@@ -29,7 +29,7 @@ export default function UserListScreen() {
   }, []);
 
   if (loading) {
-    return <Text>Loading…</Text>;
+    return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
 

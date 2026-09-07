@@ -2,20 +2,16 @@ import { useAuth } from "@clerk/clerk-expo";
 import axios from "axios";
 import { SearchResult } from "../types/youtubeResult";
 import { getAccessToken } from "../helpers/jwt";
+import { API_HOST } from "./client";
 // import { getAccessToken } from "../helpers/jwt";
 export function useAuthPost() {
   const { getToken } = useAuth();
 
-  return async (url: string, data?: any, options: any = {}) => {
+  return async (url: string, data?: any) => {
     const token = await getToken();
-    console.log("token: ", token)
-    // const access = await getAccessToken(); 
-    // console.log("access: ", access);
-    // console.log("ACCESS token: ", access);
-    console.log("CLERK TOKEN:", token);
-    //need to define method as POST or GET etc. 
+    console.log("TOKEN IN useAuthPost:", token ? "exists" : "NULL");  // add this
     return axios({
-      url: `http://127.0.0.1:8000${url}`,
+      url: `${API_HOST}${url}`,
       method: 'POST',
       data,
       headers: {
@@ -25,4 +21,26 @@ export function useAuthPost() {
     });
   };
 }
+// export function useAuthPost() {
+//   const { getToken } = useAuth();
+
+//   return async (url: string, data?: any, options: any = {}) => {
+//     const token = await getToken();
+//     console.log("token: ", token)
+//     // const access = await getAccessToken(); 
+//     // console.log("access: ", access);
+//     // console.log("ACCESS token: ", access);
+//     console.log("CLERK TOKEN:", token);
+//     //need to define method as POST or GET etc. 
+//     return axios({
+//       url: `http://127.0.0.1:8000${url}`,
+//       method: 'POST',
+//       data,
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//         "Content-Type": "application/json",
+//       },
+//     });
+//   };
+// }
 

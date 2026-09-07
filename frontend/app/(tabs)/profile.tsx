@@ -19,13 +19,18 @@ import LogListScreen from '@/src/screens/LogListScreen'
 import { useAuthUpdate } from '@/src/api/authUpdate'
 import { fetchProfile } from '@/src/api/users'
 import { useAuthDelete } from '@/src/api/authDelete'
+import { Profile } from '@/src/types/profile'
+import { ProfileTopNav } from '@/components/ui/ProfileTopNav'
+import { useNavigation } from 'expo-router'
+
 export default function Page() {
   const { user } = useUser()
+
   // const [profileImage, setProfileImage] = useState<String>();
   // If your user isn't appearing as signed in,
   // it's possible they have session tasks to complete.
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
-
+  const navigation = useNavigation();
   const { session } = useSession()
   const authDelete = useAuthDelete();
   console.log(session?.createdAt)
@@ -38,16 +43,21 @@ export default function Page() {
   const [userLogs, setUserLogs] = useState<Log[]>([]);
   const [numLogs, setNumLogs] = useState(0); 
   const [numEssays, setNumEssays] = useState(0);
+  const [profile, setProfile] = useState<Profile>();
     // Runs once when the screen loads
     useEffect(() => {
         async function loadLogs(){
         try {
+          navigation.setOptions({
+            header: () => <ProfileTopNav title = {`${user?.username}`}/>
+          })
           const token = await getToken();
           console.log("user's username", user?.username)
           const data = await fetchUserLogs(token!);
           // console.log(user?.username)
           const profile = await fetchProfile(token!);
-          // console.log("PROFILE RESULTS: ", profile)
+          setProfile(profile);
+          
           // console.log("PROFILE. id : ", data)
           // console.log("USER LOGS: ", profile.user_logs);
           const uniqueCount = new Set(profile.user_logs.map(item => item.essay)).size;
@@ -104,17 +114,19 @@ async function handleDelete(id: string) {
 }
 
   return (
-    <SafeAreaProvider>
-      <ThemedView>
-      <SafeAreaView style = {styles.container}>
-      <ThemedText>Welcome!</ThemedText>
-      <SignedIn>
-        <ThemedText>Hello {user?.username}</ThemedText>
-        <ThemedText>{user?.imageUrl}</ThemedText>
-        <TouchableOpacity onPress={updateProfileImage}>
-            <Image source={{ uri: user?.imageUrl }} style={{ width: 100, height: 100, borderRadius: 50 }} />
+     
+      <ThemedView style = {styles.container}>
+      <Image source={{ uri: user?.imageUrl }} style={{ width: 100, height: 100, borderRadius: 50, alignSelf: "center"}} />
+     
+      {/* <ThemedText>Welcome!</ThemedText>
+    
+        <ThemedText>Hello {profile?.user?.username}</ThemedText> */}
+        {/* <ThemedText>Hello {user?.username}</ThemedText> */}
+        {/* <ThemedText>{user?.imageUrl}</ThemedText> */}
+        {/* <TouchableOpacity onPress={updateProfileImage}>
+           
             <ThemedText>Change Photo</ThemedText>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <ThemedText>{numLogs} Logs</ThemedText>
         <ThemedText>{numEssays} Essays</ThemedText>
         <ThemedText>Your Logs</ThemedText>
@@ -148,11 +160,10 @@ async function handleDelete(id: string) {
         </ThemedView>
       )}
     />
-      </SignedIn>
-      </SafeAreaView>   
+       <SignOutButton/>
       </ThemedView>
       
-    </SafeAreaProvider>
+   
     
   )
 }

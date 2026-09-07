@@ -11,22 +11,18 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 function RootLayoutNav() {
   const { isLoaded } = useAuth();
-  if (!isLoaded) return (
-    <View style={styles.container}>
-      <Text>Loading...</Text>
-    </View>
-  );
+  if (!isLoaded) return;
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
     <GestureHandlerRootView style={styles.container}>
             {Platform.OS === 'web' && <WebNav />}
-          <View style={[styles.content, Platform.OS !== 'web' && { paddingBottom: 56 }]}>
+          <View style={styles.content}>
             <Stack screenOptions={{ headerShown: false }} />
           </View>
           {Platform.OS !== 'web' && <MobileNav />}    
     </GestureHandlerRootView>
-    </SafeAreaView>
+   </SafeAreaView>
   )
 }
 
