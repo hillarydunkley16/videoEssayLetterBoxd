@@ -518,9 +518,9 @@ no hardcoded hosts.
   `src/screens/logInfo.tsx`
 - lint errors: 31× `react-hooks/rules-of-hooks` (likely conditional hook calls —
   possible runtime crashes on those screens), 1× `react/no-unescaped-entities`
-- **SPEC Boundary says "Always run tsc/lint before deploying frontend". This is a
-  deviation — surfaced to the user for a decision before Task 13 (fix now vs.
-  proceed on the passing `expo export` gate and fix in Task 14).**
+- **SPEC Boundary says "Always run tsc/lint before deploying frontend". Knowing
+  deviation — user chose (AskUserQuestion) to proceed to Task 13 on the passing
+  `expo export` gate and fix tsc + lint in Task 14.**
 
 **Dependencies:** 11
 
@@ -554,29 +554,41 @@ allowed origins; redeploy backend.
 
 ---
 
-## Task 14: End-to-end acceptance against deployed URLs
+## Task 14: End-to-end acceptance against deployed URLs + frontend lint/type cleanup
 
 **Description:** Run the manual acceptance checklist from `SPEC.md` Testing
 Strategy against the live URLs. Fix blockers found (scope permitting) or log them.
+Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
 
 **Acceptance criteria:**
-- [ ] Fresh sign-up via Clerk **prod** completes on the deployed web app
+- [ ] Fresh sign-up via Clerk (dev instance) completes on the deployed web app
 - [ ] Search → log → review → view-by-video flow works
 - [ ] Profile shows the new log; list/watchlist add works
 - [ ] Reload / new session persists data (Postgres confirmed)
-- [ ] Unauthenticated protected endpoint → 401; valid token → 200
-- [ ] No `Access-Control-Allow-Origin: *`; HTTPS redirect + HSTS present
+- [ ] Unauthenticated protected endpoint → 403/401; valid token → 200
+- [ ] Deployed backend headers: no `Access-Control-Allow-Origin: *`; HTTPS
+      redirect + `Strict-Transport-Security` present (deferred from Checkpoint C)
 - [ ] `error.md` `'(home)'` navigator issue does not break routing on the built site
+
+**Frontend cleanup (deferred from Task 12):**
+- [ ] `npx expo lint` → 0 errors (fix 31× `react-hooks/rules-of-hooks` +
+      1× `react/no-unescaped-entities`; warnings may remain)
+- [ ] `npx tsc --noEmit` → 0 errors (9 files: `popularLists.tsx`,
+      `collectionDetail.tsx`, `otherProfile.tsx`, `profile.tsx`, `auth.ts`,
+      `videos.ts`, `jwt.ts`, `collectionInfo.tsx`, `logInfo.tsx`)
+- [ ] `~50 debug print()` in `backend/movie_csv/views/api.py` removed (from Task 7)
+- [ ] `Log` / `Collection` models get `Meta.ordering` (DRF pagination warning, Task 6/8)
+- [ ] Decide: `VideoEssays` + `collections/` list endpoints `AllowAny` — keep for
+      beta or require auth? (flagged Task 7/8)
 
 **Verification:**
 - [ ] Each `SPEC.md` Success Criteria checkbox ticked
-- [ ] Screenshot / note of the completed flow saved
+- [ ] `npx expo export --platform web` still succeeds after the fixes
+- [ ] Backend `manage.py test` still green after api.py/model changes
 
 **Dependencies:** 11, 13
 
-**Files likely touched:** none (or small bug fixes if found)
-
-**Estimated scope:** M
+**Estimated scope:** L (was M — absorbed the Task 12 cleanup)
 
 ---
 
