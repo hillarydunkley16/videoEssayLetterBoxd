@@ -28,11 +28,17 @@ submission, staging environment, full automated test coverage, CI gating,
 load/scale work, advanced observability/alerting. (Tracked in Open Questions for a
 later public launch.)
 
+**Removed from the deployment (Task 1b):** the legacy Django-template web UI
+(`movie_csv/templates/`, `views/web.py`, `users/` template views, and the
+`bootstrap5` / `star_ratings` / `crispy` packages). It's superseded by the Expo
+web app and its `django-bootstrap-v5` dependency is incompatible with Python 3.13
++ Django 5.2. The backend now serves the DRF API (`/api/`) + Django admin only.
+
 ## Tech Stack
 
 | Layer | Choice |
 |---|---|
-| Backend framework | Django 4.2.26, Django REST Framework 3.17.1 |
+| Backend framework | Django 5.2.10 LTS, Django REST Framework 3.16.0 |
 | Backend runtime | Python 3.13, gunicorn 26.0.0 |
 | Static file serving | WhiteNoise 6.12.0 (admin + DRF browsable API only) |
 | DB (prod) | Render PostgreSQL via `dj-database-url` 3.1.2 + `psycopg[binary]` 3.3.4 |

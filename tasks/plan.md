@@ -39,8 +39,9 @@ Tasks recorded in `tasks/todo.md`. Order is dependency-driven; do not reorder.
 | # | Title | Type | Depends on |
 |---|---|---|---|
 | 1 | Commit current `v2` working tree | git | None |
+| 1b | Create `backend/.venv` + rebuild `requirements.txt` on Django 5.2 LTS | backend | 1 |
 | 2 | Repo hygiene: untrack secrets/artifacts, fix `.gitignore` | git/config | 1 |
-| 3 | Commit migrations 0006–0008, verify no model drift | backend | 1 |
+| 3 | Commit migrations 0006–0008, verify no model drift | backend | 1b |
 | 4 | Delete root-level pre-restructure cruft | cleanup | 2 |
 | 5 | Env-driven `settings.py`: debug/secret/hosts/CORS/security | backend | 3 |
 | 6 | Database via `dj-database-url` + WhiteNoise static pipeline | backend | 5 |
@@ -91,6 +92,7 @@ Tasks recorded in `tasks/todo.md`. Order is dependency-driven; do not reorder.
 | `expo export` web build hits the `error.md` `'(home)'` navigator bug | Med | Task 12 runs the export; Task 14 manually exercises routing on the built site; bug is dev-only per its own message |
 | SerpAPI free quota (~100/mo) exhausted during beta | Low | Documented; search failures degrade gracefully (existing DB search still works) |
 | `v2` working tree has ~2000 uncommitted lines mixing features + deploy prep | Med | Task 1 commits it as-is first so deploy changes are isolated in later commits |
+| Old `requirements.txt` (Django 4.2.26 + prod deps) was never installed/verified; local dev ran a shared drifted venv on Django 5.2 | High | Task 1b builds a dedicated `backend/.venv`, rebuilds `requirements.txt` on Django 5.2 LTS, and verifies `check` + `pip check`; same file used on Render |
 | `.env` files already committed in git history | Med | Task 2 untracks going forward; note in `DEPLOY.md` that the Clerk dev keys + SERPAPI key in history should be rotated (dev Clerk instance is being replaced anyway) |
 
 ## Open Questions

@@ -6,28 +6,89 @@ the agent supplying exact steps/values and verifying the result.
 
 ---
 
-## Task 1: Commit current `v2` working tree
+## Task 1: Commit current `v2` working tree  ✅ DONE
 
 **Description:** `v2` has ~2000 uncommitted lines mixing feature work and earlier
 deploy prep. Commit it as-is so all subsequent deployment changes land in
 isolated, reviewable commits.
 
 **Acceptance criteria:**
-- [ ] `git status` is clean except for intentionally-untracked files
-- [ ] `.pyc` / `.DS_Store` are NOT part of this commit (handled in Task 2 — for
-      now stage source only)
-- [ ] Commit message describes the bundled state honestly
+- [x] `git status` is clean except for intentionally-untracked files
+      (`.env`, `db.sqlite3`, `.pyc`, `.DS_Store`, migrations 0006–0008 — all
+      deferred to Tasks 2/3)
+- [x] `.pyc` / `.DS_Store` are NOT part of this commit
+- [x] Commit message describes the bundled state honestly
 
 **Verification:**
-- [ ] `git log -1 --stat` shows the expected files
-- [ ] `cd backend && python manage.py check` passes
-- [ ] `cd backend && python manage.py runserver` boots
+- [x] `git log -1 --stat` shows the expected files (2 commits: d9389ff feature
+      snapshot, 0044c00 spec+plan)
+- [x] `python manage.py check` passes — "System check identified no issues"
+- [~] `runserver` boot: not run (harness blocks backgrounded server + sleep);
+      `check` passing covers app import/config
+
+**Notes:**
+- Local dev venv is `/Users/hillarydunkley/myworld` (shared home-dir venv), which
+  has **Django 5.2.10** and many unrelated packages. `backend/requirements.txt`
+  pinned **Django 4.2.26** and had never actually been installed anywhere.
+- **Decision:** target **Django 5.2 LTS** in a dedicated `backend/.venv`. See Task 1b.
 
 **Dependencies:** None
 
 **Files likely touched:** (git only — no content changes)
 
 **Estimated scope:** S
+
+---
+
+## Task 1b: Create project virtualenv + rebuild `requirements.txt` (Django 5.2 LTS)  ✅ DONE
+
+**Description:** The old `requirements.txt` (Django 4.2.26, psycopg3, gunicorn,
+etc.) was written speculatively and never installed/verified. Create a dedicated
+`backend/.venv`, install a corrected dependency set on the **Django 5.2 LTS**
+line, verify the app, and freeze the exact working set into `requirements.txt` so
+local == Render. Runs before Task 3 (migration verification needs a real env).
+
+**Acceptance criteria:**
+- [x] `backend/.venv` exists and is gitignored (Python 3.13.7)
+- [x] `requirements.txt` contains only this project's deps, pinned; installs
+      cleanly on Python 3.13 + Django 5.2.10 (`pip check` clean)
+- [x] Prod-serving deps present: `gunicorn`, `whitenoise`, `dj-database-url`,
+      `psycopg[binary]`
+- [x] `python manage.py check` passes in `backend/.venv` — 0 issues
+- [x] Migration graph builds + runs without error; `makemigrations --check` → no drift
+- [x] SerpAPI reconciled: code uses `from serpapi import GoogleSearch` →
+      pinned `google-search-results==2.4.2` (the `serpapi.Client` path is dead
+      commented code)
+
+**Verification:**
+- [x] `backend/.venv/bin/python -m django --version` → 5.2.10
+- [x] `backend/.venv/bin/python manage.py check` → "no issues (0 silenced)"
+- [x] `backend/.venv/bin/python -m pip check` → "No broken requirements found"
+- [x] `requirements.txt` holds 13 project deps only, no unrelated packages
+
+**Absorbed scope (decision: unmount legacy web UI):**
+- Removed `bootstrap5` / `star_ratings` / `crispy_forms` / `crispy_bootstrap5`
+  from `INSTALLED_APPS` + `requirements.txt`; removed `CRISPY_TEMPLATE_PACK`.
+  Root cause: `django-bootstrap-v5==1.0.11` requires `python <4.0` + `django <5.0`.
+- `movie_csv/urls/__init__.py` now mounts `/api/` only (dropped `movie_csv.urls.web`).
+- `config/urls.py` dropped `users.urls` (template login/register/profile).
+- `LOGIN_REDIRECT_URL` / `LOGOUT_REDIRECT_URL` / `LOGIN_URL` repointed to `/admin/`.
+- Legacy `views/web.py`, `urls/web.py`, `movie_csv/templates/`, `users/templates/`,
+  `forms.py` remain on disk, unrouted → **Task 4 can now delete them cleanly.**
+- Committed as `ac2564e`.
+
+**Notes:**
+- `requirements.txt` pins direct deps only (no full transitive lockfile). Fine for
+  closed beta; revisit (pip-tools / uv lock) before public launch.
+- Stray `print([...IsAuthenticated])` at import time in `views/api.py` — harmless
+  noise, clean up when Task 7 touches that area.
+
+**Dependencies:** 1
+
+**Files touched:** `backend/requirements.txt`, `backend/config/settings.py`,
+`backend/config/urls.py`, `backend/movie_csv/urls/__init__.py`, `.gitignore`
+
+**Estimated scope:** M
 
 ---
 
@@ -91,12 +152,18 @@ confirm models and migrations agree.
 `/main.py`, `/movie_csv/` (has its own `urls.py`), `/media/`, root `/db.sqlite3`,
 root `/package.json` + `/package-lock.json`. Confirmed: nothing under `backend/`
 or `frontend/` imports these; `backend/movie_csv/` is the live app.
+**Also** (now unrouted after Task 1b — safe to delete): `backend/movie_csv/views/web.py`,
+`backend/movie_csv/urls/web.py`, `backend/movie_csv/forms.py`,
+`backend/movie_csv/templates/`, `backend/users/views.py` (template views),
+`backend/users/urls.py`, `backend/users/forms.py`, `backend/users/templates/`,
+`backend/movie_csv/services/serpapi_youtube.py` (dead `serpapi.Client` path).
+Keep `backend/users/models.py`, `signals.py`, `admin.py`, `serializers.py`.
 
 **Acceptance criteria:**
-- [ ] Grep confirms no reference from `backend/`, `frontend/`, or `render.yaml`
-      to any deleted path
+- [ ] Grep confirms no reference from live code (`config/`, `movie_csv/views/api.py`,
+      `movie_csv/urls/api.py`, `users/models.py|signals.py|serializers.py`) to any deleted path
 - [ ] Files removed and the removal committed
-- [ ] `cd backend && python manage.py check` still passes
+- [ ] `python manage.py check` still passes; `makemigrations --check` still clean
 
 **Verification:**
 - [ ] `grep -rn "main\.py\|root package\|\.\./movie_csv" backend frontend` → no hits
@@ -130,10 +197,14 @@ production security block (SSL redirect, proxy header, secure cookies, HSTS).
 **Acceptance criteria:**
 - [ ] No `SECRET_KEY`, host, or origin literal remains in `settings.py` (dev
       fallback string for `SECRET_KEY` only, gated on `DEBUG`)
+- [ ] `CLERK_ISSUER` / `CLERK_JWKS_URL` also come from env (Task 7 finishes the
+      auth side; the settings reads land here)
 - [ ] With `DJANGO_DEBUG` unset and prod vars provided: `check --deploy` → 0 issues
 - [ ] With no env vars: `DEBUG=True`, SQLite, `runserver` works, `CORS_ALLOW_ALL_ORIGINS=True`
 - [ ] Duplicate middleware entries (`SecurityMiddleware`, `SessionMiddleware`
-      appear twice today) de-duplicated
+      appear twice today) de-duplicated; `OTPMiddleware` kept
+- [ ] `star_ratings` / `crispy` / `bootstrap5` already gone (Task 1b) — just
+      confirm no dangling refs (`CRISPY_*`, `STAR_RATINGS_*`)
 
 **Verification:**
 - [ ] `cd backend && python manage.py check` (no env) → passes
