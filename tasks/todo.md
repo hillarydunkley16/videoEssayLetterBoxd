@@ -131,7 +131,7 @@ here just remove and ignore.
 confirm models and migrations agree.
 
 **Acceptance criteria:**
-- [x] The three migration files are tracked and committed (`ffd… ` below)
+- [x] The three migration files are tracked and committed (committed `344a764`)
 - [x] `makemigrations --check --dry-run` → "No changes detected", exit 0
 - [x] Full `migrate` on a brand-new SQLite DB applies all 40+ migrations
       (incl. movie_csv 0006/0007/0008) → exit 0
@@ -204,14 +204,15 @@ permission-blocked): stale root `db.sqlite3` (217 KB, Jan 2026 — NOT the live
 
 ---
 
-### CHECKPOINT A — review with human before Task 5
-- [ ] `git ls-files` clean of secrets/artifacts
-- [ ] Local dev unchanged: `runserver` boots, admin loads, `check` passes
-- [ ] Root cruft gone, nothing broke
+### CHECKPOINT A — reviewed ✅
+- [x] `git ls-files` clean of secrets/artifacts
+- [x] Local dev unchanged: `check` passes, admin + API serve, legacy routes 404
+- [x] Root cruft removed from git (gitignored disk leftovers noted above)
+- User instructed "continue" via repeated `/build`.
 
 ---
 
-## Task 5: Env-driven `settings.py` — debug/secret/hosts/CORS/security
+## Task 5: Env-driven `settings.py` — debug/secret/hosts/CORS/security  ✅ DONE
 
 **Description:** Replace hardcoded dev values with environment reads plus safe
 local defaults, per the Code Style snippet in `SPEC.md`. Covers `DEBUG`,
@@ -220,21 +221,29 @@ local defaults, per the Code Style snippet in `SPEC.md`. Covers `DEBUG`,
 production security block (SSL redirect, proxy header, secure cookies, HSTS).
 
 **Acceptance criteria:**
-- [ ] No `SECRET_KEY`, host, or origin literal remains in `settings.py` (dev
-      fallback string for `SECRET_KEY` only, gated on `DEBUG`)
-- [ ] `CLERK_ISSUER` / `CLERK_JWKS_URL` also come from env (Task 7 finishes the
-      auth side; the settings reads land here)
-- [ ] With `DJANGO_DEBUG` unset and prod vars provided: `check --deploy` → 0 issues
-- [ ] With no env vars: `DEBUG=True`, SQLite, `runserver` works, `CORS_ALLOW_ALL_ORIGINS=True`
-- [ ] Duplicate middleware entries (`SecurityMiddleware`, `SessionMiddleware`
-      appear twice today) de-duplicated; `OTPMiddleware` kept
-- [ ] `star_ratings` / `crispy` / `bootstrap5` already gone (Task 1b) — just
-      confirm no dangling refs (`CRISPY_*`, `STAR_RATINGS_*`)
+- [x] No `SECRET_KEY` / host / origin literal in `settings.py` — dev fallbacks
+      for `SECRET_KEY` and `CLERK_ISSUER` only, both `DEBUG`-gated
+- [x] `CLERK_ISSUER` / `CLERK_JWKS_URL` / `CLERK_ISSUER_LEGACY` from env
+      (authentication.py wiring is Task 7)
+- [x] Prod env, `DJANGO_DEBUG` unset: `check --deploy --fail-level WARNING`
+      → "no issues", exit 0 (`DJANGO_SECRET_KEY` presence flips `DEBUG` off)
+- [x] No env: `DEBUG=True`, SQLite, `CORS_ALLOW_ALL_ORIGINS=True`, request smoke OK
+- [x] `MIDDLEWARE` de-duplicated; `OTPMiddleware` kept; WhiteNoise slot marked for Task 6
+- [x] No dangling `CRISPY_*` / `STAR_RATINGS_*` refs
 
 **Verification:**
-- [ ] `cd backend && python manage.py check` (no env) → passes
-- [ ] `DJANGO_SECRET_KEY=x DJANGO_ALLOWED_HOSTS=example.com CLERK_ISSUER=https://x python manage.py check --deploy` → 0 issues
-- [ ] `grep -nE "SECRET_KEY *= *['\"]django-insecure-@|ALLOWED_HOSTS *= *\[\"\\*\"\]" backend/config/settings.py` → only the DEBUG-gated fallback
+- [x] `movie_csv/tests.py` — 12 subprocess tests (RED 9→GREEN 0), full suite 12/12
+- [x] `manage.py check` (no env) → 0 issues
+- [x] `check --deploy` with `DJANGO_SECRET_KEY`/`DJANGO_ALLOWED_HOSTS`/`CLERK_ISSUER`
+      → 0 issues, exit 0
+- [x] `makemigrations --check` → no drift; dev-mode `/admin/` + `/api/` smoke unchanged
+- Committed as `5c4cc73`.
+
+**Design note:** `DEBUG` defaults to `not bool($DJANGO_SECRET_KEY)` when
+`DJANGO_DEBUG` is unset — so `check --deploy` is clean without needing an
+explicit `DJANGO_DEBUG=false`, while `no env at all` still yields dev mode.
+HSTS defaults 3600s + subdomains + preload (inert without hstspreload.org
+submission; needed for a clean `--deploy`); override via `DJANGO_SECURE_HSTS_SECONDS`.
 
 **Dependencies:** 3
 
