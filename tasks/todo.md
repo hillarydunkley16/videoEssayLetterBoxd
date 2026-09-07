@@ -124,20 +124,25 @@ here just remove and ignore.
 
 ---
 
-## Task 3: Commit migrations 0006–0008, verify no model drift
+## Task 3: Commit migrations 0006–0008, verify no model drift  ✅ DONE
 
 **Description:** Migrations `0006_collection`, `0007_alter_log_rating`,
 `0008_collection_is_watchlist` exist on disk but are untracked. Commit them and
 confirm models and migrations agree.
 
 **Acceptance criteria:**
-- [ ] The three migration files are tracked and committed
-- [ ] `python manage.py makemigrations --check --dry-run` reports nothing to do
-- [ ] `python manage.py migrate` runs clean on a fresh SQLite DB
+- [x] The three migration files are tracked and committed (`ffd… ` below)
+- [x] `makemigrations --check --dry-run` → "No changes detected", exit 0
+- [x] Full `migrate` on a brand-new SQLite DB applies all 40+ migrations
+      (incl. movie_csv 0006/0007/0008) → exit 0
 
 **Verification:**
-- [ ] `cd backend && python manage.py makemigrations --check --dry-run` → exit 0
-- [ ] `rm /tmp/test.sqlite3; DATABASE_URL=sqlite:////tmp/test.sqlite3 python manage.py migrate` succeeds
+- [x] `.venv/bin/python manage.py makemigrations --check --dry-run` → exit 0
+- [x] `manage.py migrate --settings=<override pointing at a fresh tempfile DB>`
+      → every migration `OK`, non-destructive to `backend/db.sqlite3`
+- Migration chain is linear 0005→0006→0007→0008, Django 5.2.10-generated.
+- 0007 carries a 0-10→0-5 rating data migration with `RunPython.noop` reverse
+  (reverse loses data — acceptable, documented).
 
 **Dependencies:** 1
 
