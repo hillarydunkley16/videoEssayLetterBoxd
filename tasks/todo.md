@@ -416,32 +416,33 @@ output dir is `dist/`.
 
 ---
 
-## Task 10: [operator] Confirm Clerk dev instance + capture its keys
+## Task 10: [operator] Confirm Clerk dev instance + capture its keys  ✅ DONE
 
 **Decision (changed):** Clerk *production* needs a custom domain with DNS control;
 the `*.onrender.com` beta has none. Use the existing **development** instance for
 the closed beta; create the prod instance before public launch (SPEC Open Q2).
 
-**Description:** In the Clerk dashboard, confirm the dev instance for this app and
-record its Frontend API / issuer URL + publishable key (`pk_test_…`). The
-publishable key is likely already in `frontend/.env`.
+**Captured values (for Tasks 11 & 13 — set as Render env vars, not committed):**
+- `CLERK_ISSUER` = `https://splendid-sunbird-55.clerk.accounts.dev`
+- `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` = `pk_test_c3BsZW5kaWQ…ZXYk` (public by
+  design — ships in the web bundle; full value in `frontend/.env` and provided
+  by the user)
+- `CLERK_ISSUER_LEGACY` — leave unset for the beta (no cutover)
 
 **Acceptance criteria:**
-- [ ] Dev instance identified (expected: `splendid-sunbird-55.clerk.accounts.dev`,
-      the issuer the old code hardcoded — confirm it's the right app)
-- [ ] Issuer URL + publishable key captured for Tasks 11/13 (into Render env, not git)
-- [ ] Email/password sign-in enabled on the instance
+- [x] Dev instance confirmed: `splendid-sunbird-55.clerk.accounts.dev`
+- [x] Issuer + publishable key captured
+- [x] Email/password sign-in — user confirmed enabled
 
 **Verification:**
-- [ ] `<issuer>/.well-known/jwks.json` returns a JSON body with a `keys` array
-      (agent will WebFetch this once the user provides the issuer)
+- [x] `https://splendid-sunbird-55.clerk.accounts.dev/.well-known/jwks.json` →
+      `keys` array with `kid=ins_38qOjACFHMWQO5uAI7AWm2Bv9bH` (kty/n/e present)
+      — checked via WebFetch
 
 **Adding the deployed web origin to Clerk's allowed origins** happens in Task 13,
 once Render has assigned `videoessay-web.onrender.com`.
 
 **Dependencies:** None
-
-**Status:** waiting on user to confirm the instance + report issuer + publishable key.
 
 **Files likely touched:** none (dashboard + secrets)
 
