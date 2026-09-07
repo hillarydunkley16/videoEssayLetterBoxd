@@ -377,32 +377,40 @@ into the code-review/security pass.
 
 ---
 
-## Task 9: Add `render.yaml` Blueprint
+## Task 9: Add `render.yaml` Blueprint  ✅ DONE
 
 **Description:** Repo-root `render.yaml` defining a Python web service (backend),
 a static site (frontend web), and a free PostgreSQL instance, with env-var
-wiring. `DATABASE_URL` from the Postgres resource; `DJANGO_SECRET_KEY` generated;
-`SERPAPI_KEY` / `CLERK_ISSUER` / `EXPO_PUBLIC_*` marked `sync: false` (set in
-dashboard).
+wiring.
 
 **Acceptance criteria:**
-- [ ] Web service: build `pip install -r backend/requirements.txt`; pre-deploy
-      `python backend/manage.py migrate`; start
-      `cd backend && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
-- [ ] Static site: build `cd frontend && npm ci && npx expo export --platform web`;
-      publish path `frontend/dist`; SPA rewrite `/* -> /index.html`
-- [ ] `DJANGO_DEBUG` set to empty/false; `DJANGO_ALLOWED_HOSTS` and CORS/CSRF
-      origins reference the Render URLs
-- [ ] Postgres plan is `free`
+- [x] Web service: `rootDir: backend`, build
+      `pip install -r requirements.txt && manage.py collectstatic --noinput`,
+      start `manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
+      (migrate moved out of `preDeployCommand` — paid-only on Render)
+- [x] Static site: `rootDir: frontend`, build
+      `npm ci --legacy-peer-deps && npx expo export --platform web`,
+      `staticPublishPath: dist`, SPA rewrite `/* -> /index.html`, `NODE_VERSION` pinned
+- [x] `DJANGO_DEBUG: "false"`; `DJANGO_SECRET_KEY` `generateValue`; `DATABASE_URL`
+      `fromDatabase`; hosts/CORS/CSRF + Clerk + SerpAPI + `EXPO_PUBLIC_*` all
+      `sync: false` (operator-set). No secrets committed.
+- [x] Postgres `plan: free`; all three resources free
+- [x] `settings.py` auto-trusts `RENDER_EXTERNAL_HOSTNAME` (ALLOWED_HOSTS + CSRF)
+      so first deploy works before `DJANGO_ALLOWED_HOSTS` is set
+- [x] `frontend/.npmrc` → `legacy-peer-deps=true`
 
 **Verification:**
-- [ ] `render.yaml` validates (YAML lint; Render Blueprint preview shows 3 resources)
-- [ ] Manual read-through against Render Blueprint spec docs
+- [x] Schema checked against render.com/docs/blueprint-spec; free-tier preDeploy
+      limitation against render.com/docs/deploys
+- [x] `movie_csv/test_render_blueprint.py` (9) content-guards the file; suite 50/50
+- [ ] Render Blueprint preview (3 resources) — happens at Task 11
+- Committed as `90da6b2`.
+
+**To verify at deploy (Task 11/13):** exact `NODE_VERSION` availability on Render;
+`npm ci` lockfile sync (fall back to `npm install` if it errors); `expo export`
+output dir is `dist/`.
 
 **Dependencies:** 6, 7
-
-**Files likely touched:**
-- `render.yaml`
 
 **Estimated scope:** S
 
