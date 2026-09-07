@@ -16,5 +16,8 @@ venv/
 # Local databases (dev only — never deploy SQLite)
 *.sqlite3
 
+# Django collected static output
+staticfiles/
+
 # OS cruft
 .DS_Store

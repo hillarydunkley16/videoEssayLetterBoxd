@@ -82,6 +82,52 @@ class DeployCheckTests(SimpleTestCase):
         )
 
 
+class DatabaseUrlTests(SimpleTestCase):
+    def test_database_url_env_selects_postgres(self):
+        engine = _setting(
+            "settings.DATABASES['default']['ENGINE']",
+            {**_PROD_ENV, "DATABASE_URL": "postgres://u:p@localhost:5432/appdb"},
+        )
+        self.assertEqual(engine, repr("django.db.backends.postgresql"))
+
+    def test_database_url_env_keeps_a_persistent_connection(self):
+        self.assertEqual(
+            _setting(
+                "settings.DATABASES['default'].get('CONN_MAX_AGE')",
+                {**_PROD_ENV, "DATABASE_URL": "postgres://u:p@localhost:5432/appdb"},
+            ),
+            "600",
+        )
+
+
+class WhiteNoiseStaticTests(SimpleTestCase):
+    def test_whitenoise_middleware_directly_after_security(self):
+        mw_repr = _setting("list(settings.MIDDLEWARE)", {})
+        self.assertIn("whitenoise.middleware.WhiteNoiseMiddleware", mw_repr)
+        self.assertIn(
+            "'django.middleware.security.SecurityMiddleware', "
+            "'whitenoise.middleware.WhiteNoiseMiddleware'",
+            mw_repr,
+        )
+
+    def test_static_root_points_at_staticfiles_dir(self):
+        self.assertTrue(
+            _setting("str(settings.STATIC_ROOT)", {}).strip("'").endswith("staticfiles")
+        )
+
+    def test_staticfiles_storage_backend_is_whitenoise(self):
+        self.assertIn(
+            "whitenoise", _setting("settings.STORAGES['staticfiles']['BACKEND']", {})
+        )
+
+    def test_collectstatic_runs_and_writes_the_manifest(self):
+        result = _run(["collectstatic", "--noinput", "--clear"], _PROD_ENV)
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertTrue(
+            (BACKEND_DIR / "staticfiles" / "staticfiles.json").exists()
+        )
+
+
 class LocalDevDefaultsTests(SimpleTestCase):
     def test_debug_is_true_with_no_env(self):
         self.assertEqual(_setting("settings.DEBUG", {}), "True")
