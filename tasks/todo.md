@@ -289,7 +289,7 @@ submission; needed for a clean `--deploy`); override via `DJANGO_SECURE_HSTS_SEC
 
 ---
 
-## Task 7: Clerk config to env; JWKS cache TTL; logging not `print`
+## Task 7: Clerk config to env; JWKS cache TTL; logging not `print`  ✅ DONE
 
 **Description:** In `authentication.py` and `settings.py`: read `CLERK_ISSUER`
 from env (dev default only when `DEBUG`), derive `CLERK_JWKS_URL` from it. Give
@@ -298,21 +298,32 @@ Optionally accept a second issuer via `CLERK_ISSUER_LEGACY` to bridge the
 dev→prod cutover. Replace `print(...)` with `logging.getLogger(__name__)`.
 
 **Acceptance criteria:**
-- [ ] `authentication.py` has no hardcoded issuer/JWKS URL and no `print`
-- [ ] JWKS refetches after TTL; within TTL it does not hit the network
-- [ ] Missing/blank `Authorization` header → returns `None` (unchanged)
-- [ ] Malformed token → `AuthenticationFailed` (unchanged)
+- [x] `authentication.py` reads issuer/JWKS from `settings`; no hardcoded issuer,
+      no `print` (grep-guarded by a test)
+- [x] JWKS cached within `settings.CLERK_JWKS_CACHE_TTL` (default 600s), refetched
+      after — verified by mocked-clock tests
+- [x] No / non-Bearer `Authorization` header → `None` (unchanged)
+- [x] Malformed token → `AuthenticationFailed` (unchanged)
+- [x] `jwt.decode` gets a tuple of `(CLERK_ISSUER, CLERK_ISSUER_LEGACY)` so
+      dev+prod tokens both verify during cutover
 
 **Verification:**
-- [ ] `cd backend && python manage.py test movie_csv` → auth tests pass (added in Task 8)
-- [ ] `grep -n "print(" backend/movie_csv/authentication.py` → empty
-- [ ] `grep -n "splendid-sunbird" backend/movie_csv/authentication.py` → empty
+- [x] `movie_csv/test_authentication.py` — 9 tests, all pass; full suite 27/27
+- [x] `grep -n "print(" .../authentication.py` → empty
+- [x] `grep -n "splendid-sunbird" .../authentication.py` → empty
+- [x] `check` clean, no drift; DRF `/api/logList/` → 403 for no-header and
+      bad-bearer (unchanged)
+- Committed as `3480730`. Settings reads landed in Task 5 (`5c4cc73`).
+
+**Behavior change (deliberate, tested):** a persistent unknown-`kid` now raises
+`AuthenticationFailed` before `jwt.decode` instead of calling decode with a
+`None` key. Net auth result is identical (still 403).
+
+**Note:** `views/api.py` still has ~50 debug `print()`s (incl. the module-level
+`print(permission_classes)` that noises up test output). Out of scope here;
+fold into Task 14 / a code-review pass.
 
 **Dependencies:** 5
-
-**Files likely touched:**
-- `backend/movie_csv/authentication.py`
-- `backend/config/settings.py`
 
 **Estimated scope:** S
 
