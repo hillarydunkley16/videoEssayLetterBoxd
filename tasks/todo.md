@@ -416,23 +416,32 @@ output dir is `dist/`.
 
 ---
 
-## Task 10: [operator] Create Clerk production instance, capture keys
+## Task 10: [operator] Confirm Clerk dev instance + capture its keys
 
-**Description:** In the Clerk dashboard, create a **production** instance for the
-app. Record: Frontend API / issuer URL, publishable key, and (if used) any
-JWT template. Add the Render frontend origin to Clerk's allowed origins once
-known (revisit after Task 13).
+**Decision (changed):** Clerk *production* needs a custom domain with DNS control;
+the `*.onrender.com` beta has none. Use the existing **development** instance for
+the closed beta; create the prod instance before public launch (SPEC Open Q2).
+
+**Description:** In the Clerk dashboard, confirm the dev instance for this app and
+record its Frontend API / issuer URL + publishable key (`pk_test_…`). The
+publishable key is likely already in `frontend/.env`.
 
 **Acceptance criteria:**
-- [ ] Production instance exists
-- [ ] Issuer URL, publishable key captured (paste into Render env in Task 11/13, not into git)
-- [ ] Sign-in methods match the dev instance (email/password etc.)
+- [ ] Dev instance identified (expected: `splendid-sunbird-55.clerk.accounts.dev`,
+      the issuer the old code hardcoded — confirm it's the right app)
+- [ ] Issuer URL + publishable key captured for Tasks 11/13 (into Render env, not git)
+- [ ] Email/password sign-in enabled on the instance
 
 **Verification:**
-- [ ] `curl -s <issuer>/.well-known/jwks.json` returns keys
-- [ ] Issuer differs from `splendid-sunbird-55.clerk.accounts.dev`
+- [ ] `<issuer>/.well-known/jwks.json` returns a JSON body with a `keys` array
+      (agent will WebFetch this once the user provides the issuer)
 
-**Dependencies:** None (can run in parallel with Tasks 1–9)
+**Adding the deployed web origin to Clerk's allowed origins** happens in Task 13,
+once Render has assigned `videoessay-web.onrender.com`.
+
+**Dependencies:** None
+
+**Status:** waiting on user to confirm the instance + report issuer + publishable key.
 
 **Files likely touched:** none (dashboard + secrets)
 

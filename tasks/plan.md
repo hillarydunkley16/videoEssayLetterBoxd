@@ -1,4 +1,4 @@
-# Implementation Plan: Deploy to Closed Beta (Render + Expo web + Clerk prod)
+# Implementation Plan: Deploy to Closed Beta (Render + Expo web + Clerk dev instance)
 
 Traces to `SPEC.md` at repo root.
 
@@ -6,8 +6,9 @@ Traces to `SPEC.md` at repo root.
 
 Take the current dev-only Django/DRF backend and Expo frontend to a live closed
 beta: backend as a Render Web Service on Render PostgreSQL (free tier), frontend
-as a Render Static Site serving the `expo export` web bundle, auth on a Clerk
-production instance. Work happens on `v2`; `v2` merges to `main` once the
+as a Render Static Site serving the `expo export` web bundle, auth on the Clerk
+**development** instance (a prod instance needs a custom domain — deferred to
+before public launch). Work happens on `v2`; `v2` merges to `main` once the
 deployment is verified green.
 
 ## Architecture Decisions
@@ -48,7 +49,7 @@ Tasks recorded in `tasks/todo.md`. Order is dependency-driven; do not reorder.
 | 7 | Clerk config to env; JWKS cache TTL; logging not `print` | backend | 5 |
 | 8 | Backend smoke tests + `.env.example` + `runtime.txt` | backend/test | 6, 7 |
 | 9 | Add `render.yaml` Blueprint | infra | 6, 7 |
-| 10 | Create Clerk production instance, capture keys | operator | None (can start anytime) |
+| 10 | Confirm Clerk **dev** instance, capture issuer + publishable key (prod instance deferred — needs a custom domain) | operator | None (can start anytime) |
 | 11 | Provision backend + Postgres on Render, run migrations | operator | 8, 9, 10 |
 | 12 | Frontend prod env wiring + `.env.example` + build gates | frontend | 11 |
 | 13 | Deploy frontend static site on Render | operator | 12 |
@@ -73,7 +74,7 @@ Tasks recorded in `tasks/todo.md`. Order is dependency-driven; do not reorder.
 ### Checkpoint C: after Task 11
 - [ ] Backend reachable at its `*.onrender.com` URL
 - [ ] `GET /admin/` loads with CSS (WhiteNoise working)
-- [ ] Authenticated API request with a Clerk **prod** token → 200; no token → 401
+- [ ] Authenticated API request with a Clerk token (dev instance) → 200; no token → 401
 - [ ] Response headers: HTTPS redirect + HSTS present; `Access-Control-Allow-Origin` is specific, not `*`
 
 ### Checkpoint D: after Task 14 (Complete)
@@ -86,20 +87,22 @@ Tasks recorded in `tasks/todo.md`. Order is dependency-driven; do not reorder.
 | Risk | Impact | Mitigation |
 |---|---|---|
 | `settings.py` rewrite breaks local dev for the user | High | Safe defaults for every var; Checkpoint B explicitly re-tests the no-env-vars local path |
-| Clerk prod instance issuer/JWKS differs from dev in a way `authentication.py` doesn't handle | High | Task 7 makes issuer configurable + adds a second-issuer allowance during migration; Task 14 tests a real prod token |
+| ~~Clerk prod instance issuer/JWKS differs from dev~~ — RESOLVED: Clerk prod needs a custom domain the `*.onrender.com` beta lacks, so the beta stays on the **dev** instance (SPEC Open Q2). `CLERK_ISSUER` still env-driven; `CLERK_ISSUER_LEGACY` remains for the eventual prod cutover | Low | — |
 | Free Render Postgres 90-day expiry / cold starts surprise testers | Med | Documented in `DEPLOY.md`; `pg_dump` note in Open Questions |
 | Deleting root cruft breaks an unknown import/script | Med | Task 4 greps for references first; cruft is pre-restructure and not on any path when running from `backend/` |
 | `expo export` web build hits the `error.md` `'(home)'` navigator bug | Med | Task 12 runs the export; Task 14 manually exercises routing on the built site; bug is dev-only per its own message |
 | SerpAPI free quota (~100/mo) exhausted during beta | Low | Documented; search failures degrade gracefully (existing DB search still works) |
 | `v2` working tree has ~2000 uncommitted lines mixing features + deploy prep | Med | Task 1 commits it as-is first so deploy changes are isolated in later commits |
 | Old `requirements.txt` (Django 4.2.26 + prod deps) was never installed/verified; local dev ran a shared drifted venv on Django 5.2 | High | Task 1b builds a dedicated `backend/.venv`, rebuilds `requirements.txt` on Django 5.2 LTS, and verifies `check` + `pip check`; same file used on Render |
-| `.env` files already committed in git history | Med | Task 2 untracks going forward; note in `DEPLOY.md` that the Clerk dev keys + SERPAPI key in history should be rotated (dev Clerk instance is being replaced anyway) |
+| `.env` files already committed in git history | Med | Task 2 untracks going forward; `DEPLOY.md` notes SERPAPI key + Clerk dev keys in history — rotate SERPAPI at Task 11, Clerk keys before public launch (beta still uses the dev instance) |
 
 ## Open Questions
 
 - **Backups:** rely on Render's automated Postgres backups for beta, or also
   schedule a `pg_dump`? (Deferred — not blocking; note in `DEPLOY.md`.)
-- **Secret rotation:** `.env` / `SERPAPI_KEY` are in git history. Clerk dev keys
-  are moot (instance being replaced). Rotate the SerpAPI key as part of Task 11?
+- **Secret rotation:** `.env` / `SERPAPI_KEY` / Clerk dev keys are in git history.
+  The beta keeps using the Clerk dev instance, so its keys are still live — but a
+  dev instance is low-value and rate-limited; rotating is optional for the beta,
+  required before public launch. Rotate the SerpAPI key as part of Task 11.
 - **Later (public launch, not now):** CI gate, Sentry, rate limiting on
   auth/search, native builds + store submission, staging environment.

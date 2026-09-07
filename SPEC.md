@@ -9,9 +9,11 @@ Get the existing app to a live, publicly reachable **closed beta / soft launch**
   locked-down hosts/CORS).
 - The Expo frontend is built as a **static web bundle** and hosted at a stable
   public URL (Render Static Site), pointed at the deployed backend.
-- Auth runs on a **Clerk production instance** (not the current dev instance),
-  with the backend verifying prod-issuer tokens and the frontend using the prod
-  publishable key.
+- Auth runs on the existing **Clerk development instance** for the closed beta.
+  A Clerk *production* instance requires a custom domain with DNS control, which
+  the `*.onrender.com` beta setup doesn't have — so it's deferred to before
+  public launch (see Open Questions). The backend still reads `CLERK_ISSUER` from
+  the environment; for the beta it's set to the dev instance's issuer.
 - A small group of invited testers can sign up, log a video essay, review it,
   view profiles, and use lists/watchlists against real hosted infrastructure.
 
@@ -43,7 +45,7 @@ web app and its `django-bootstrap-v5` dependency is incompatible with Python 3.1
 | Static file serving | WhiteNoise 6.12.0 (admin + DRF browsable API only) |
 | DB (prod) | Render PostgreSQL via `dj-database-url` 3.1.2 + `psycopg[binary]` 3.3.4 |
 | DB (local dev) | SQLite (unchanged) |
-| Auth | Clerk (production instance) — JWT verified with `python-jose` |
+| Auth | Clerk (**development** instance for the beta) — JWT verified with `python-jose` |
 | External API | SerpAPI (`google-search-results`) for YouTube search |
 | Frontend | Expo SDK 54, React Native 0.81, expo-router 6, React 19 |
 | Frontend auth | `@clerk/clerk-expo` 2.x |
@@ -214,7 +216,8 @@ Bar for closed beta is **smoke coverage + deploy checks**, not full unit coverag
 
 **Manual acceptance (against the deployed URLs)** — the runbook in `DEPLOY.md`
 lists these; all must pass before inviting testers:
-1. Web URL loads; Clerk sign-up completes with a prod-instance account.
+1. Web URL loads; Clerk sign-up completes (dev instance; a "development" badge on
+   Clerk UI is expected for the beta).
 2. Search a video essay → log it → write a review → see it under that video.
 3. Profile shows the new log; list/watchlist add works.
 4. Reload / new browser session persists data (confirms Postgres, not ephemeral).
@@ -245,7 +248,9 @@ lists these; all must pass before inviting testers:
 - Commit secrets, API keys, `.env` files, or `db.sqlite3` with real data.
 - Ship with `DEBUG=True`, `ALLOWED_HOSTS=["*"]`, or `CORS_ALLOW_ALL_ORIGINS=True`
   in production.
-- Leave the Clerk **dev** issuer as the only accepted issuer in production.
+- Point the deployed backend at a Clerk issuer it doesn't read from `CLERK_ISSUER`
+  env (the dev issuer is acceptable for the beta, but it must come from env, not
+  a hardcoded literal).
 - Edit an already-applied migration in place.
 - Commit `__pycache__/`, `.pyc`, or `.DS_Store` files.
 - Point the frontend at a hardcoded backend URL.
@@ -260,8 +265,10 @@ lists these; all must pass before inviting testers:
 - [ ] `git ls-files` shows no `.env`, no `db.sqlite3`, no `.pyc`, no `.DS_Store`;
       `.gitignore` covers all four.
 - [ ] Grep of `backend/` source shows no hardcoded `SECRET_KEY`, Clerk issuer, or origin literal.
-- [ ] Clerk **production** instance created; backend `CLERK_ISSUER` and frontend
-      `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` both point at it; a fresh sign-up works end to end.
+- [ ] Backend `CLERK_ISSUER` (Render env) and frontend
+      `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` both point at the Clerk **dev** instance;
+      a fresh sign-up works end to end. (Production Clerk instance deferred — see
+      Open Question 2.)
 - [ ] Frontend web URL loads and completes the search → log → review → view flow
       against the deployed backend, data persisting across sessions.
 - [ ] Unauthenticated request to a protected endpoint returns 401; authenticated returns 200.
@@ -278,9 +285,13 @@ lists these; all must pass before inviting testers:
    is local disk. Render web services have ephemeral disk. Is any user upload
    actually written to `MEDIA_ROOT` in the current code, or is all imagery
    external URLs? If uploads exist, we need object storage (S3/Cloudinary) — confirm.
-2. **Custom domain:** use the default `*.onrender.com` URLs for beta, or set up a
-   custom domain now? Affects `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` / Clerk
-   allowed origins and CORS.
+2. **Custom domain + Clerk production (deferred, needed before public launch):**
+   the beta uses default `*.onrender.com` URLs and the Clerk *development*
+   instance. A Clerk production instance requires a custom domain with DNS
+   control. Before public launch: register a domain, point it at Render, add
+   Clerk's DNS records, create the Clerk prod instance, and swap `CLERK_ISSUER` /
+   `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (the backend already accepts a second
+   issuer via `CLERK_ISSUER_LEGACY` for a zero-downtime cutover).
 3. **Deploy branch:** deploy from `v2` (has ~2000 uncommitted lines) or merge to
    `main` first? Recommend: commit `v2`, deploy from `v2`, merge to `main` once green.
 4. **Render plan:** free tier (backend spins down after inactivity, ~50s cold
