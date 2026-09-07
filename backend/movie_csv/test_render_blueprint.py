@@ -68,12 +68,19 @@ class RenderBlueprintTests(SimpleTestCase):
         self.assertIn('value: "false"', self.text)
 
     def test_operator_supplied_secrets_are_marked_sync_false(self):
-        for key in ("CLERK_ISSUER", "SERPAPI_KEY",
-                    "EXPO_PUBLIC_API_BASE_URL", "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY"):
+        for key in ("SERPAPI_KEY", "EXPO_PUBLIC_API_BASE_URL",
+                    "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY"):
             self.assertIn(f"key: {key}", self.text)
         self.assertIn("sync: false", self.text)
 
+    def test_clerk_issuer_set_literally_as_a_public_url(self):
+        # It's a public URL, not a secret — set as `value:` so a sync can't leave
+        # it blank (that crashed two deploys). SerpAPI key stays sync:false.
+        self.assertRegex(
+            self.text,
+            r'-\s*key:\s*CLERK_ISSUER\s*\n\s*value:\s*"https://\S+clerk\.accounts\.dev"',
+        )
+
     def test_no_real_secret_values_committed(self):
-        self.assertNotIn("sk_live", self.text)
-        self.assertNotIn("pk_live", self.text)
-        self.assertNotIn("splendid-sunbird-55", self.text)
+        for token in ("sk_live", "sk_test", "pk_live", "SERPAPI_KEY: ", "serpapi_"):
+            self.assertNotIn(token, self.text)

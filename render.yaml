@@ -42,12 +42,13 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGINS   # the static site's https origin
         sync: false
-      # Clerk production instance (Task 10):
+      # Clerk: the beta runs on the DEV instance. This issuer is a public URL
+      # (not a secret) — set it literally so a sync can't leave it blank.
+      # Swap for the prod issuer + move the old one to CLERK_ISSUER_LEGACY when
+      # the Clerk production instance exists (needs a custom domain).
       - key: CLERK_ISSUER
-        sync: false
-      - key: CLERK_ISSUER_LEGACY    # optional: old dev issuer during cutover
-        sync: false
-      - key: SERPAPI_KEY
+        value: "https://splendid-sunbird-55.clerk.accounts.dev"
+      - key: SERPAPI_KEY   # real secret — set in the dashboard
         sync: false
 
   # --- Expo web app (static bundle) ------------------------------------
