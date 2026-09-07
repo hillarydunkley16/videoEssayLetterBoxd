@@ -92,23 +92,27 @@ local == Render. Runs before Task 3 (migration verification needs a real env).
 
 ---
 
-## Task 2: Repo hygiene — untrack secrets/artifacts, fix `.gitignore`
+## Task 2: Repo hygiene — untrack secrets/artifacts, fix `.gitignore`  ✅ DONE
 
 **Description:** Stop tracking `.env` files, `db.sqlite3`, `__pycache__`/`*.pyc`,
 and `.DS_Store`. Add root `.env.example` placeholders are handled in Tasks 8/12;
 here just remove and ignore.
 
 **Acceptance criteria:**
-- [ ] `.gitignore` (root) covers: `.env`, `*.env` (except `*.env.example`),
-      `**/__pycache__/`, `*.pyc`, `.DS_Store`, `backend/db.sqlite3`
-- [ ] `git rm --cached` run for: `.env`, `backend/db.sqlite3`, all tracked
-      `*.pyc`, all tracked `.DS_Store`, `db.sqlite3` (root)
-- [ ] Local files remain on disk (only untracked, not deleted)
-- [ ] `git ls-files` returns none of the above patterns
+- [x] `.gitignore` (root) covers: `.env` + `.env.*` (keep `*.env.example`),
+      `__pycache__/`, `*.py[cod]`, `.venv/`/`venv/`, `*.sqlite3`, `.DS_Store`
+- [x] `git rm --cached`: `.env`, `db.sqlite3` (root), `backend/db.sqlite3`,
+      3× `.DS_Store`, 71× tracked `*.pyc` under `backend/**/__pycache__`
+- [x] Local files remain on disk (`.env` 139 B, `backend/db.sqlite3` 377 KB present)
+- [x] `git ls-files` returns none of the above patterns
 
 **Verification:**
-- [ ] `git ls-files | grep -E '\.env$|db\.sqlite3|\.pyc$|\.DS_Store'` → empty
-- [ ] `cd backend && python manage.py runserver` still works (local SQLite intact)
+- [x] `git ls-files | grep -E '\.env$|\.sqlite3$|\.pyc$|\.DS_Store$|__pycache__'` → empty
+- [x] `manage.py check` → 0 issues (SQLite intact); `git check-ignore` confirms
+      `backend/.env.example` is NOT ignored (negation works)
+- Committed as `fc5734e`.
+
+**Note:** `.env` secrets are in git history; SERPAPI_KEY rotation tracked at Task 11.
 
 **Dependencies:** 1
 
