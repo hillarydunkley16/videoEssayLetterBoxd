@@ -1,74 +1,87 @@
 # movie_csv/authentication.py
+import logging
+import time
+
+import requests
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from jose import jwt
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from jose import jwt
-from django.contrib.auth import get_user_model
-import requests
+
 from users.models import Profile
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
-CLERK_ISSUER = "https://splendid-sunbird-55.clerk.accounts.dev"
-CLERK_JWKS_URL = f"{CLERK_ISSUER}/.well-known/jwks.json"
+# Clerk JWKS are rotated rarely; cache them and refetch on a TTL or a cache miss.
+JWKS_CACHE_TTL = getattr(settings, "CLERK_JWKS_CACHE_TTL", 600)
 
-# JWKS = requests.get(CLERK_JWKS_URL).json()["keys"]
-_jwks_cache = None
-def get_jwks():
-    global _jwks_cache
-    if _jwks_cache is None:
-        response = requests.get(CLERK_JWKS_URL, timeout=10)
-        _jwks_cache = response.json()["keys"]
-    return _jwks_cache
+_jwks_cache = {"keys": None, "fetched_at": 0.0}
 
-def refresh_jwks():
-    global _jwks_cache
-    _jwks_cache = None
-    return get_jwks()
+
+def reset_jwks_cache():
+    _jwks_cache["keys"] = None
+    _jwks_cache["fetched_at"] = 0.0
+
+
+def get_jwks(force_refresh=False):
+    fresh = time.monotonic() - _jwks_cache["fetched_at"] < JWKS_CACHE_TTL
+    if _jwks_cache["keys"] is None or force_refresh or not fresh:
+        response = requests.get(settings.CLERK_JWKS_URL, timeout=10)
+        _jwks_cache["keys"] = response.json()["keys"]
+        _jwks_cache["fetched_at"] = time.monotonic()
+    return _jwks_cache["keys"]
+
+
+def _accepted_issuers():
+    issuers = [settings.CLERK_ISSUER]
+    legacy = getattr(settings, "CLERK_ISSUER_LEGACY", "")
+    if legacy:
+        issuers.append(legacy)
+    return tuple(issuers)
+
+
 class ClerkAuthentication(BaseAuthentication):
     def authenticate(self, request):
         auth = request.headers.get("Authorization")
-        print("AUTH HEADER: ", auth[:50] if auth else "NONE") 
         if not auth or not auth.startswith("Bearer "):
             return None
 
         token = auth.split(" ")[1]
 
         try:
-            unverified_header = jwt.get_unverified_header(token)
-            kid = unverified_header.get("kid")
+            kid = jwt.get_unverified_header(token).get("kid")
             if not kid:
                 raise AuthenticationFailed("Missing kid in token header")
 
-            # fetch fresh keys each time instead of caching
             jwks = get_jwks()
             jwk = next((k for k in jwks if k["kid"] == kid), None)
-
-            if not jwk:
-                jwks = refresh_jwks()  # retry with fresh keys
+            if jwk is None:
+                jwks = get_jwks(force_refresh=True)
                 jwk = next((k for k in jwks if k["kid"] == kid), None)
+            if jwk is None:
+                raise AuthenticationFailed("Signing key not found for token")
 
             payload = jwt.decode(
                 token,
                 jwk,
                 algorithms=["RS256"],
-                issuer=CLERK_ISSUER,
+                issuer=_accepted_issuers(),
                 options={"verify_aud": False},
             )
-
-            clerk_id = payload["sub"]
-            print("CLERK PAYLOAD KEYS:", payload.keys())
-            user, _ = User.objects.get_or_create(
-                username=clerk_id,
-                defaults={"email": payload.get("email", "")},
-            )
-            imageUrl = payload.get("imageUrl", "")
-            if imageUrl: 
-                Profile.objects.update_or_create(
-                    user = user,
-                    defaults = {"imageUrl": imageUrl}
-                )
-            return (user, None)
-
-        except Exception as e:
-            print("JWT DECODE ERROR:", type(e), e)
+        except AuthenticationFailed:
+            raise
+        except Exception as exc:
+            logger.warning("Clerk token verification failed: %s: %s", type(exc).__name__, exc)
             raise AuthenticationFailed("Invalid Clerk token")
+
+        clerk_id = payload["sub"]
+        user, _ = User.objects.get_or_create(
+            username=clerk_id,
+            defaults={"email": payload.get("email", "")},
+        )
+        image_url = payload.get("imageUrl", "")
+        if image_url:
+            Profile.objects.update_or_create(user=user, defaults={"imageUrl": image_url})
+        return (user, None)
