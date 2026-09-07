@@ -155,7 +155,7 @@ confirm models and migrations agree.
 
 ---
 
-## Task 4: Delete root-level pre-restructure cruft
+## Task 4: Delete root-level pre-restructure cruft  ✅ DONE
 
 **Description:** Remove leftovers from before the `backend/` restructure:
 `/main.py`, `/movie_csv/` (has its own `urls.py`), `/media/`, root `/db.sqlite3`,
@@ -169,20 +169,36 @@ or `frontend/` imports these; `backend/movie_csv/` is the live app.
 Keep `backend/users/models.py`, `signals.py`, `admin.py`, `serializers.py`.
 
 **Acceptance criteria:**
-- [ ] Grep confirms no reference from live code (`config/`, `movie_csv/views/api.py`,
-      `movie_csv/urls/api.py`, `users/models.py|signals.py|serializers.py`) to any deleted path
-- [ ] Files removed and the removal committed
-- [ ] `python manage.py check` still passes; `makemigrations --check` still clean
+- [x] Live code (`config/`, `movie_csv/views/api.py`, `urls/api.py`,
+      `serializers.py`, `users/models.py|signals.py|admin.py|serializers.py`)
+      references none of the deleted paths — verified by grep + import trace
+- [x] 29 files `git rm`'d and committed (`e9f190b`)
+- [x] `manage.py check` → 0 issues; `makemigrations --check` → no drift
 
 **Verification:**
-- [ ] `grep -rn "main\.py\|root package\|\.\./movie_csv" backend frontend` → no hits
-- [ ] `cd backend && python manage.py runserver` boots
-- [ ] `cd frontend && npx tsc --noEmit` passes
+- [x] grep for `views.web` / `urls.web` / `.forms import` / `serpapi_youtube` /
+      `users.views` / `users.urls` / `templates/*` in `*.py` → only two stale
+      explanatory comments in `urls/__init__.py` + `config/urls.py` (kept)
+- [x] `manage.py check` boots the app (URLconf + all apps load)
+- [~] `frontend tsc`: not run — frontend untouched; root `package.json` was
+      unrelated to `frontend/` (which has its own)
+
+**Deleted:**
+- Repo root: `main.py`, `package.json`, `package-lock.json`, `media/`
+  (1 orphan JPG — MEDIA_ROOT is `backend/media`), `movie_csv/` (stale url stubs)
+- `backend/` legacy web UI (unrouted since Task 1b): `movie_csv/views/web.py`,
+  `movie_csv/urls/web.py`, `movie_csv/forms.py`, `movie_csv/templates/` (11 html),
+  `movie_csv/services/serpapi_youtube.py`, `users/views.py`, `users/urls.py`,
+  `users/forms.py`, `users/templates/` (3 html), `backend/package-lock.json` (empty stub)
+- **Kept:** `backend/users/{models,signals,admin,serializers,apps}.py`, migrations,
+  `movie_csv/static/css/mystyles.css` (STATICFILES_DIRS target — revisit at Task 6)
+
+**Note:** untracked leftovers still on disk (all gitignored, harmless, `rm` was
+permission-blocked): stale root `db.sqlite3` (217 KB, Jan 2026 — NOT the live
+`backend/db.sqlite3`), some `.DS_Store`. Clean up manually with
+`rm -f db.sqlite3 .DS_Store backend/.DS_Store` if desired.
 
 **Dependencies:** 2
-
-**Files likely touched:** (deletions)
-- `main.py`, `movie_csv/`, `media/`, `db.sqlite3`, `package.json`, `package-lock.json` (all repo root)
 
 **Estimated scope:** S
 
