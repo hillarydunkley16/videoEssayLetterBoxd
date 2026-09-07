@@ -254,7 +254,7 @@ submission; needed for a clean `--deploy`); override via `DJANGO_SECURE_HSTS_SEC
 
 ---
 
-## Task 6: Database via `dj-database-url` + WhiteNoise static pipeline
+## Task 6: Database via `dj-database-url` + WhiteNoise static pipeline  ✅ DONE
 
 **Description:** Wire `dj_database_url.config()` with a SQLite fallback for the
 `default` database. Add WhiteNoise: middleware directly after
@@ -262,15 +262,22 @@ submission; needed for a clean `--deploy`); override via `DJANGO_SECURE_HSTS_SEC
 `STORAGES["staticfiles"]` set to WhiteNoise compressed manifest storage.
 
 **Acceptance criteria:**
-- [ ] `DATABASE_URL=postgres://...` switches the DB with no code change; unset → SQLite
-- [ ] `collectstatic --noinput` succeeds and populates `staticfiles/`
-- [ ] `staticfiles/` is gitignored
-- [ ] `runserver` with `DEBUG=False` + `collectstatic` done → `/admin/` renders with CSS
+- [x] `DATABASE_URL=postgres://…` → `ENGINE=django.db.backends.postgresql`,
+      `CONN_MAX_AGE=600`; unset → SQLite file
+- [x] `collectstatic --noinput --clear` exits 0 and writes
+      `backend/staticfiles/staticfiles.json`
+- [x] `staticfiles/` gitignored
+- [x] WhiteNoise serves the hashed admin CSS: `200`, `text/css`,
+      `Cache-Control: max-age=315360000, public, immutable` (verified via
+      test client over https; plain http 301s due to the Task 5 SSL redirect)
 
 **Verification:**
-- [ ] `cd backend && python manage.py collectstatic --noinput` → success
-- [ ] `DJANGO_DEBUG= DJANGO_SECRET_KEY=x DJANGO_ALLOWED_HOSTS=127.0.0.1 CLERK_ISSUER=https://x python manage.py runserver` then `curl -sI localhost:8000/admin/` → 302→login, static assets 200
-- [ ] `python -c "import dj_database_url"` (dep present)
+- [x] `movie_csv/tests.py` +6 (suite 18/18): postgres selection, `CONN_MAX_AGE`,
+      middleware adjacency, `STATIC_ROOT`, whitenoise storage backend,
+      collectstatic → manifest
+- [x] `check --deploy --fail-level WARNING` still 0 issues with `DATABASE_URL` set
+- [x] `makemigrations --check` → no drift
+- Committed as `b69fa5c`.
 
 **Dependencies:** 5
 
