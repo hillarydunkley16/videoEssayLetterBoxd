@@ -135,6 +135,7 @@ if not DEBUG:
 # unset -> local SQLite file.
 DATABASES = {
     'default': dj_database_url.config(
+        env="DATABASE_URL",
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
     )
@@ -236,6 +237,7 @@ if not CLERK_ISSUER:
 CLERK_ISSUER = CLERK_ISSUER.rstrip("/")
 CLERK_JWKS_URL = f"{CLERK_ISSUER}/.well-known/jwks.json"
 CLERK_ISSUER_LEGACY = (os.environ.get("CLERK_ISSUER_LEGACY") or "").rstrip("/")
+CLERK_JWKS_CACHE_TTL = int(os.environ.get("CLERK_JWKS_CACHE_TTL", "600"))
 
 
 SIMPLE_JWT = {
