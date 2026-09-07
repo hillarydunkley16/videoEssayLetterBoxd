@@ -452,26 +452,34 @@ once Render has assigned `videoessay-web.onrender.com`.
 
 ## Task 11: [operator] Provision backend + Postgres on Render, run migrations
 
-**Description:** Create the Blueprint from `render.yaml`. Set dashboard env vars:
-`DJANGO_SECRET_KEY` (generate), `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`,
-`CORS_ALLOWED_ORIGINS`, `SERPAPI_KEY` (rotate the one from git history),
-`CLERK_ISSUER` (from Task 10). Confirm the pre-deploy migrate ran; create a
-superuser via Render shell.
+**Prereq DONE:** local `v2` rebased onto `origin/v2` (which had a stray
+`46c72cd Delete .env`) and **pushed** — `render.yaml` is now on GitHub `v2`.
+NOTE: the rebase rewrote local commit SHAs; SHA references elsewhere in this
+file (pre-Task-11) are stale — commit *messages* are the source of truth.
+
+**Description:** Render dashboard → New → Blueprint → repo
+`hillarydunkley16/videoEssayLetterBoxd`, branch `v2` → Apply. The only
+`sync: false` var that must be filled now is **`CLERK_ISSUER` =
+`https://splendid-sunbird-55.clerk.accounts.dev`** (settings.py raises if it's
+unset when DEBUG is off). Leave `DJANGO_ALLOWED_HOSTS` / CSRF / CORS blank
+(settings auto-trusts `RENDER_EXTERNAL_HOSTNAME`); set `SERPAPI_KEY` to a fresh
+key (rotate). `DJANGO_SECRET_KEY` / `DJANGO_DEBUG` / `DATABASE_URL` are wired by
+the Blueprint. Then create a superuser via the service Shell.
 
 **Acceptance criteria:**
-- [ ] Web service build + deploy succeeds; service is "live"
-- [ ] `GET /admin/` loads with CSS over HTTPS
-- [ ] `python manage.py migrate` shows all applied (check deploy logs)
+- [ ] Blueprint apply creates 3 resources; backend build + deploy → "live"
+- [ ] Deploy logs show `Applying … OK` (migrate runs in startCommand)
+- [ ] `GET /admin/login/` loads with CSS over HTTPS; `Strict-Transport-Security` header present
+- [ ] `GET /api/VideoEssays/` → 200 JSON (DB reachable); `GET /api/logList/` → 403
 - [ ] Superuser created; can log into `/admin/`
 
-**Verification:**
-- [ ] `curl -sI https://<backend>.onrender.com/admin/` → 302 to login, HSTS header present, `X-Forwarded-Proto` honored (no redirect loop)
-- [ ] `curl -s https://<backend>.onrender.com/api/videoessays/` → 401 (no token)
-- [ ] `python manage.py check --deploy` in Render shell → 0 issues
+**Verification:** user runs the 3 `curl`s from the runbook (agent can't reach
+the network) OR checks in a browser; paste results back.
+
+**Watch for:** `runtime.txt` `python-3.13.7` rejected by Render → bump to a
+supported patch + re-push; free Postgres lifetime; ~50s cold start.
 
 **Dependencies:** 8, 9, 10
-
-**Files likely touched:** none (dashboard)
 
 **Estimated scope:** M
 
