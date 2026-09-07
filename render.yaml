@@ -14,12 +14,17 @@ services:
     type: web
     runtime: python
     plan: free
-    rootDir: backend            # runtime.txt + manage.py live here
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
-    # migrate runs in startCommand, not preDeployCommand: pre-deploy is paid-only,
-    # and free tier runs a single instance so there's no migration race.
-    startCommand: python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    rootDir: backend
+    # Build = install only. migrate + collectstatic run in startCommand so they
+    # execute with the full runtime env (CLERK_ISSUER etc.) present — settings.py
+    # raises on a missing CLERK_ISSUER, and sync:false vars aren't guaranteed at
+    # build time. Free tier is a single instance, so no migration race.
+    # preDeployCommand is paid-only, so it's not an option here.
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
+      - key: PYTHON_VERSION      # Render ignored runtime.txt and used 3.14; pin explicitly
+        value: "3.13.7"
       - key: DATABASE_URL
         fromDatabase:
           name: videoessay-db

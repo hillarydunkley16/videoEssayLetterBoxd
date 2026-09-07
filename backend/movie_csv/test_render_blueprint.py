@@ -36,6 +36,21 @@ class RenderBlueprintTests(SimpleTestCase):
         self.assertIn("gunicorn config.wsgi:application", self.text)
         self.assertIn("0.0.0.0:$PORT", self.text)
 
+    def test_python_version_pinned_to_313(self):
+        self.assertIn("key: PYTHON_VERSION", self.text)
+        self.assertRegex(self.text, r'value:\s*"3\.13\.\d+"')
+
+    def test_migrate_and_collectstatic_run_at_start_not_build(self):
+        # settings.py raises on a missing CLERK_ISSUER; keep DB/Clerk-touching
+        # commands out of buildCommand where sync:false vars may be absent.
+        build_line = next(
+            (ln for ln in self.text.splitlines() if ln.strip().startswith("buildCommand:")),
+            "",
+        )
+        self.assertIn("pip install", build_line)
+        self.assertNotIn("migrate", build_line)
+        self.assertNotIn("collectstatic", build_line)
+
     def test_static_site_publishes_a_dir_with_spa_rewrite(self):
         self.assertIn("staticPublishPath:", self.text)
         self.assertIn("npx expo export --platform web", self.text)
