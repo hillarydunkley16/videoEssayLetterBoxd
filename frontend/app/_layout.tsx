@@ -26,9 +26,18 @@ function RootLayoutNav() {
   )
 }
 
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+if (!publishableKey) {
+  throw new Error(
+    'Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Set it in frontend/.env (local) ' +
+      'or the deploy environment. See frontend/.env.example.',
+  )
+}
+
 export default function RootLayout() {
   return (
-    <ClerkProvider tokenCache={tokenCache}>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <RootLayoutNav/>
     </ClerkProvider>
   )
