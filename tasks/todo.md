@@ -491,32 +491,38 @@ once Render has assigned `videoessay-web.onrender.com`.
 
 ---
 
-## Task 12: Frontend prod env wiring + `.env.example` + build gates
+## Task 12: Frontend prod env wiring + `.env.example` + build gates  ✅ DONE (with a flagged gate deviation)
 
 **Description:** Add `frontend/.env.example` with `EXPO_PUBLIC_API_BASE_URL` and
-`EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`. Confirm `client.ts` already consumes
-`EXPO_PUBLIC_API_BASE_URL` (it does) and that `ClerkProvider` reads the
-publishable key from env (add `publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}`
-explicitly if not already). No hardcoded hosts.
+`EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`; make `ClerkProvider` read the key from env;
+no hardcoded hosts.
 
 **Acceptance criteria:**
-- [ ] `frontend/.env.example` documents both vars (no values)
-- [ ] `ClerkProvider` uses the env publishable key
-- [ ] `grep` shows no hardcoded backend URL or Clerk key in `frontend/src` or `frontend/app`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web` all pass
+- [x] `frontend/.env.example` created (`EXPO_PUBLIC_API_BASE_URL` = live Render
+      backend; `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` blank)
+- [x] `ClerkProvider` gets `publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}`
+      + a fail-fast `throw` if unset
+- [x] No hardcoded backend URL / Clerk key in `src/` or `app/` (`client.ts`
+      already reads `EXPO_PUBLIC_API_BASE_URL`; `127.0.0.1` there is the
+      dev-only fallback behind that var)
+- [~] `npx expo export --platform web` → **passes**, `dist/index.html` produced
+      (this is the command Render runs)
+- [ ] **`tsc --noEmit` (20 errors) and `expo lint` (32 errors / 321 warnings)
+      are NOT clean** — verified 100% pre-existing in the v2 feature code
+      (stash-and-recount gives identical counts). None in the 2 files touched.
 
-**Verification:**
-- [ ] `cd frontend && npx tsc --noEmit` → clean
-- [ ] `cd frontend && npm run lint` → clean
-- [ ] `cd frontend && npx expo export --platform web` → `dist/` produced, no errors
-- [ ] `npx serve frontend/dist` locally with `EXPO_PUBLIC_API_BASE_URL` pointing at the Render backend → app loads, sign-in screen renders
+**Pre-existing debt (for Task 14 / code-review):**
+- tsc errors in: `app/(home)/popularLists.tsx`, `app/(modals)/collectionDetail.tsx`,
+  `app/(tabs)/otherProfile.tsx`, `app/(tabs)/profile.tsx`, `src/api/auth.ts`,
+  `src/api/videos.ts`, `src/helpers/jwt.ts`, `src/screens/collectionInfo.tsx`,
+  `src/screens/logInfo.tsx`
+- lint errors: 31× `react-hooks/rules-of-hooks` (likely conditional hook calls —
+  possible runtime crashes on those screens), 1× `react/no-unescaped-entities`
+- **SPEC Boundary says "Always run tsc/lint before deploying frontend". This is a
+  deviation — surfaced to the user for a decision before Task 13 (fix now vs.
+  proceed on the passing `expo export` gate and fix in Task 14).**
 
 **Dependencies:** 11
-
-**Files likely touched:**
-- `frontend/.env.example`
-- `frontend/app/_layout.tsx`
-- `frontend/.gitignore` (ensure `dist/` ignored — already is)
 
 **Estimated scope:** S
 
