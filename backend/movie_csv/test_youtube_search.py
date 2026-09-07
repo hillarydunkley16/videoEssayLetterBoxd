@@ -65,7 +65,9 @@ class YoutubeSearchViewTests(SimpleTestCase):
     @mock.patch("movie_csv.views.api.requests.get")
     def test_serpapi_4xx_normalized_to_502(self, mget, _getenv):
         mget.return_value = mock.Mock(
-            status_code=401, json=lambda: {"error": "Invalid API key"}
+            status_code=401,
+            text='{"error": "Invalid API key"}',
+            json=lambda: {"error": "Invalid API key"},
         )
         self.assertEqual(_post(self.client, {"q": "essay"}).status_code, 502)
 
