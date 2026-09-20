@@ -18,10 +18,12 @@ jest.mock('@clerk/clerk-expo', () => ({
 }));
 
 const mockFetchFollowers = jest.fn();
+const mockFetchFollowing = jest.fn();
 const mockFetchProfile = jest.fn();
 const mockFollowUser = jest.fn();
 jest.mock('@/src/api/users', () => ({
   fetchFollowers: (...args: unknown[]) => mockFetchFollowers(...args),
+  fetchFollowing: (...args: unknown[]) => mockFetchFollowing(...args),
   fetchProfile: (...args: unknown[]) => mockFetchProfile(...args),
   followUser: (...args: unknown[]) => mockFollowUser(...args),
 }));
@@ -140,5 +142,55 @@ describe('FollowListScreen (followers)', () => {
     render(<FollowListScreen userId={9} />);
 
     expect(await screen.findByText('No followers yet.')).toBeTruthy();
+  });
+});
+
+describe('FollowListScreen (following tab)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetchProfile.mockResolvedValue({ user: { id: 1, username: 'me' } });
+  });
+
+  it('opens on the requested tab and lists who the user follows', async () => {
+    mockFetchFollowing.mockResolvedValue(page([row(4, 'cat', true)]));
+    render(<FollowListScreen userId={9} tab="following" />);
+
+    expect(await screen.findByText('cat')).toBeTruthy();
+    expect(mockFetchFollowing).toHaveBeenCalledWith(9, 1, 'token');
+    expect(mockFetchFollowers).not.toHaveBeenCalled();
+    expect(within(screen.getByTestId('follow-toggle-4')).getByText('Following')).toBeTruthy();
+  });
+
+  it('switching tabs replaces the rows with the other list', async () => {
+    mockFetchFollowers.mockResolvedValue(page([row(2, 'ann')]));
+    mockFetchFollowing.mockResolvedValue(page([row(4, 'cat')]));
+    render(<FollowListScreen userId={9} />);
+    await screen.findByText('ann');
+
+    fireEvent.press(screen.getByTestId('tab-following'));
+
+    expect(await screen.findByText('cat')).toBeTruthy();
+    expect(screen.queryByText('ann')).toBeNull();
+    expect(mockFetchFollowing).toHaveBeenCalledWith(9, 1, 'token');
+  });
+
+  it('shows an empty state when the user follows nobody', async () => {
+    mockFetchFollowing.mockResolvedValue(page([]));
+    render(<FollowListScreen userId={9} tab="following" />);
+
+    expect(await screen.findByText('Not following anyone yet.')).toBeTruthy();
+  });
+
+  it('paginates the following list', async () => {
+    mockFetchFollowing
+      .mockResolvedValueOnce(page([row(4, 'cat')], 'http://x/?page=2'))
+      .mockResolvedValueOnce(page([row(5, 'dan')]));
+    render(<FollowListScreen userId={9} tab="following" />);
+    await screen.findByText('cat');
+
+    fireEvent(screen.getByTestId('follow-list'), 'endReached');
+
+    expect(await screen.findByText('dan')).toBeTruthy();
+    expect(mockFetchFollowing).toHaveBeenLastCalledWith(9, 2, 'token');
   });
 });

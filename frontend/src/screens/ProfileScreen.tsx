@@ -158,9 +158,15 @@ export default function ProfileScreen() {
             n={profile.followers_count}
             label="Followers"
             theme={theme}
-            onPress={() => router.push({ pathname: "/followList", params: { userId: String(profile.user.id) } })}
+            onPress={() => router.push({ pathname: "/followList", params: { userId: String(profile.user.id), tab: "followers" } })}
           />
-          <Stat n={profile.following_count} label="Following" theme={theme} isLast />
+          <Stat
+            n={profile.following_count}
+            label="Following"
+            theme={theme}
+            isLast
+            onPress={() => router.push({ pathname: "/followList", params: { userId: String(profile.user.id), tab: "following" } })}
+          />
         </View>
       </View>
 

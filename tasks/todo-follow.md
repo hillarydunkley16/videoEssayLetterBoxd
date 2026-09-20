@@ -34,7 +34,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
   - Acceptance: paginated, ordered, viewer-relative `is_following`, 404 unknown user, constant queries; screen paginates, row toggle updates that row, empty state; follower count tappable on both profiles
   - Verify: `python manage.py test movie_csv.test_follow_lists`; jest for `FollowListScreen`; manual on web
   - Files: `views/api.py`, `serializers.py`, `urls/api.py`, `users.ts`, `(modals)/followList.tsx`, `FollowListScreen.tsx`, 2 profile screens, tests
-- [ ] Task 7: Following list, end to end
+- [x] Task 7: Following list, end to end (backend 117/117; jest 21/21; tsc 41 vs 37 baseline, all 4 new are `/followList` missing from the gitignored generated typed-routes file; web export OK; manual web check not done, needs Clerk sign-in)
   - Acceptance: same guarantees for `/following/`; Following tab in the same screen; following count tappable
   - Verify: extend `test_follow_lists.py` and the screen test; manual on web
 - [ ] Task 8: Remove follower

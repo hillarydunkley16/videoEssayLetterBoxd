@@ -603,19 +603,36 @@ class FollowUser(APIView):
         )
 
 
-class FollowersList(generics.ListAPIView):
-    """Users who follow <user_id>, newest follow first. `is_following` is relative to the viewer."""
+class FollowListBase(generics.ListAPIView):
+    """Newest-follow-first list of users on one side of <user_id>'s follows.
+    `is_following` is relative to the viewer. Subclasses set `relation`: the Follow
+    reverse name reaching the listed users, and `target_field`: the Follow column
+    that must equal <user_id>."""
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = FollowListUserSerializer
+    relation = None
+    target_field = None
 
     def get_queryset(self):
         target_id = self.kwargs["user_id"]
         get_object_or_404(User, id=target_id)
         viewer_follows = Follow.objects.filter(follower=self.request.user, followee=OuterRef("pk"))
         return (
-            User.objects.filter(following_set__followee_id=target_id)
+            User.objects.filter(**{f"{self.relation}__{self.target_field}_id": target_id})
             .select_related("profile")
-            .annotate(is_following=Exists(viewer_follows), followed_at=F("following_set__created_at"))
+            .annotate(is_following=Exists(viewer_follows), followed_at=F(f"{self.relation}__created_at"))
             .order_by("-followed_at", "-id")
         )
+
+
+class FollowersList(FollowListBase):
+    """Users who follow <user_id>."""
+    relation = "following_set"  # Follow rows where the listed user is the follower
+    target_field = "followee"
+
+
+class FollowingList(FollowListBase):
+    """Users <user_id> follows."""
+    relation = "follower_set"  # Follow rows where the listed user is the followee
+    target_field = "follower"

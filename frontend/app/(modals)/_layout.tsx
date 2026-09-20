@@ -75,7 +75,7 @@ export default function Layout() {
             <Stack.Screen
                 name = "followList"
                 options = {{
-                    title: 'Followers',
+                    title: 'Connections',
                     headerShown: true,
                 }}
             />

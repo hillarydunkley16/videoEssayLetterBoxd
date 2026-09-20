@@ -11,8 +11,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: '7' }),
+  router: { push: (...args: unknown[]) => mockPush(...args) },
 }));
 
 jest.mock('@clerk/clerk-expo', () => ({
@@ -138,5 +140,17 @@ describe('other profile follow button', () => {
     await waitFor(() => expect(mockFollowUser).toHaveBeenCalled());
     expect(screen.getByText('Follow')).toBeTruthy();
     expect(screen.getByText(/3 Followers/)).toBeTruthy();
+  });
+
+  it('opens the followers list from the follower count and the following list from the following count', async () => {
+    mockFetchProfile.mockResolvedValue(profile({ followers_count: 3, following_count: 5 }));
+
+    render(<OtherProfile />);
+    fireEvent.press(await screen.findByTestId('followers-count'));
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/followList', params: { userId: '7', tab: 'followers' } });
+
+    expect(screen.getByText(/5 Following/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('following-count'));
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/followList', params: { userId: '7', tab: 'following' } });
   });
 });

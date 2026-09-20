@@ -58,3 +58,7 @@ export type FollowListUser = {
 export async function fetchFollowers(userId: number, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
     return authFetch(`/users/${userId}/followers/?page=${page}`, {}, token);
 }
+
+export async function fetchFollowing(userId: number, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
+    return authFetch(`/users/${userId}/following/?page=${page}`, {}, token);
+}

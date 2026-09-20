@@ -34,6 +34,7 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followersCount, setFollowersCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
   const [followBusy, setFollowBusy] = useState(false)
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function Page() {
         setNumLogs(profileData.user_logs.length)
         setNumEssays(new Set(profileData.user_logs.map((item) => item.essay)).size)
         setFollowersCount(profileData.followers_count)
+        setFollowingCount(profileData.following_count)
         setIsFollowing(profileData.is_following)
       } catch (err) {
         console.error('Failed to load other profile:', err)
@@ -117,9 +119,15 @@ export default function Page() {
             {numLogs} Logs · {numEssays} Essays ·{' '}
             <Text
               testID="followers-count"
-              onPress={() => router.push({ pathname: '/followList', params: { userId: String(profileId) } })}
+              onPress={() => router.push({ pathname: '/followList', params: { userId: String(profileId), tab: 'followers' } })}
             >
               {followersCount} Followers
+            </Text>{' '}·{' '}
+            <Text
+              testID="following-count"
+              onPress={() => router.push({ pathname: '/followList', params: { userId: String(profileId), tab: 'following' } })}
+            >
+              {followingCount} Following
             </Text>
           </ThemedText>
 

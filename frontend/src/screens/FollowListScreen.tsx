@@ -13,14 +13,22 @@ import { router } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
-import { FollowListUser, fetchFollowers, fetchProfile, followUser } from "@/src/api/users";
+import { FollowListUser, fetchFollowers, fetchFollowing, fetchProfile, followUser } from "@/src/api/users";
 import { useAuthPost } from "@/src/api/authPost";
 
-export default function FollowListScreen({ userId }: { userId: number }) {
+export type FollowListTab = "followers" | "following";
+
+const EMPTY_TEXT: Record<FollowListTab, string> = {
+  followers: "No followers yet.",
+  following: "Not following anyone yet.",
+};
+
+export default function FollowListScreen({ userId, tab: initialTab = "followers" }: { userId: number; tab?: FollowListTab }) {
   const theme = Colors[(useColorScheme() ?? "light") as "light" | "dark"];
   const { getToken } = useAuth();
   const authPost = useAuthPost();
 
+  const [tab, setTab] = useState<FollowListTab>(initialTab);
   const [rows, setRows] = useState<FollowListUser[]>([]);
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,30 +36,47 @@ export default function FollowListScreen({ userId }: { userId: number }) {
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const nextPage = useRef(1);
   const fetching = useRef(false);
+  // Bumped whenever the list is reset, so a response for a previous tab is dropped.
+  const generation = useRef(0);
 
   const loadPage = useCallback(async () => {
     if (fetching.current) return;
     fetching.current = true;
+    const mine = generation.current;
     try {
       const token = await getToken();
       if (!token) return;
-      const data = await fetchFollowers(userId, nextPage.current, token);
+      const fetchPage = tab === "followers" ? fetchFollowers : fetchFollowing;
+      const data = await fetchPage(userId, nextPage.current, token);
+      if (mine !== generation.current) return;
       nextPage.current += 1;
       setRows((prev) => [...prev, ...data.results]);
       setHasNext(data.next !== null);
     } catch (err) {
-      console.error("Failed to load followers:", err);
+      console.error(`Failed to load ${tab}:`, err);
     } finally {
-      fetching.current = false;
-      setLoading(false);
+      if (mine === generation.current) {
+        fetching.current = false;
+        setLoading(false);
+      }
     }
     // getToken's identity changes on every Clerk render; excluding it keeps
     // callers from re-fetching in a loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, tab]);
+
+  // (Re)start from page 1 whenever the list being shown changes.
+  useEffect(() => {
+    generation.current += 1;
+    fetching.current = false;
+    nextPage.current = 1;
+    setRows([]);
+    setHasNext(false);
+    setLoading(true);
+    loadPage();
+  }, [loadPage]);
 
   useEffect(() => {
-    loadPage();
     (async () => {
       try {
         const token = await getToken();
@@ -61,7 +86,7 @@ export default function FollowListScreen({ userId }: { userId: number }) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadPage]);
+  }, []);
 
   async function toggle(id: number) {
     if (busyIds.includes(id)) return;
@@ -80,16 +105,25 @@ export default function FollowListScreen({ userId }: { userId: number }) {
     router.push(id === me ? "/profile" : `/otherProfile/${id}`);
   }
 
-  if (loading) {
-    return (
-      <ThemedView style={styles.center}>
-        <ActivityIndicator />
-      </ThemedView>
-    );
-  }
-
   return (
     <ThemedView style={styles.container}>
+      <View style={[styles.tabs, { borderColor: theme.border }]}>
+        {(["followers", "following"] as const).map((t) => (
+          <TouchableOpacity key={t} testID={`tab-${t}`} style={styles.tab} onPress={() => setTab(t)}>
+            <Text
+              style={{
+                color: tab === t ? theme.text : theme.muted,
+                fontFamily: tab === t ? Fonts?.displayMedium : Fonts?.sans,
+              }}
+            >
+              {t === "followers" ? "Followers" : "Following"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {loading ? (
+        <ActivityIndicator style={styles.loading} />
+      ) : (
       <FlatList
         testID="follow-list"
         data={rows}
@@ -97,7 +131,7 @@ export default function FollowListScreen({ userId }: { userId: number }) {
         onEndReached={() => hasNext && loadPage()}
         onEndReachedThreshold={0.5}
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: theme.muted, fontFamily: Fonts?.sans }]}>No followers yet.</Text>
+          <Text style={[styles.empty, { color: theme.muted, fontFamily: Fonts?.sans }]}>{EMPTY_TEXT[tab]}</Text>
         }
         renderItem={({ item }) => (
           <View style={[styles.row, { borderColor: theme.border }]}>
@@ -124,13 +158,16 @@ export default function FollowListScreen({ userId }: { userId: number }) {
           </View>
         )}
       />
+      )}
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loading: { marginTop: 32 },
+  tabs: { flexDirection: "row", borderBottomWidth: 1 },
+  tab: { marginRight: 22, paddingVertical: 12 },
   row: {
     flexDirection: "row",
     alignItems: "center",
