@@ -1,48 +1,56 @@
 // components/WebNav.tsx
-import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { Link } from 'expo-router'
-import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
-import { ThemedText } from '@/components/themed-text'
-import { ThemedView } from '@/components/themed-view'
-import {useAuth} from '@clerk/clerk-expo'
-import { SignOutButton } from '@/app/components/sign-out-button'
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-export function WebNav() {
-    
-  return (
-    <ThemedView style={styles.nav}>
-      <Link href="/">
-        <ThemedText style={styles.link}>Home</ThemedText>
-      </Link>
-      <SignedOut>
-        <Link href="/(auth)/sign-in">
-          <Pressable>
-            <MaterialCommunityIcons name="home" size={24} color="#666" />
-            <ThemedText>Log in</ThemedText>
+import { View, Text, Pressable, StyleSheet, useColorScheme } from 'react-native'
+import { Link, usePathname } from 'expo-router'
+import { SignedIn, SignedOut } from '@clerk/clerk-expo'
+import { Colors, Fonts } from '@/constants/theme'
+import { SearchField } from './SearchField'
 
-           </Pressable>
-          
-        </Link>
-        <Link href="/(auth)/sign-up">
-          <ThemedText>Sign up</ThemedText>
-        </Link>
-      </SignedOut>
+function NavLink({ href, label, active, theme }: { href: string; label: string; active: boolean; theme: (typeof Colors)['light'] }) {
+  return (
+    <Link href={href as any} asChild>
+      <Pressable>
+        <Text
+          style={[
+            styles.link,
+            { color: active ? theme.text : theme.muted, fontFamily: Fonts?.sansSemiBold },
+          ]}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    </Link>
+  )
+}
+
+export function WebNav() {
+  const theme = Colors[useColorScheme() ?? 'light']
+  const pathname = usePathname()
+
+  return (
+    <View style={[styles.nav, { borderColor: theme.border, backgroundColor: theme.background }]}>
+      <Link href="/" asChild>
+        <Pressable>
+          <Text style={[styles.brand, { color: theme.text, fontFamily: Fonts?.display }]}>
+            Visual Arguments
+          </Text>
+        </Pressable>
+      </Link>
+
       <SignedIn>
-        <Link href =  "/(tabs)/search">
-            <ThemedText>Log a Video</ThemedText>
-        </Link>
-        <Link href = "/(tabs)/profile">
-            <ThemedText>Profile</ThemedText>
-        </Link>
-        <SignOutButton />
+        <SearchField theme={theme} style={styles.searchContainer} />
       </SignedIn>
-      {/* <Link href="/videos">
-        <Text style={styles.link}>Videos</Text>
-      </Link> */}
-      {/* <Link href="/profile">
-        <Text style={styles.link}>Profile</Text>
-      </Link> */}
-    </ThemedView>
+
+      <View style={styles.links}>
+        <SignedOut>
+          <NavLink href="/(auth)/sign-in" label="Log in" active={pathname.includes('sign-in')} theme={theme} />
+          <NavLink href="/(auth)/sign-up" label="Sign up" active={pathname.includes('sign-up')} theme={theme} />
+        </SignedOut>
+        <SignedIn>
+          <NavLink href="/(tabs)/lists" label="Lists" active={pathname.includes('lists')} theme={theme} />
+          <NavLink href="/(tabs)/profile" label="Profile" active={pathname.includes('profile')} theme={theme} />
+        </SignedIn>
+      </View>
+    </View>
   )
 }
 
@@ -54,16 +62,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 24,
     borderBottomWidth: 1,
-    borderColor: '#ddd',
+  },
+  links: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
+  },
+  brand: {
+    fontSize: 17,
   },
   link: {
-    fontSize: 16,
+    fontSize: 14,
+    marginLeft: 24,
   },
-  navItem: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  navLabel: {
-    fontSize: 12,
+  searchContainer: {
+    flex: 1,
+    maxWidth: 360,
   },
 })

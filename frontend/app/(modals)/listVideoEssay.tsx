@@ -12,7 +12,7 @@ import { fetchUsersCollections } from '@/src/api/collection'
 import { Collection } from '@/src/types/collection'
 import { useAuth } from '@clerk/clerk-expo'
 import UserListsScreen from '@/src/screens/userLists';
-export default function listVideoEssay(){
+export default function ListVideoEssay(){
     const params = useLocalSearchParams<{essayId: string}>();
     const [collections, setCollections] = useState<Collection[]>([]);
     const { getToken } = useAuth(); 

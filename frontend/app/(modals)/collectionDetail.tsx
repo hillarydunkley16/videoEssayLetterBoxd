@@ -1,28 +1,18 @@
-import { router, useLocalSearchParams } from 'expo-router'
-import { StyleSheet, Text, TouchableOpacity } from 'react-native'
-import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen'
-import VideoInfoLogs from '@/src/screens/VideoInfoLogs'
-import { ThemedText } from '@/components/themed-text'
+import { useLocalSearchParams } from 'expo-router'
+import { Text } from 'react-native'
 import { ThemedView } from '@/components/themed-view'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { useEffect } from 'react'
-import { useNavigation } from 'expo-router'
-import { ReviewsTopNav } from '@/components/ui/reviewsTopNav'
 import CollectionInfo from '@/src/screens/collectionInfo'
-export default function collectionDetail(){
-    const params = useLocalSearchParams<string>(); 
-    console.log(params)
-    const navigation = useNavigation();
-    if (!params) return(
+export default function CollectionDetail(){
+    const params = useLocalSearchParams<{ publicId: string }>();
+    if (!params.publicId) return(
         <ThemedView>
-            <ThemedText>Invalid collection ID</ThemedText>
+            <Text>Invalid collection ID</Text>
         </ThemedView>
     )
-    console.log(`TYPE OF PUBLIC ID PARAMS ${typeof params}`)
     return(
-        <ThemedView>
-            <CollectionInfo 
-            public_id = {params}
+        <ThemedView style={{ flex: 1 }}>
+            <CollectionInfo
+            public_id = {params.publicId}
             />
         </ThemedView>
     )

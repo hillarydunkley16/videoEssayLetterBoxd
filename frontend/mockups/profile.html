@@ -1,0 +1,486 @@
+<title>Visual Arguments Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1B1D21;
+    --paper: #F1F1EE;
+    --paper-dim: #E2E2DD;
+    --cobalt: #2F5DFF;
+    --teal: #1E7A6C;
+    --slate: #63666C;
+
+    --bg: var(--paper);
+    --surface: var(--paper-dim);
+    --surface-2: #D5D5CF;
+    --text: var(--ink);
+    --muted: var(--slate);
+    --border: rgba(27, 29, 33, 0.14);
+    --accent: var(--cobalt);
+    --accent-ink: #fff;
+    --accent2: var(--teal);
+    --shadow: 0 1px 0 rgba(27,29,33,0.05);
+  }
+
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: var(--ink);
+      --surface: #24262B;
+      --surface-2: #2B2D33;
+      --text: var(--paper);
+      --muted: #93969E;
+      --border: rgba(241,241,238,0.14);
+      --accent: #5B7CFF;
+      --accent2: #2FA593;
+      --shadow: 0 1px 0 rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--ink);
+    --surface: #24262B;
+    --surface-2: #2B2D33;
+    --text: var(--paper);
+    --muted: #93969E;
+    --border: rgba(241,241,238,0.14);
+    --accent: #5B7CFF;
+    --accent2: #2FA593;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .frame {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100%;
+    padding: 0 0 48px;
+  }
+
+  /* ---- top bar ---- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 10px;
+  }
+  .topbar .brand {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+  .topbar .brand em { color: var(--accent); font-style: normal; }
+  .icon-btn {
+    width: 30px; height: 30px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    color: var(--muted);
+    background: transparent;
+  }
+
+  /* ---- header ---- */
+  .header {
+    padding: 4px 20px 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .id-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+  }
+  .avatar {
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    flex: none;
+    background: linear-gradient(155deg, var(--accent), #7a2517 130%);
+    display: grid; place-items: center;
+    color: var(--accent-ink);
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 32px;
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--border);
+  }
+  .id-text { flex: 1; min-width: 0; padding-bottom: 4px; }
+  .display-name {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 24px;
+    line-height: 1.1;
+    margin: 0 0 3px;
+  }
+  .handle {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .handle .dot { margin: 0 6px; opacity: .6; }
+
+  .tagline {
+    margin: 14px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+    max-width: 65ch;
+  }
+
+  .stats-row {
+    display: flex;
+    margin-top: 18px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .stat {
+    flex: 1;
+    text-align: center;
+    padding: 0 4px;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+  .stat .n {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
+    display: block;
+  }
+  .stat .lbl {
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-top: 2px;
+  }
+
+  .actions-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 12px;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* ---- favorites shelf ---- */
+  .section {
+    padding: 20px 20px 4px;
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .section-link {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .fav-shelf {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .fav-card {
+    aspect-ratio: 16/10;
+    border-radius: 4px;
+    position: relative;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .fav-card .fav-rank {
+    position: absolute;
+    top: 4px; left: 5px;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.7);
+  }
+  .frame-still {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+  .frame-still::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px
+    );
+    mix-blend-mode: overlay;
+  }
+  .frame-still svg { position: absolute; }
+  .grain-1 { background: linear-gradient(155deg, #3a4a6b 0%, #1c2430 60%, #0e1218 100%); }
+  .grain-2 { background: linear-gradient(155deg, #5a6a4a 0%, #26301f 55%, #14180f 100%); }
+  .grain-3 { background: linear-gradient(155deg, #b98a3e 0%, #5c3f1a 55%, #241a0d 100%); }
+  .grain-4 { background: linear-gradient(155deg, #4a5a68 0%, #202d38 55%, #10161c 100%); }
+  .grain-5 { background: linear-gradient(155deg, #9c4e6a 0%, #47202f 55%, #1c1116 100%); }
+
+  /* ---- tabs ---- */
+  .tabs {
+    display: flex;
+    gap: 22px;
+    padding: 4px 20px 0;
+    margin-top: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    position: relative;
+  }
+  .tab.active { color: var(--text); }
+  .tab.active::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 2px;
+    background: var(--accent);
+  }
+  .tab .count {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-weight: 500;
+    margin-left: 3px;
+  }
+
+  /* ---- log list ---- */
+  .log-list {
+    padding: 6px 20px 0;
+  }
+  .log-row {
+    display: flex;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-thumb {
+    width: 96px;
+    aspect-ratio: 16/9;
+    flex: none;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .log-body { flex: 1; min-width: 0; }
+  .log-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .log-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+  }
+  .log-channel {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .rating-dots { letter-spacing: 2px; font-size: 12px; white-space: nowrap; flex: none; }
+  .rating-dots .on { color: var(--accent); }
+  .rating-dots .off { color: var(--border); }
+  .log-review {
+    font-size: 12.5px;
+    color: var(--text);
+    opacity: 0.85;
+    margin: 6px 0 0;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .log-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 7px;
+  }
+  .log-date {
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .pill {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 2px;
+    color: var(--accent2);
+    background: color-mix(in srgb, var(--accent2) 14%, transparent);
+  }
+
+  .load-more {
+    text-align: center;
+    padding: 18px 0 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+  }
+
+  @media (max-width: 400px) {
+    .log-thumb { width: 78px; }
+  }
+</style>
+
+<div class="frame">
+  <div class="topbar">
+    <div class="brand">visual <em>arguments</em></div>
+    <div class="icon-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" stroke="currentColor" stroke-width="1.6"/><path d="M4 12a8 8 0 0016 0 8 8 0 00-16 0z" stroke="currentColor" stroke-width="1.6" opacity=".35"/></svg>
+    </div>
+  </div>
+
+  <div class="header">
+    <div class="id-row">
+      <div class="avatar">HD</div>
+      <div class="id-text">
+        <h1 class="display-name">Hillary Dunkley</h1>
+        <div class="handle">@hillarydunkley<span class="dot">·</span>joined Feb 2026</div>
+      </div>
+    </div>
+
+    <p class="tagline">Video essays about film editing, internet culture, and whatever YouTube's recommending me at 1am. Currently rewatching everything by Every Frame a Painting.</p>
+
+    <div class="stats-row">
+      <div class="stat"><span class="n">142</span><span class="lbl">Logs</span></div>
+      <div class="stat"><span class="n">98</span><span class="lbl">Essays</span></div>
+      <div class="stat"><span class="n">31</span><span class="lbl">Followers</span></div>
+      <div class="stat"><span class="n">54</span><span class="lbl">Following</span></div>
+    </div>
+
+    <div class="actions-row">
+      <div class="btn primary">Edit Profile</div>
+      <div class="btn">Share</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Favorite Essays</span>
+      <span class="section-link">Edit</span>
+    </div>
+    <div class="fav-shelf">
+      <div class="fav-card"><div class="frame-still grain-1"></div><span class="fav-rank">01</span></div>
+      <div class="fav-card"><div class="frame-still grain-4"></div><span class="fav-rank">02</span></div>
+      <div class="fav-card"><div class="frame-still grain-3"></div><span class="fav-rank">03</span></div>
+      <div class="fav-card"><div class="frame-still grain-5"></div><span class="fav-rank">04</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Logs <span class="count">142</span></div>
+    <div class="tab">Watchlist <span class="count">12</span></div>
+    <div class="tab">Lists <span class="count">6</span></div>
+  </div>
+
+  <div class="log-list">
+    <div class="log-row">
+      <div class="log-thumb"><div class="frame-still grain-1"></div></div>
+      <div class="log-body">
+        <div class="log-top">
+          <div>
+            <p class="log-title">Why Wes Anderson Won't Change</p>
+            <div class="log-channel">Every Frame a Painting</div>
+          </div>
+          <div class="rating-dots"><span class="on">●●●●</span><span class="off">●</span></div>
+        </div>
+        <p class="log-review">Still the best breakdown of symmetry-as-storytelling I've seen. Rewatched this after Asteroid City and it holds up even better than I remembered.</p>
+        <div class="log-meta">
+          <span class="log-date">Sep 14</span>
+          <span class="pill">Rewatch</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-row">
+      <div class="log-thumb"><div class="frame-still grain-2"></div></div>
+      <div class="log-body">
+        <div class="log-top">
+          <div>
+            <p class="log-title">The Death of the Video Essay Format</p>
+            <div class="log-channel">Nerdwriter1</div>
+          </div>
+          <div class="rating-dots"><span class="on">●●●</span><span class="off">●●</span></div>
+        </div>
+        <p class="log-review">Good argument, weak conclusion. Feels like it's setting up a thesis it never quite commits to.</p>
+        <div class="log-meta">
+          <span class="log-date">Sep 11</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-row">
+      <div class="log-thumb"><div class="frame-still grain-3"></div></div>
+      <div class="log-body">
+        <div class="log-top">
+          <div>
+            <p class="log-title">How Edgar Wright Cuts to the Beat</p>
+            <div class="log-channel">Thomas Flight</div>
+          </div>
+          <div class="rating-dots"><span class="on">●●●●●</span><span class="off"></span></div>
+        </div>
+        <p class="log-review">Perfect. Put this on the syllabus. The Baby Driver diner scene breakdown alone is worth the runtime.</p>
+        <div class="log-meta">
+          <span class="log-date">Sep 8</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-row">
+      <div class="log-thumb"><div class="frame-still grain-5"></div></div>
+      <div class="log-body">
+        <div class="log-top">
+          <div>
+            <p class="log-title">Framing Loneliness in Modern Anime</p>
+            <div class="log-channel">Accented Cinema</div>
+          </div>
+          <div class="rating-dots"><span class="on">●●●●</span><span class="off">●</span></div>
+        </div>
+        <p class="log-review">Didn't expect to tear up over negative space, but here we are.</p>
+        <div class="log-meta">
+          <span class="log-date">Sep 3</span>
+          <span class="pill">Rewatch</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="load-more">Load more logs</div>
+</div>

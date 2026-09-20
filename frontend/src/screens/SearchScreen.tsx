@@ -1,37 +1,104 @@
-import React, { useState } from 'react';
-import { SearchBar } from '@rneui/themed';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator  } from 'react-native';
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { searchDataBase, callSerpAPI } from "../api/videos";
-import { VideoEssay } from '../types/videoEssay';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  useWindowDimensions,
+  useColorScheme,
+  FlatList,
+  Image,
+} from 'react-native';
+import { searchDataBase, callSerpAPI, useVideoApi } from "../api/videos";
 import { SearchResult } from '../types/youtubeResult';
-
-import { FlatList } from 'react-native';
-import { Link } from 'expo-router'
-import {router, useLocalSearchParams} from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useVideoApi } from '../api/videos';
-import { Image } from 'react-native';
 import { useAuth } from '@clerk/clerk-expo';
-type SearchBarComponentProps = {};
-/** if id is null create new video object in database when logging 
- *  
- * 
+import { Colors, Fonts } from '@/constants/theme';
+
+type SearchBarComponentProps = Record<string, never>;
+
+// Minimum column width a result tile is allowed to shrink to before the
+// grid drops another column — keeps thumbnails a legible 16:9 box instead
+// of stretching a single full-width card (the old bug on wide web viewports).
+const MIN_TILE_WIDTH = 220;
+
+// How long to wait after the last keystroke before filtering the DB, so
+// typing doesn't fire a request per character.
+const DB_FILTER_DEBOUNCE_MS = 250;
+
+/** if id is null create new video object in database when logging
+ *
+ *
 */
 const SwitchComponent: React.FunctionComponent<SearchBarComponentProps> = () => {
+// WebNav's top-nav search bar is the only search input now (see WebNav.tsx) —
+// it lives outside this screen's render tree, so it hands typed text down
+// via the `q` route param and signals "run the full API search" via a
+// `submittedAt` param bump (set on Enter), rather than this screen owning
+// its own text field.
+const { q: initialQuery, submittedAt } = useLocalSearchParams<{ q?: string; submittedAt?: string }>();
 const {convertYouTubeResultToVideoEssay} = useVideoApi();
-const [search, setSearch] = useState("");
-const [videos, setVideos] = useState<VideoEssay[]>([]);
+const [search, setSearch] = useState(initialQuery ?? "");
 const [loading, setLoading] = useState(false);
 const [database, setDatabase] = useState<SearchResult[]>([]);
-const {getToken} = useAuth(); 
-const updateSearch = async (query: string) => {
-    setSearch(query);
-    if (!query.trim()) {
+const {getToken} = useAuth();
+const { width } = useWindowDimensions();
+const theme = Colors[useColorScheme() ?? 'light'];
+const numColumns = Math.max(1, Math.floor(width / MIN_TILE_WIDTH));
+
+// Guards against a slow request from an earlier keystroke/submit clobbering
+// the result of a newer one that finished first.
+const requestIdRef = useRef(0);
+
+// Keep local state synced to the URL param as WebNav updates it on every
+// keystroke, so the debounced DB filter below keeps firing while typing.
+useEffect(() => {
+    setSearch(initialQuery ?? "");
+}, [initialQuery]);
+
+// Typing filters the DB only (debounced) — cheap and instant. Hitting enter
+// is what reaches out to YouTube, since that's the slow/rate-limited call.
+useEffect(() => {
+    const query = search.trim();
+    if (!query) {
+        requestIdRef.current += 1;
         setDatabase([]);
+        setLoading(false);
         return;
     }
+
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    const handle = setTimeout(async () => {
+        let dbResults: SearchResult[] = [];
+        try {
+            const token = await getToken();
+            if (token) {
+                dbResults = (await searchDataBase(query, token)) ?? [];
+            }
+        } catch (err) {
+            console.warn("database search failed", err);
+        }
+        if (requestIdRef.current !== requestId) return;
+        setDatabase(dbResults);
+        setLoading(false);
+    }, DB_FILTER_DEBOUNCE_MS);
+
+    return () => clearTimeout(handle);
+    // getToken (Clerk's useAuth()) is a new function identity every render,
+    // not a stable callback — depending on it here re-fires this effect on
+    // every state update the debounced search itself causes, so it never
+    // actually stops re-searching. It's read fresh from the closure either way.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [search]);
+
+const runFullSearch = async (rawQuery: string) => {
+    const query = rawQuery.trim();
+    if (!query) return;
+
+    const requestId = ++requestIdRef.current;
     setLoading(true);
 
     // Existing video essays (needs auth) and a YouTube search run independently
@@ -53,6 +120,8 @@ const updateSearch = async (query: string) => {
         console.warn("youtube search failed", err);
     }
 
+    if (requestIdRef.current !== requestId) return;
+
     const seenTitles = new Set(
         dbResults.map((r) => (r.video.title ?? "").toLowerCase())
     );
@@ -65,140 +134,188 @@ const updateSearch = async (query: string) => {
     setDatabase(merged);
     setLoading(false);
 };
-console.log("search: ", search);
 
-{loading && <ActivityIndicator size="large" color="#0000ff" />}
+// WebNav bumps `submittedAt` (a timestamp) when the user presses Enter in
+// the top-nav search bar — that's the only thing that should trigger the
+// slower DB + YouTube search; plain typing only drives the debounced
+// DB-only filter above.
+const lastSubmitRef = useRef<string | undefined>(undefined);
+useEffect(() => {
+    if (submittedAt && submittedAt !== lastSubmitRef.current) {
+        lastSubmitRef.current = submittedAt;
+        runFullSearch(initialQuery ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [submittedAt]);
+
 return (
-
   <SafeAreaProvider>
-    <SafeAreaView style={styles.safeArea}>
-      <SearchBar
-        placeholder="Search videos or logs"
-        onSubmitEditing={() => updateSearch(search)}
-        value={search}
-        onChangeText={setSearch}
-        containerStyle={styles.searchContainer}
-        inputContainerStyle={styles.searchInputContainer}
-        inputStyle={styles.searchInput}
-        lightTheme
-      />
-      <FlatList
-        data={database}
-        contentContainerStyle={styles.listContent}
-        keyExtractor={(item, index) =>
-          item.source === "database"
-            ? item.video.public_id.toString()
-            : `api-${index}`
-        }
-        ListEmptyComponent={() => (
-          <Text style={styles.emptyText}>
-            {search.trim() ? 'No results found' : 'Search for video essays by title'}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      {search.trim() ? (
+        <View style={styles.metaRow}>
+          <Text style={[styles.metaText, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+            <Text style={{ color: theme.text, fontFamily: Fonts?.sansSemiBold }}>{database.length}</Text>
+            {" "}result{database.length === 1 ? "" : "s"} for &ldquo;{search.trim()}&rdquo;
           </Text>
-        )}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.resultCard}
-            onPress={async () => {
-              if (item.source === "database") {
-                router.push({
-                  pathname: "/logVideoModal",
-                  params: { essayId: item.video.public_id },
-                });
-              } else {
-                const result = await convertYouTubeResultToVideoEssay(item.video);
-                if (result.source === 'database') {
+        </View>
+      ) : null}
+
+      {loading ? (
+        <ActivityIndicator size="large" color={theme.accent} style={styles.loading} />
+      ) : (
+        <FlatList
+          key={`grid-${numColumns}`}
+          data={database}
+          numColumns={numColumns}
+          contentContainerStyle={styles.listContent}
+          columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
+          keyExtractor={(item, index) =>
+            item.source === "database"
+              ? item.video.public_id.toString()
+              : `api-${index}`
+          }
+          ListEmptyComponent={() => (
+            <Text style={[styles.emptyText, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+              {search.trim() ? 'No results found' : 'Search for video essays by title'}
+            </Text>
+          )}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.tile}
+              onPress={async () => {
+                if (item.source === "database") {
                   router.push({
                     pathname: "/logVideoModal",
-                    params: {
-                      essayId: result.video.public_id,
-                    },
+                    params: { essayId: item.video.public_id },
                   });
+                } else {
+                  const result = await convertYouTubeResultToVideoEssay(item.video);
+                  if (result.source === 'database') {
+                    router.push({
+                      pathname: "/logVideoModal",
+                      params: {
+                        essayId: result.video.public_id,
+                      },
+                    });
+                  }
                 }
-              }
-            }}
-          >
-            <ThemedText style={styles.resultTitle}>
-              {item.video.title}
-            </ThemedText>
-            {item.video.thumbnail && (
-              <Image
-                source={{ uri: item.video.thumbnail }}
-                style={styles.thumbnail}
-              />
-            )}
-            {item.source === "api" && (
-              <Text style={styles.sourceText}>
-                From YouTube
+              }}
+            >
+              <View style={[styles.thumbWrap, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+                {item.video.thumbnail ? (
+                  <Image source={{ uri: item.video.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.thumbnail, { backgroundColor: theme.surface }]} />
+                )}
+                {item.source === "database" ? (
+                  <View style={styles.sourceBadge}>
+                    <Text style={styles.sourceBadgeText}>LOGGED</Text>
+                  </View>
+                ) : null}
+                {item.video.duration ? (
+                  <View style={styles.durationBadge}>
+                    <Text style={styles.durationText}>{item.video.duration}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text
+                style={[styles.resultTitle, { color: theme.text, fontFamily: Fonts?.sansMedium }]}
+                numberOfLines={2}
+              >
+                {item.video.title}
               </Text>
-            )}
-          </TouchableOpacity>
-        )}
-      />
+              <Text style={[styles.sourceText, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                {item.source === "api" ? "from YouTube" : item.video.channel_name}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </SafeAreaView>
   </SafeAreaProvider>
-    
-  
-    
-  
 );
 };
 
 const styles = StyleSheet.create({
 safeArea: {
   flex: 1,
-  backgroundColor: '#f8fafc',
   paddingHorizontal: 16,
   paddingTop: 16,
 },
-searchContainer: {
-  backgroundColor: 'transparent',
-  paddingHorizontal: 0,
-  paddingBottom: 12,
+metaRow: {
+  paddingVertical: 12,
 },
-searchInputContainer: {
-  backgroundColor: '#ffffff',
-  borderRadius: 14,
-  borderWidth: 1,
-  borderColor: '#d1d5db',
-  height: 46,
+metaText: {
+  fontSize: 13,
 },
-searchInput: {
-  fontSize: 16,
+loading: {
+  marginTop: 32,
 },
 listContent: {
   paddingBottom: 24,
+  paddingTop: 4,
 },
-resultCard: {
-  backgroundColor: '#ffffff',
-  borderRadius: 16,
-  padding: 16,
-  marginBottom: 12,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.08,
-  shadowRadius: 6,
-  elevation: 3,
+row: {
+  gap: 16,
 },
-resultTitle: {
-  fontSize: 16,
-  fontWeight: '700',
-  marginBottom: 10,
+tile: {
+  flex: 1,
+  marginBottom: 22,
+  maxWidth: '100%',
+},
+thumbWrap: {
+  width: '100%',
+  aspectRatio: 16 / 9,
+  borderRadius: 2,
+  overflow: 'hidden',
+  borderWidth: 1,
 },
 thumbnail: {
   width: '100%',
-  height: 200,
-  borderRadius: 12,
-  marginBottom: 10,
+  height: '100%',
+},
+sourceBadge: {
+  position: 'absolute',
+  left: 6,
+  top: 6,
+  backgroundColor: 'rgba(20,21,26,0.78)',
+  borderRadius: 2,
+  paddingHorizontal: 6,
+  paddingVertical: 2,
+},
+sourceBadgeText: {
+  color: '#F1F1EE',
+  fontSize: 10,
+  fontWeight: '700',
+  letterSpacing: 0.3,
+},
+durationBadge: {
+  position: 'absolute',
+  right: 6,
+  bottom: 6,
+  backgroundColor: 'rgba(20,21,26,0.78)',
+  borderRadius: 2,
+  paddingHorizontal: 4,
+  paddingVertical: 1,
+},
+durationText: {
+  color: '#F1F1EE',
+  fontSize: 11,
+  fontVariant: ['tabular-nums'],
+},
+resultTitle: {
+  fontSize: 13,
+  lineHeight: 17,
+  marginTop: 10,
 },
 sourceText: {
-  opacity: 0.7,
   fontSize: 12,
+  marginTop: 3,
 },
 emptyText: {
   textAlign: 'center',
-  color: '#6b7280',
   marginTop: 32,
-  fontSize: 16,
+  fontSize: 15,
 },
 });
 

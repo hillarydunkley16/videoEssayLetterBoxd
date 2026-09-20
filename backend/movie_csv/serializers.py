@@ -3,19 +3,28 @@ from .models import VideoEssay, Log, Like, Comment, Collection
 from django.contrib.auth.models import User
 from users.models import Profile
 #a serializer defines the columns/data that will be used in the views. 
-class VideoEssaySerializer(serializers.ModelSerializer): 
+class VideoEssaySerializer(serializers.ModelSerializer):
     # id = serializers.CharField(source = 'public_id', read_only=True)
-    class Meta: 
+    # Only present when the queryset annotates `log_count` (see PopularVideoEssays);
+    # null otherwise rather than issuing a query per row.
+    log_count = serializers.SerializerMethodField()
+
+    def get_log_count(self, obj):
+        return getattr(obj, "log_count", None)
+
+    class Meta:
         model = VideoEssay
         fields = (
             "id",
             "public_id",
-            "title", 
+            "title",
             "youtube_url",
-            "thumbnail", 
-            "views", 
-            "channel_name", 
-            "channel_url", 
+            "thumbnail",
+            "duration",
+            "views",
+            "channel_name",
+            "channel_url",
+            "log_count",
         )
 class LikeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -123,13 +132,16 @@ class ProfileSerializer(serializers.ModelSerializer):
 class CollectionSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source="owner.username")
     essays = VideoEssaySerializer(many=True, read_only=True)
-    class Meta: 
+    class Meta:
         model = Collection
         fields = (
             "id",
             "public_id",
             "name",
+            "description",
             "owner",
-            "essays"
+            "essays",
+            "is_watchlist",
         )
+        read_only_fields = ("is_watchlist",)
 

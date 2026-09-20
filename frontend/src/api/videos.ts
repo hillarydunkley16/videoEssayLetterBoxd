@@ -22,6 +22,20 @@ export async function fetchVideoEssays(token: string): Promise<PaginatedResponse
   return authFetch("/VideoEssays/", {}, token);
 }
 
+// Most-logged essays in the trailing 7 days, ranked by log_count.
+// Calls: GET /api/VideoEssays/popular/
+export async function fetchPopularVideoEssays(token: string): Promise<PaginatedResponse<VideoEssay>> {
+  return authFetch("/VideoEssays/popular/", {}, token);
+}
+
+// Same endpoint, unauthenticated — it's AllowAny server-side (see
+// PopularVideoEssays in views/api.py) so the signed-out home screen can show
+// a teaser feed before the user has a Clerk token.
+export async function fetchPopularVideoEssaysPublic(): Promise<PaginatedResponse<VideoEssay>> {
+  const response = await axios.get<PaginatedResponse<VideoEssay>>(`${API_BASE_URL}/VideoEssays/popular/`);
+  return response.data;
+}
+
 export async function getAVideoEssay(publicId: string, token: string): Promise<VideoEssayData> {
     console.log("id received: ", publicId); 
     console.log("get a video essay function called!");
@@ -72,32 +86,26 @@ export const fetchYoutubeResults = async(query: string, location='us', language=
   }
 };
 
+// Searches the whole VideoEssays table server-side (?search=<query>, matched
+// against title/channel_name — see VideoEssays.search_fields), instead of
+// fetching only the first page of the unfiltered listing and filtering it
+// client-side, which meant an already-logged essay past page 1 could never
+// show up no matter what you searched for.
 export const searchDataBase = async (
   query: string, token: string
 ): Promise<SearchResult[]>  => {
-  // this needs to be done on the backend i think 
   try {
-      const response = await fetchVideoEssays(token!);
-      const lastID = response.results[response.results.length-1]?.public_id;
-      if (!lastID) {
-        throw new Error("No video essays in database");
-      }
-      const results = response.results
-      const filtered = results.filter(item => Object.values(item).join('').
-      toLowerCase().includes(query.toLowerCase()));
-      // add each result in filtered to search result array and then return search result array 
-      if (filtered.length > 0){
-        //add : SearchResult to force the results to be of type SearchResult instead of a string?
-        const results: SearchResult[] = filtered.map((v) => ({
-          source: "database",
-          video: v,
-        }))
-        return results
-      }
-      return []
-
+      const response: PaginatedResponse<VideoEssay> = await authFetch(
+        `/VideoEssays/?search=${encodeURIComponent(query)}`,
+        {},
+        token
+      );
+      return response.results.map((v) => ({
+        source: "database",
+        video: v,
+      }));
   } catch(error){
-      console.error("Error fetching Youtube Data: " , error);
+      console.error("Error searching database: " , error);
       return []
   }
 }

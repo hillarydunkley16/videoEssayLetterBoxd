@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import DestroyAPIView
 from ..models import VideoEssay, Log, Like, Comment, Collection
 from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer, CollectionSerializer
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, filters
 from ..permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
 from ..services.youtube_search import youtube_search
@@ -31,7 +31,9 @@ from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from movie_csv.authentication import ClerkAuthentication
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.utils import timezone
+from datetime import timedelta
 from users.models import Profile
 import logging
 
@@ -57,6 +59,12 @@ class  VideoEssays(generics.ListCreateAPIView):
     queryset = VideoEssay.objects.all()
     serializer_class = VideoEssaySerializer
     permission_classes = [AllowAny]
+    # Search runs server-side across the whole table (?search=<query>)
+    # rather than the frontend paging through results and filtering only
+    # the first page client-side, which is why already-logged essays past
+    # page 1 never showed up in search.
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["title", "channel_name"]
     @csrf_exempt
     def  post(self, request, *args, **kwargs): 
         data = request.data
@@ -554,8 +562,61 @@ class RemoveCollection(APIView):
             collection = Collection.objects.get(owner = self.request.user, public_id = collection_public_id)
         except: 
             return Response({"message": "Collection not found"}, status = 404)
-        if "Watchlist" in collection.name: 
+        if "Watchlist" in collection.name:
             return Response({"message": "Watchlist Collection cannot be Deleted"}, status = 403)
-        else: 
+        else:
             collection.delete()
             return Response({"message": "Collection deleted"}, status=200)
+
+
+class PopularVideoEssays(generics.ListAPIView):
+    """Most-logged video essays in the trailing 7 days, ranked by log count."""
+    serializer_class = VideoEssaySerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        since = timezone.now().date() - timedelta(days=7)
+        return (
+            VideoEssay.objects.filter(log__date__gte=since)
+            .annotate(log_count=Count("log", filter=Q(log__date__gte=since)))
+            # Ordering by a related field (e.g. log__date) here would pull it
+            # into the GROUP BY and split one essay's count across rows —
+            # order only by the essay's own fields.
+            .order_by("-log_count", "-created_at")
+            .distinct()[:10]
+        )
+
+
+class FollowUser(APIView):
+    """Toggles the request user following the given user, keeping both
+    Profile.following (mine) and Profile.followers (theirs) in sync."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        if request.user.id == user_id:
+            return Response({"message": "Cannot follow yourself"}, status=400)
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"message": "User not found"}, status=404)
+
+        my_profile, _ = Profile.objects.get_or_create(user=request.user)
+        target_profile, _ = Profile.objects.get_or_create(user=target_user)
+
+        if my_profile.following.filter(id=target_user.id).exists():
+            my_profile.following.remove(target_user)
+            target_profile.followers.remove(request.user)
+            following = False
+        else:
+            my_profile.following.add(target_user)
+            target_profile.followers.add(request.user)
+            following = True
+
+        return Response(
+            {
+                "following": following,
+                "followers_count": target_profile.followers.count(),
+            },
+            status=200,
+        )

@@ -4,11 +4,13 @@ import { useSignUp } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
 
 export default function Page() {
   const { isLoaded, signUp, setActive } = useSignUp()
   const router = useRouter()
 
+  const [errors, setErrors] = React.useState('')
   const [emailAddress, setEmailAddress] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [firstName, setFirstName] = React.useState('')
@@ -40,7 +42,7 @@ export default function Page() {
     } catch (err) {
       // See https://clerk.com/docs/guides/development/custom-flows/error-handling
       // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+      setErrors(getClerkErrorMessage(err))
     }
   }
 
@@ -74,46 +76,63 @@ export default function Page() {
         // If the status is not complete, check why. User may need to
         // complete further steps.
         console.error(JSON.stringify(signUpAttempt, null, 2))
+        setErrors('Verification incomplete. Please try again.')
       }
     } catch (err) {
       // See https://clerk.com/docs/guides/development/custom-flows/error-handling
       // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
+      setErrors(getClerkErrorMessage(err))
     }
   }
 
   if (pendingVerification) {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText type="title" style={styles.title}>
-          Verify your email
-        </ThemedText>
-        <ThemedText style={styles.description}>
-          A verification code has been sent to your email.
-        </ThemedText>
-        <TextInput
-          style={styles.input}
-          value={code}
-          placeholder="Enter your verification code"
-          placeholderTextColor="#666666"
-          onChangeText={(code) => setCode(code)}
-          keyboardType="numeric"
-        />
-        <Pressable
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-          onPress={onVerifyPress}
-        >
-          <ThemedText style={styles.buttonText}>Verify</ThemedText>
-        </Pressable>
+        <ThemedView style={styles.subcontainer}>
+          <ThemedText type="title" style={styles.title}>
+            Verify your email
+          </ThemedText>
+          <ThemedText style={styles.description}>
+            A verification code has been sent to your email.
+          </ThemedText>
+          {errors ? (
+            <View style={styles.errorContainer}>
+              <ThemedText style={styles.errorText}>{errors}</ThemedText>
+            </View>
+          ) : null}
+          <TextInput
+            style={styles.input}
+            value={code}
+            placeholder="Enter your verification code"
+            placeholderTextColor="#666666"
+            onChangeText={(text) => {
+              setCode(text)
+              setErrors('')
+            }}
+            keyboardType="numeric"
+          />
+          <Pressable
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            onPress={onVerifyPress}
+          >
+            <ThemedText style={styles.buttonText}>Verify</ThemedText>
+          </Pressable>
+        </ThemedView>
       </ThemedView>
     )
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style = {styles.container}> 
+       <ThemedView style={styles.subcontainer}>
       <ThemedText type="title" style={styles.title}>
         Sign up
       </ThemedText>
+      {errors ? (
+        <View style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>{errors}</ThemedText>
+        </View>
+      ) : null}
       <ThemedText style = {styles.label}>First Name</ThemedText>
       <TextInput
         style={styles.input}
@@ -179,6 +198,9 @@ export default function Page() {
         </Link>
       </View>
     </ThemedView>
+
+    </ThemedView>
+   
   )
 }
 
@@ -186,6 +208,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subcontainer: {
+    width: '100%',
+    maxWidth: 400,
     gap: 12,
   },
   title: {
@@ -231,5 +259,15 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 12,
     alignItems: 'center',
+  },
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 8,
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    textAlign: 'center',
   },
 })

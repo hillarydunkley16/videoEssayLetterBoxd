@@ -39,11 +39,10 @@ export default function Layout() {
             />
             <Stack.Screen
                 name="singleLog"
-                options={{ 
+                options={{
                     presentation: 'card',
                     animation: "slide_from_right",
-                    headerShown: true, 
-                    header: () => <ReviewsTopNav />
+                    headerShown: false,
                 }}
             />
             <Stack.Screen
@@ -64,6 +63,19 @@ export default function Layout() {
             <Stack.Screen
                 name = "collectionDetail"
                 options = {{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name = "videoInfo"
+                options = {{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name = "newList"
+                options = {{
+                    presentation: 'modal',
                     headerShown: false,
                 }}
             />

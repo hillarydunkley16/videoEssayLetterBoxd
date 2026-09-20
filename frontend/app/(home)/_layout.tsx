@@ -1,15 +1,8 @@
-import { Stack, Tabs } from 'expo-router'
-import { SafeAreaView, StyleSheet, Platform } from 'react-native'
-import { HomeTopNav } from '@/components/ui/HomeTopNav'
+import { Stack } from 'expo-router'
+import { StyleSheet } from 'react-native'
 
 export default function Layout() {
-  return (
-    <Stack screenOptions={{
-        headerShown: Platform.OS === 'web' ? false : true,
-        header: () => <HomeTopNav/>,
-    }}/>
-  )
-  
+  return <Stack screenOptions={{ headerShown: false }} />
 }
 
 const styles = StyleSheet.create({

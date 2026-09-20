@@ -5,10 +5,13 @@ export interface VideoEssay {
     public_id: string;
     youtube_url: string; 
     title: string; 
-    thumbnail: string; 
-    views: number | null; 
-    channel_name: string; 
+    thumbnail: string;
+    duration?: string | null;
+    views: number | null;
+    channel_name: string;
     channel_url: string;
+    // Only present on responses from the popular-this-week endpoint.
+    log_count?: number | null;
 }
 
         

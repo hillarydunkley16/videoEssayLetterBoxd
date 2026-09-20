@@ -5,6 +5,7 @@ import type { EmailCodeFactor } from '@clerk/types'
 import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
 
 export default function Page() {
   const { signIn, setActive, isLoaded } = useSignIn()
@@ -64,17 +65,10 @@ export default function Page() {
         
         console.error(JSON.stringify(signInAttempt, null, 2))
       }
-    } catch (err: any) {
+    } catch (err) {
       // See https://clerk.com/docs/guides/development/custom-flows/error-handling
       // for more info on error handling
-      if (err.errors && Array.isArray(err.errors)) {
-        console.log('Errors array:', err.errors)
-        setErrors(err.errors.map((e: any) => e.message).join('\n'))
-      }else{
-        setErrors(err.message || 'An unexpected error occurred')
-      }
-      // console.error(JSON.stringify(err, null, 2));
-      // setErrors(JSON.stringify(err, null, 2));
+      setErrors(getClerkErrorMessage(err))
     }
   }, [isLoaded, signIn, setActive, router, emailAddress, password])
 
@@ -104,9 +98,10 @@ export default function Page() {
         })
       } else {
         console.error(JSON.stringify(signInAttempt, null, 2))
+        setErrors('Verification incomplete. Please try again.')
       }
     } catch (err) {
-      console.error(JSON.stringify(err, null, 2))
+      setErrors(getClerkErrorMessage(err))
     }
   }, [isLoaded, signIn, setActive, router, code])
 
@@ -114,82 +109,93 @@ export default function Page() {
   if (showEmailCode) {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText type="title" style={styles.title}>
-          Verify your email
-        </ThemedText>
-        <ThemedText style={styles.description}>
-          A verification code has been sent to your email.
-        </ThemedText>
-        <TextInput
-          style={styles.input}
-          value={code}
-          placeholder="Enter verification code"
-          placeholderTextColor="#666666"
-          onChangeText={(code) => setCode(code)}
-          keyboardType="numeric"
-        />
-        <Pressable
-          style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-          onPress={onVerifyPress}
-        >
-          <ThemedText style={styles.buttonText}>Verify</ThemedText>
-        </Pressable>
+        <ThemedView style={styles.subcontainer}>
+          <ThemedText type="title" style={styles.title}>
+            Verify your email
+          </ThemedText>
+          <ThemedText style={styles.description}>
+            A verification code has been sent to your email.
+          </ThemedText>
+          {errors ? (
+            <View style={styles.errorContainer}>
+              <ThemedText style={styles.errorText}>{errors}</ThemedText>
+            </View>
+          ) : null}
+          <TextInput
+            style={styles.input}
+            value={code}
+            placeholder="Enter verification code"
+            placeholderTextColor="#666666"
+            onChangeText={(text) => {
+              setCode(text)
+              setErrors('')
+            }}
+            keyboardType="numeric"
+          />
+          <Pressable
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            onPress={onVerifyPress}
+          >
+            <ThemedText style={styles.buttonText}>Verify</ThemedText>
+          </Pressable>
+        </ThemedView>
       </ThemedView>
     )
   }
-  console.log(errors);
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.title}>
-        Sign in
-      </ThemedText>
-      {errors ? (
-        <View style = {styles.errorContainer}>
-          <ThemedText style = {styles.errorText}>{errors}</ThemedText>
+      <ThemedView style={styles.subcontainer}>
+        <ThemedText type="title" style={styles.title}>
+          Log in
+        </ThemedText>
+        {errors ? (
+          <View style = {styles.errorContainer}>
+            <ThemedText style = {styles.errorText}>{errors}</ThemedText>
+          </View>
+        ): null}
+        <ThemedText style={styles.label}>Email address</ThemedText>
+        <TextInput
+          style={styles.input}
+          autoCapitalize="none"
+          value={emailAddress}
+          placeholder="Enter email"
+          placeholderTextColor="#666666"
+          onChangeText={(text) => {
+            setEmailAddress(text)
+            setErrors('')  // Clear error when user types
+          }}
+          keyboardType="email-address"
+        />
+        <ThemedText style={styles.label}>Password</ThemedText>
+        <TextInput
+          style={styles.input}
+          value={password}
+          placeholder="Enter password"
+          placeholderTextColor="#666666"
+          secureTextEntry={true}
+          onChangeText={(text) => {
+            setPassword(text)
+            setErrors('')
+          }}
+        />
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            (!emailAddress || !password) && styles.buttonDisabled,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={onSignInPress}
+          disabled={!emailAddress || !password}
+        >
+          <ThemedText style={styles.buttonText}>Sign in</ThemedText>
+        </Pressable>
+        <View style={styles.linkContainer}>
+          <ThemedText>Don't have an account? </ThemedText>
+          <Link href="/sign-up">
+            <ThemedText type="link">Sign up</ThemedText>
+          </Link>
         </View>
-      ): null}
-      <ThemedText style={styles.label}>Email address</ThemedText>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="none"
-        value={emailAddress}
-        placeholder="Enter email"
-        placeholderTextColor="#666666"
-        onChangeText={(text) => {
-          setEmailAddress(text)
-          setErrors('')  // Clear error when user types
-        }}
-        keyboardType="email-address"
-      />
-      <ThemedText style={styles.label}>Password</ThemedText>
-      <TextInput
-        style={styles.input}
-        value={password}
-        placeholder="Enter password"
-        placeholderTextColor="#666666"
-        secureTextEntry={true}
-        onChangeText={(password) => setPassword(password)}
-      />
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          (!emailAddress || !password) && styles.buttonDisabled,
-          pressed && styles.buttonPressed,
-        ]}
-        onPress={onSignInPress}
-        disabled={!emailAddress || !password}
-      >
-        <ThemedText style={styles.buttonText}>Sign in</ThemedText>
-      </Pressable>
-      {errors && (
-    <ThemedText style={{ color: 'red', marginTop: 8 }}>{errors}</ThemedText>
-)}
-      <View style={styles.linkContainer}>
-        <ThemedText>Don't have an account? </ThemedText>
-        <Link href="/sign-up">
-          <ThemedText type="link">Sign up</ThemedText>
-        </Link>
-      </View>
+      </ThemedView>
     </ThemedView>
   )
 }
@@ -198,6 +204,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subcontainer: {
+    width: '100%',
+    maxWidth: 400,
     gap: 12,
   },
   title: {

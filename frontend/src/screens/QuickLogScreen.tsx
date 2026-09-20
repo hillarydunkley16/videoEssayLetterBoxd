@@ -1,57 +1,42 @@
 import { useState } from 'react';
-import {View, Text, TextInput, Button, Switch , Platform, Touchable, TouchableOpacity, StyleSheet} from 'react-native'
-import { useRouter, useFocusEffect } from 'expo-router';
-import { createLog } from '../api/logs';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet, useColorScheme } from 'react-native'
+import { useRouter } from 'expo-router';
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthPost} from '../api/authPost';
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { likeLog } from '../api/logs';
-import Slider from '@react-native-community/slider';
-import { Rating } from 'react-native-ratings';
+import { TappableRatingDots } from '@/components/ui/RatingDots';
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Colors, Fonts } from '@/constants/theme';
+
+const ICON_SIZE = 44;
+
 type Props = {
-    id: String;
+    id: string;
     style: object;
     onRatingChange?: (value: number) => void;
     onRatingSetChange?: (isSet: boolean) => void;
     onWatchedChange?: (watched: boolean) => void;
     onLikedChange?: (liked: boolean) => void;
     onWatchListChange?: (inWatchList: boolean) => void;
+    onDone?: () => void;
     initialRating?: number;
 }
-// date is automatically set to today's date 
-// review text will be blank  
-// 
-export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange, style, initialRating}: Props){
-    
-    // console.log("QuickLogScreen mounted");
+// date is automatically set to today's date
+// review text will be blank
+//
+export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange, style, initialRating, onDone}: Props){
+    const theme = Colors[useColorScheme() ?? 'light'];
     const authFetch = useAuthPost();
     const [rating, setRating] = useState<number>(initialRating ?? 0);
-    const [reviewText, setReviewText] = useState(""); 
-    const [rewatch, setRewatch] = useState(false); 
-    const [error, setError] = useState(""); 
-    const [loading, setLoading] = useState(false); 
-    const [date, setDate] = useState(new Date());
-    const [showPicker, setShowPicker] = useState(false);
+    const [rewatch, setRewatch] = useState(false);
+    const [error, setError] = useState("");
     const [liked, setLiked] = useState(false);
     const [ratingIsSet,  setRatingIsSet] = useState(false);
     const [watchList, setWatchList] = useState(false);
-    const [sheetIndex, setSheetIndex] = useState(0);
-    // const dateValue = date ? date.toISOString().split('T')[0] : '';
-    // console.log("QUICK LOG SCREEN");
-    // console.log("quick log screen got id ", id)
-    // Handle web date input change
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        console.log(value)
-        setDate(new Date(value));
-  
-    };
     const handleWatchList = async () => {
         // similar to handle like but for watchlist status
         if (!id) return;
-        
+
         setWatchList((prev) => !prev);
     }
     const handleLike = async () => {
@@ -63,130 +48,119 @@ export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange,
     const handleWatched = async () => {
         // similar to handle like but for watched status
         if (!id) return;
-        
+
         setRewatch((prev) => !prev);
     }
     const router = useRouter();
-    async function handleSubmit() {
-        setError("")
-        const ratingNumber = Number(rating); 
-
-        if (isNaN(ratingNumber)){
-            setError("Rating must be a number"); 
-            return; 
-        }
-        if (ratingNumber < 0 || ratingNumber > 10){
-            setError("Rating must be between 0 and 10"); 
-            return; 
-        }
-        try {
-            setLoading(true); 
-            console.log(id)
-            console.log(date.toISOString().split('T')[0])
-            await createLog(authFetch, {
-                essay: id, 
-                date: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
-                rating: ratingNumber, 
-                review_text: "", 
-                rewatch: rewatch         
-            });
-           
-            setRating(0);
-            setReviewText("");
-            setRewatch(false);
-            alert("log created!");
-            router.replace('/');
-        } catch(err){
-            setError("failed to create log");
-            //i need a specific error message for if the user has already created a log for this essay.
-            // if (err.response == 400){
-            //     setError("You have already created a log for this essay");
-            // }
-            console.error(err)
-        } finally {
-            setLoading(false)
+    function handleRatingChange(value: number) {
+        setRating(value);
+        onRatingChange?.(value);
+        if (!ratingIsSet) {
+            setRatingIsSet(true);
+            onRatingSetChange?.(true);
         }
     }
-    // watched, liked, add to watchlist 
+    // watched, liked, add to watchlist
     // quick log with just rating and date, then option to add review text later?
     return (
         <View style = {style}>
             <View style = {styles.iconRow}>
-            <TouchableOpacity onPress={handleLike} style={[styles.likeButton]}>
-                    <MaterialCommunityIcons name = {liked ? "heart" : "heart-outline"} size={30} color={liked ? "red" : "black"} />
-            <ThemedText style={styles.likeButtonText}>{liked ? 'Liked' : 'Like'} </ThemedText>
-           </TouchableOpacity>
-            <TouchableOpacity onPress = {handleWatched}>
-                <MaterialCommunityIcons name= {rewatch ? "eye" : "eye-outline"} size={30} color="black" />
-                <ThemedText style={styles.likeButtonText}>Watched</ThemedText>
-
-                {/* <ThemedText>
-                    Review or Log =
-                </ThemedText> */}
-            </TouchableOpacity>
-            <TouchableOpacity onPress = {handleWatchList}>
-                <MaterialCommunityIcons name= {watchList ? "clock-minus" : "clock-plus-outline"} size={30} color="black" />
-                <ThemedText style={styles.likeButtonText}>Watchlist</ThemedText>
-            </TouchableOpacity>
+                <TouchableOpacity onPress = {handleWatched} style={styles.iconButton}>
+                    <MaterialCommunityIcons name={rewatch ? "eye" : "eye-outline"} size={ICON_SIZE} color={rewatch ? theme.accent : theme.muted} />
+                    <ThemedText style={[styles.iconButtonText, { color: theme.muted, fontFamily: Fonts?.sans }]}>{rewatch ? "Watched" : "Watch"}</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleLike} style={styles.iconButton}>
+                    <MaterialCommunityIcons name={liked ? "heart" : "heart-outline"} size={ICON_SIZE} color={liked ? theme.accent : theme.muted} />
+                    <ThemedText style={[styles.iconButtonText, { color: theme.muted, fontFamily: Fonts?.sans }]}>{liked ? 'Liked' : 'Like'}</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity onPress = {handleWatchList} style={styles.iconButton}>
+                    <MaterialCommunityIcons name={watchList ? "clock-minus" : "clock-plus-outline"} size={ICON_SIZE} color={watchList ? theme.accent : theme.muted} />
+                    <ThemedText style={[styles.iconButtonText, { color: theme.muted, fontFamily: Fonts?.sans }]}>Watchlist</ThemedText>
+                </TouchableOpacity>
            </View>
-            <Rating 
-            ratingCount={5}
-            startingValue={rating}            
-            onSwipeRating={(value: number) => {
-                setRating(value);
-                onRatingChange?.(value);
-                if (!ratingIsSet) {
-                    setRatingIsSet(true);
-                    onRatingSetChange?.(true);
-                }
-            }}            onFinishRating={(value: number) => {
-                setRating(value);
-                onRatingChange?.(value);
-                if (!ratingIsSet) {
-                    setRatingIsSet(true);
-                    onRatingSetChange?.(true);
-                }
-            }}
-            />
+
+            <View style={styles.rateBlock}>
+                <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                    your rating
+                </Text>
+                <TappableRatingDots value={rating} onChange={handleRatingChange} />
+                <Text style={[styles.rateCaption, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                    {rating > 0 ? `${rating} out of 5` : 'Tap a dot to rate'}
+                </Text>
+            </View>
+
             {error ? <ThemedText style={{ color: 'red' }}>{error}</ThemedText> : null}
-           
-            {/* <Button title = {"Add Review"} onPress = {() => setSheetIndex(1)} /> */}
-            <Button title = {"Share"} />
-            <Button title = {"Add Review"} onPress = {() => router.push(`/logVideoModal?essayId=${id}`)} />
-            <Button title = {"Add to List"} onPress = {() => router.push(`/(modals)/listVideoEssay?essayId=${id}`)} />
-            {/* setSheetIndex to -1 to close the modal */}
-            <Button title = {"Done"} />
+
+            <View style={[styles.actions, { borderTopColor: theme.border }]}>
+                <Pressable style={styles.linkButton}>
+                    <Text style={[styles.linkButtonText, { color: theme.text, fontFamily: Fonts?.sansMedium }]}>Share</Text>
+                </Pressable>
+                <Pressable style={styles.linkButton} onPress={() => router.push(`/logVideoModal?essayId=${id}`)}>
+                    <Text style={[styles.linkButtonText, { color: theme.text, fontFamily: Fonts?.sansMedium }]}>Add Review</Text>
+                </Pressable>
+                <Pressable style={styles.linkButton} onPress={() => router.push(`/(modals)/listVideoEssay?essayId=${id}`)}>
+                    <Text style={[styles.linkButtonText, { color: theme.text, fontFamily: Fonts?.sansMedium }]}>Add to List</Text>
+                </Pressable>
+            </View>
+
+            <Pressable
+                style={[styles.doneButton, { backgroundColor: theme.accent }]}
+                onPress={() => (onDone ? onDone() : router.back())}
+            >
+                <Text style={[styles.doneButtonText, { color: theme.background, fontFamily: Fonts?.sansSemiBold }]}>Done</Text>
+            </Pressable>
             </View>
     )
 }
 
 const styles = StyleSheet.create({
-    largeContainer: {
-        flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 30,
-        paddingBottom: 20,
-        margin: 20
-    },
-    container: {
-        width: '100%',
-        marginBottom: 16,
-    }, 
-    likeButton: {
-    // backgroundColor: '#1f2937',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  likeButtonText: {
-    // color: '#fff',
-    fontWeight: '600',
-  },
   iconRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+  iconButton: {
+    flex: 1,
     alignItems: 'center',
-    gap: 8,
-    justifyContent: 'space-between'
-  }
+    gap: 6,
+    paddingVertical: 8,
+  },
+  iconButtonText: {
+    fontSize: 15,
+  },
+  rateBlock: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  rateCaption: {
+    fontSize: 13,
+    marginTop: 10,
+  },
+  actions: {
+    borderTopWidth: 1,
+    marginTop: 24,
+    paddingTop: 8,
+  },
+  linkButton: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  linkButtonText: {
+    fontSize: 16,
+  },
+  doneButton: {
+    marginTop: 16,
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    fontSize: 16,
+  },
 });

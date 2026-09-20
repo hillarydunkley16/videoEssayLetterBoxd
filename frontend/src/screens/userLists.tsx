@@ -46,7 +46,7 @@ export default function UserListsScreen({ essayId }: { essayId: string }){
         <ThemedView>
             {/* <ThemedText>User Lists</ThemedText> */}
 
-            <Button title = "New list"/>
+            <Button title = "New list" onPress={() => router.push('/newList')}/>
             <FlatList
             data = {collections}
             keyExtractor={(item) => item.public_id.toString()}

@@ -1,12 +1,13 @@
-import { VideoEssayData} from "./videoEssay";
-import { User } from "./user";
+import { VideoEssay } from "./videoEssay";
 
 export interface Collection {
-    id: number; 
+    id: number;
     public_id: string;
-    name: string; 
-    owner: User; 
-    essays: VideoEssayData[];
+    name: string;
+    description: string;
+    owner: string;        // the owner's username (see CollectionSerializer)
+    essays: VideoEssay[];
+    is_watchlist: boolean;
 }
 
 export interface PaginatedCollections {

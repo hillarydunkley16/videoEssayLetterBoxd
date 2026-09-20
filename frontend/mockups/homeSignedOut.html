@@ -1,0 +1,412 @@
+<title>Visual Arguments Welcome</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1B1D21;
+    --paper: #F1F1EE;
+    --paper-dim: #E2E2DD;
+    --cobalt: #2F5DFF;
+    --teal: #1E7A6C;
+    --slate: #63666C;
+
+    --bg: var(--paper);
+    --surface: var(--paper-dim);
+    --surface-2: #D5D5CF;
+    --text: var(--ink);
+    --muted: var(--slate);
+    --border: rgba(27, 29, 33, 0.14);
+    --accent: var(--cobalt);
+    --accent-ink: #fff;
+    --accent2: var(--teal);
+    --shadow: 0 1px 0 rgba(27,29,33,0.05);
+  }
+
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: var(--ink);
+      --surface: #24262B;
+      --surface-2: #2B2D33;
+      --text: var(--paper);
+      --muted: #93969E;
+      --border: rgba(241,241,238,0.14);
+      --accent: #5B7CFF;
+      --accent2: #2FA593;
+      --shadow: 0 1px 0 rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--ink);
+    --surface: #24262B;
+    --surface-2: #2B2D33;
+    --text: var(--paper);
+    --muted: #93969E;
+    --border: rgba(241,241,238,0.14);
+    --accent: #5B7CFF;
+    --accent2: #2FA593;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .frame {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100%;
+    padding: 0 0 40px;
+  }
+
+  /* ---- top bar ---- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 10px;
+  }
+  .topbar .brand {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+  .topbar .brand em { color: var(--accent); font-style: normal; }
+  .topbar .login-link {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ---- hero ---- */
+  .hero {
+    padding: 20px 20px 26px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+  .hero h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 30px;
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero p {
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0 0 20px;
+    max-width: 42ch;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .btn {
+    flex: 1;
+    text-align: center;
+    padding: 13px 16px;
+    border-radius: 3px;
+    font-size: 13.5px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  .hero-fine {
+    margin: 14px 0 0;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .hero-fine a { color: var(--text); font-weight: 600; }
+
+  /* ---- shared film-still texture ---- */
+  .frame-still {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+  .frame-still::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px
+    );
+    mix-blend-mode: overlay;
+  }
+  .grain-1 { background: linear-gradient(155deg, #3a4a6b 0%, #1c2430 60%, #0e1218 100%); }
+  .grain-2 { background: linear-gradient(155deg, #5a6a4a 0%, #26301f 55%, #14180f 100%); }
+  .grain-3 { background: linear-gradient(155deg, #b98a3e 0%, #5c3f1a 55%, #241a0d 100%); }
+  .grain-4 { background: linear-gradient(155deg, #4a5a68 0%, #202d38 55%, #10161c 100%); }
+  .grain-5 { background: linear-gradient(155deg, #9c4e6a 0%, #47202f 55%, #1c1116 100%); }
+
+  /* ---- teaser feed (locked) ---- */
+  .section {
+    padding: 22px 20px 4px;
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .teaser-wrap {
+    position: relative;
+  }
+  .log-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .log-row {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-thumb {
+    width: 88px;
+    aspect-ratio: 16/9;
+    flex: none;
+    align-self: flex-start;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .log-body { flex: 1; min-width: 0; }
+  .log-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .log-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+  }
+  .log-channel {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .rating-dots { letter-spacing: 2px; font-size: 11px; white-space: nowrap; flex: none; }
+  .rating-dots .on { color: var(--accent); }
+  .rating-dots .off { color: var(--border); }
+  .log-review {
+    font-size: 12px;
+    color: var(--text);
+    opacity: 0.85;
+    margin: 6px 0 0;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .log-watcher {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .teaser-fade {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 130px;
+    background: linear-gradient(180deg, transparent, var(--bg) 78%);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 4px;
+  }
+  .teaser-cta {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--bg);
+    padding: 8px 4px;
+  }
+
+  /* ---- feature triad ---- */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 4px 20px 0;
+    margin-top: 6px;
+  }
+  .feature {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .feature .ico {
+    width: 26px; height: 26px;
+    margin: 0 auto 10px;
+    display: grid; place-items: center;
+    color: var(--accent2);
+  }
+  .feature .lbl {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  /* ---- closing cta ---- */
+  .closing {
+    margin: 26px 20px 0;
+    padding: 22px 18px;
+    border-radius: 6px;
+    background: var(--ink);
+    color: var(--paper);
+    text-align: center;
+  }
+  :root[data-theme="dark"] .closing,
+  :root:not([data-theme="light"]) .closing {
+    background: var(--surface-2);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .closing { background: var(--surface-2); }
+  }
+  .closing h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 19px;
+    margin: 0 0 6px;
+  }
+  .closing p {
+    font-size: 12.5px;
+    color: rgba(241,241,238,0.72);
+    margin: 0 0 16px;
+  }
+  .closing .btn.primary { max-width: 220px; margin: 0 auto; }
+
+  @media (max-width: 400px) {
+    .log-thumb { width: 74px; }
+    .hero h1 { font-size: 26px; }
+  }
+</style>
+
+<div class="frame">
+  <div class="topbar">
+    <div class="brand">visual <em>arguments</em></div>
+    <div class="login-link">Log in</div>
+  </div>
+
+  <div class="hero">
+    <p class="hero-eyebrow">Bootleg Letterboxd for video essays</p>
+    <h1>Track every video essay that <em>rewired</em> how you watch.</h1>
+    <p>Log the essays you finish, rate them, write the review you'd actually send a friend, and build watchlists out of whatever's melting your brain on YouTube tonight.</p>
+    <div class="hero-actions">
+      <div class="btn primary">Create account</div>
+      <div class="btn">Log in</div>
+    </div>
+    <p class="hero-fine">Beta is invite-only right now. <a href="#">Request access</a></p>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Popular this week</span>
+    </div>
+    <div class="teaser-wrap">
+      <div class="log-list">
+        <div class="log-row">
+          <div class="log-thumb"><div class="frame-still grain-1"></div></div>
+          <div class="log-body">
+            <div class="log-top">
+              <div>
+                <p class="log-title">Why Wes Anderson Won't Change</p>
+                <div class="log-channel">Every Frame a Painting</div>
+              </div>
+              <div class="rating-dots"><span class="on">●●●●</span><span class="off">●</span></div>
+            </div>
+            <p class="log-review">Still the best breakdown of symmetry-as-storytelling out there. Rewatched after Asteroid City and it holds up even better.</p>
+            <div class="log-watcher">Logged by 214 people</div>
+          </div>
+        </div>
+        <div class="log-row">
+          <div class="log-thumb"><div class="frame-still grain-3"></div></div>
+          <div class="log-body">
+            <div class="log-top">
+              <div>
+                <p class="log-title">How Edgar Wright Cuts to the Beat</p>
+                <div class="log-channel">Thomas Flight</div>
+              </div>
+              <div class="rating-dots"><span class="on">●●●●●</span><span class="off"></span></div>
+            </div>
+            <p class="log-review">Put this on the syllabus. The Baby Driver diner scene breakdown alone is worth the runtime.</p>
+            <div class="log-watcher">Logged by 189 people</div>
+          </div>
+        </div>
+        <div class="log-row">
+          <div class="log-thumb"><div class="frame-still grain-5"></div></div>
+          <div class="log-body">
+            <div class="log-top">
+              <div>
+                <p class="log-title">Framing Loneliness in Modern Anime</p>
+                <div class="log-channel">Accented Cinema</div>
+              </div>
+              <div class="rating-dots"><span class="on">●●●●</span><span class="off">●</span></div>
+            </div>
+            <p class="log-review">Didn't expect to tear up over negative space, but here we are.</p>
+            <div class="log-watcher">Logged by 142 people</div>
+          </div>
+        </div>
+      </div>
+      <div class="teaser-fade">
+        <div class="teaser-cta">Create an account to see the full feed</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" stroke="currentColor" stroke-width="1.6"/><path d="M4 12a8 8 0 0016 0 8 8 0 00-16 0z" stroke="currentColor" stroke-width="1.6" opacity=".4"/></svg></div>
+      <p class="lbl">Log &amp; rate what you watch</p>
+    </div>
+    <div class="feature">
+      <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="11" width="16" height="4" rx="1" stroke="currentColor" stroke-width="1.6" opacity=".55"/><rect x="4" y="17" width="10" height="4" rx="1" stroke="currentColor" stroke-width="1.6" opacity=".3"/></svg></div>
+      <p class="lbl">Build lists &amp; watchlists</p>
+    </div>
+    <div class="feature">
+      <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="9" r="3.2" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="10.5" r="2.4" stroke="currentColor" stroke-width="1.6" opacity=".55"/><path d="M4 19c.7-3.3 2.9-5 5-5s4.3 1.7 5 5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+      <p class="lbl">Follow people with taste</p>
+    </div>
+  </div>
+
+  <div class="closing">
+    <h2>Your next favorite essay is one log away.</h2>
+    <p>Free during the beta &mdash; no credit card, just an account.</p>
+    <div class="btn primary">Create account</div>
+  </div>
+</div>

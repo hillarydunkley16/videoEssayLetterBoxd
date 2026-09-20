@@ -1,19 +1,15 @@
 import { useState, useEffect } from 'react';
-import {View, TextInput, Button, Switch , Platform, StyleSheet, TouchableOpacity} from 'react-native'
-import { useRouter } from 'expo-router';
-import { createLog } from '../api/logs';
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
+import { View, TextInput, Platform, StyleSheet, TouchableOpacity, Text, useColorScheme } from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker';
-import Slider from '@react-native-community/slider';
-import { useAuthPost} from '../api/authPost';
-import { Rating } from 'react-native-ratings';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { TappableRatingDots } from '@/components/ui/RatingDots';
+import { Toggle } from '@/components/ui/Toggle';
+import { Colors, Fonts } from '@/constants/theme';
+
 type Props = {
     id: string;
     initialRating?: number;
     style: object;
-    reviewText: string; 
+    reviewText: string;
     date: Date;
     rewatch: boolean;
     onRatingChange?: (value: number) => void;
@@ -25,7 +21,11 @@ type Props = {
     onDateChange: (date: Date) => void;
 }
 
-export default function CreateLogScreen( 
+function formatDateLabel(date: Date) {
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export default function CreateLogScreen(
     {
     id,
     initialRating,
@@ -36,206 +36,205 @@ export default function CreateLogScreen(
     onReviewTextChange,
     onDateChange,
     onWatchedChange,
+    onWatchListChange,
     reviewText,
     date
     }: Props){
-    const authFetch = useAuthPost();
-    
+    const theme = Colors[useColorScheme() ?? 'light'];
+
     const [rating, setRating] = useState<number>(initialRating ?? 0);
     const [watchList, setWatchList] = useState(false);
-    
-    useEffect(() => {
-        console.log("CreateLogScreen mounted with id ", id, " and initialRating ", initialRating);
-    }, [id]);
+    const [showPicker, setShowPicker] = useState(false);
+    const [ratingIsSet, setRatingIsSet] = useState(initialRating != null && initialRating > 0);
 
     useEffect(() => {
         if (initialRating !== undefined) {
             setRating(initialRating);
         }
     }, [initialRating]);
-    // const [reviewText, setReviewText] = useState(""); 
-    // const [rewatch, setRewatch] = useState(false); 
-    const [error, setError] = useState(""); 
-    const [loading, setLoading] = useState(false); 
-    // const [date, setDate] = useState(new Date());
-    const [showPicker, setShowPicker] = useState(false);
-    const [ratingIsSet,  setRatingIsSet] = useState(false);
-    // const dateValue = date ? date.toISOString().split('T')[0] : '';
 
-    // Handle web date input change
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    function handleRatingPress(value: number) {
+        setRating(value);
+        onRatingChange?.(value);
+        if (!ratingIsSet) {
+            setRatingIsSet(true);
+            onRatingSetChange?.(true);
+        }
+    }
+
+    // Web has no native DateTimePicker implementation (it renders null there
+    // — see @react-native-community/datetimepicker's platform-less fallback),
+    // so the date row opens a plain HTML date input on web instead.
+    function handleWebDateChange(e: React.ChangeEvent<HTMLInputElement>) {
         const value = e.target.value;
-        console.log(value)
-        onDateChange(new Date(value))
-  
-    };
-    const router = useRouter();
-    const handleWatched = async () => {
-        // similar to handle like but for watched status
-        if (!id) return;
-        
-        onWatchedChange?.(true);
+        if (!value) return;
+        onDateChange(new Date(value));
     }
-    const handleWatchList = async () => {
-        // similar to handle like but for watchlist status
-        if (!id) return;
-        
-        setWatchList((prev) => !prev);
-    }
-    async function handleSubmit() {
-        setError("")
-        const ratingNumber = rating;
 
-        if (isNaN(ratingNumber)){
-            setError("Rating must be a number"); 
-            return; 
-        }
-        if (ratingNumber < 0 || ratingNumber > 5){
-            setError("Rating must be between 0 and 5"); 
-            return; 
-        }
-        try {
-            setLoading(true); 
-            console.log(id)
-            console.log(date.toISOString().split('T')[0])
-            await createLog(authFetch, {
-                essay: id, 
-                date: date.toISOString().split('T')[0], // Format as YYYY-MM-DD
-                rating: ratingNumber, 
-                review_text: reviewText, 
-                rewatch: rewatch         
-            });
-           
-            setRating(0);
-            onReviewTextChange("");
-            onWatchedChange?.(false);
-            alert("log created!");
-            router.replace('/');
-        } catch(err){
-            setError("failed to create log");
-            //i need a specific error message for if the user has already created a log for this essay.
-            // if (err.response == 400){
-            //     setError("You have already created a log for this essay");
-            // }
-            console.error(err)
-        } finally {
-            setLoading(false)
-        }
+    function handleWatchListToggle(next: boolean) {
+        setWatchList(next);
+        onWatchListChange?.(next);
     }
-    // watched, liked, add to watchlist 
-    // quick log with just rating and date, then option to add review text later?
+
     return (
-        <ThemedView style = {style}>
-            {error ? (
-                <ThemedText>
-                    {error}
-                </ThemedText>
-            ) : null}
-            
-            <View style = {{padding: 20}}> 
-                <View style = {[styles.buttonRow, {marginBottom: 20}]}> 
-                    <ThemedText>I watched this on: </ThemedText>
-                    <DateTimePicker
-                        value={date}
-                        mode="date"
-                        maximumDate={new Date()}
-                        onChange={(event, selectedDate) => {
-                            // setShowPicker(false);
-                            if (selectedDate) {
-                                console.log("Selected date: ", selectedDate);
-                                onDateChange(selectedDate);
-                                // format for Django
-                                const formatted = selectedDate.toISOString().split('T')[0];
-                                // use formatted when submitting
-                            }
-                        }}
-                        
-                    />
-                </View>
-                <View style={{marginBottom: 20}}>
-                <Rating 
-                         ratingCount={5}
-                         startingValue={rating}            
-                         onSwipeRating={(value: number) => {
-                             setRating(value);
-                             onRatingChange?.(value);
-                             if (!ratingIsSet) {
-                                 setRatingIsSet(true);
-                                 onRatingSetChange?.(true);
-                             }
-                         }}            onFinishRating={(value: number) => {
-                             setRating(value);
-                             onRatingChange?.(value);
-                             if (!ratingIsSet) {
-                                 setRatingIsSet(true);
-                                 onRatingSetChange?.(true);
-                             }
-                         }}
-                         />
-                </View>
-        
-            
-                <TextInput 
-                    value = {reviewText}
-                    placeholder='Add review...'
+        <View style={style}>
+            <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                    I watched this on
+                </Text>
+                {Platform.OS === 'web' ? (
+                    <View style={[styles.dateRow, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+                        <input
+                            type="date"
+                            value={date.toISOString().split('T')[0]}
+                            max={new Date().toISOString().split('T')[0]}
+                            onChange={handleWebDateChange}
+                            style={webDateInputStyle(theme.text)}
+                        />
+                    </View>
+                ) : (
+                    <>
+                        <TouchableOpacity
+                            style={[styles.dateRow, { borderColor: theme.border, backgroundColor: theme.surface }]}
+                            onPress={() => setShowPicker(true)}
+                        >
+                            <Text style={{ color: theme.text, fontFamily: Fonts?.sansSemiBold, fontVariant: ['tabular-nums'] }}>
+                                {formatDateLabel(date)}
+                            </Text>
+                        </TouchableOpacity>
+                        {showPicker && (
+                            <DateTimePicker
+                                value={date}
+                                mode="date"
+                                maximumDate={new Date()}
+                                onChange={(event, selectedDate) => {
+                                    setShowPicker(Platform.OS === 'ios');
+                                    if (selectedDate) {
+                                        onDateChange(selectedDate);
+                                    }
+                                }}
+                            />
+                        )}
+                    </>
+                )}
+            </View>
+
+            <View style={[styles.field, styles.rateBlock]}>
+                <Text style={[styles.fieldLabel, styles.centerLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                    your rating
+                </Text>
+                <TappableRatingDots value={rating} onChange={handleRatingPress} />
+                <Text style={[styles.rateCaption, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                    {rating > 0 ? `${rating} out of 5` : 'Tap a dot to rate'}
+                </Text>
+            </View>
+
+            <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                    review <Text style={{ opacity: 0.7 }}>optional</Text>
+                </Text>
+                <TextInput
+                    value={reviewText}
+                    placeholder="What stood out about this one?"
+                    placeholderTextColor={theme.muted}
                     onChangeText={onReviewTextChange}
                     multiline
-                    style={{
-                        marginTop: 20,
-                        borderTopWidth: 1,
-                        borderColor: "black",
-                        padding: 8,
-                        marginBottom: 12,
-                        height: 300,
-                    }}
+                    style={[
+                        styles.reviewBox,
+                        { borderColor: theme.border, backgroundColor: theme.surface, color: theme.text, fontFamily: Fonts?.sans },
+                    ]}
                 />
-
+                <Text style={[styles.charCount, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                    {reviewText.length} characters
+                </Text>
             </View>
-            
-           
-              
-            {/* <View style={styles.iconRow}>
-                <TouchableOpacity onPress = {handleWatched}>
-                <MaterialCommunityIcons name= {rewatch ? "eye" : "eye-outline"} size={30} color="black" />
-                <ThemedText style={styles.likeButtonText}>Watched</ThemedText>
 
-                {/* rate slider one to ten? */}
-                {/* <ThemedText>
-                    Review or Log
-                </ThemedText> */}
-            {/* </TouchableOpacity>
-            <TouchableOpacity onPress = {handleWatchList}>
-                <MaterialCommunityIcons name= {watchList ? "clock-minus" : "clock-plus-outline"} size={30} color="black" />
-                <ThemedText style={styles.likeButtonText}>Watchlist</ThemedText>
-            </TouchableOpacity> */}
-            {/* </View>  */}
-
-        </ThemedView>
+            <View style={[styles.toggleRow, { borderColor: theme.border }]}>
+                <View>
+                    <Text style={{ color: theme.text, fontFamily: Fonts?.sansMedium }}>Rewatch</Text>
+                    <Text style={[styles.toggleSub, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                        You've seen this one before
+                    </Text>
+                </View>
+                <Toggle value={rewatch} onChange={(next) => onWatchedChange?.(next)} />
+            </View>
+            <View style={[styles.toggleRow, styles.toggleRowLast, { borderColor: theme.border }]}>
+                <View>
+                    <Text style={{ color: theme.text, fontFamily: Fonts?.sansMedium }}>Add to watchlist</Text>
+                    <Text style={[styles.toggleSub, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                        Keep it queued after this log
+                    </Text>
+                </View>
+                <Toggle value={watchList} onChange={handleWatchListToggle} />
+            </View>
+        </View>
     );
 }
 
+function webDateInputStyle(color: string) {
+    return {
+        border: 'none',
+        outline: 'none',
+        background: 'transparent',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: 14,
+        fontWeight: 600,
+        color,
+        width: '100%',
+    } as const;
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  field: {
+    marginBottom: 24,
   },
-  content: {
-    flex: 1,
+  fieldLabel: {
+    fontSize: 13,
+    marginBottom: 10,
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-   
+  centerLabel: {
+    textAlign: 'center',
   },
-   likeButtonText: {
-    // color: '#fff',
-    fontWeight: '600',
+  dateRow: {
+    borderWidth: 1,
+    borderRadius: 3,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  iconRow: {
+  rateBlock: {
+    alignItems: 'center',
+  },
+  rateCaption: {
+    fontSize: 13,
+    marginTop: 10,
+  },
+  reviewBox: {
+    borderWidth: 1,
+    borderRadius: 3,
+    padding: 14,
+    minHeight: 120,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlignVertical: 'top',
+  },
+  charCount: {
+    fontSize: 11,
+    textAlign: 'right',
+    marginTop: 6,
+  },
+  toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    justifyContent: 'space-between', 
-    marginBottom: 'auto'
-  }
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+  },
+  toggleRowLast: {
+    borderBottomWidth: 1,
+    marginBottom: 24,
+  },
+  toggleSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
 })

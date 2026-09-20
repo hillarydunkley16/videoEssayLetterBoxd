@@ -1,16 +1,14 @@
-import { Link,  router , useLocalSearchParams} from 'expo-router';
-import { StyleSheet, Text, Button, View } from 'react-native';
+import { router, useLocalSearchParams} from 'expo-router';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import CreateLogScreen from '@/src/screens/createLogScreen';
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen';
-import { useEffect, useRef, useState} from 'react';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-// import { ThemedText } from '@/components/themed-text'
+import { useRef, useState} from 'react';
 import { ThemedView } from '@/components/themed-view'
-import { ThemedText } from '@/components/themed-text';
 import { createLog } from '@/src/api/logs';
-import { authFetch } from '@/src/api/client';
 import { useAuthPost } from '@/src/api/authPost';
-export default function logVideoModal() {
+import { Colors, Fonts } from '@/constants/theme';
+
+export default function LogVideoModal() {
   const authFetch = useAuthPost();  // ← use this instead of imported authFetch
     const [loading, setLoading] = useState(false);
     const submittingRef = useRef(false);
@@ -18,22 +16,16 @@ export default function logVideoModal() {
     const [rewatch, setRewatch] = useState(false);
     const [reviewText, setReviewText] = useState("");
     const [date, setDate] = useState(new Date());
-    const isPresented = router.canGoBack();
-    // const [loading, setLoading] = useState(false);
-    // const [ratingValue, setRatingValue] = useState(0);
-    // const [rewatch, setRewatch] = useState(false);
-    // const [reviewText, setReviewText] = useState(""); 
-    // const [date, setDate] = useState(new Date());
+    const [error, setError] = useState("");
+    const theme = Colors[useColorScheme() ?? 'light'];
     const params = useLocalSearchParams<{essayId?: string | string[]}>();
-    console.log("params logVideoModal ", params);
-    const essayId = 
-      typeof params.essayId === "string" ? 
+    const essayId =
+      typeof params.essayId === "string" ?
       params.essayId
       : Array.isArray(params.essayId)
-      ? params.essayId[0] 
+      ? params.essayId[0]
       : undefined;
-   
-    // console.log("essayID found", essayId)
+
      if (typeof essayId !== "string") {
         return (
           <View>
@@ -41,14 +33,22 @@ export default function logVideoModal() {
           </View>
         );
       }
-       async function handlePress() {
-        router.replace('/');
-      }
+    // router.back() silently no-ops when this modal has no back-history (e.g.
+    // opened via a direct/refreshed URL on web), so callers must fall back to
+    // a known route instead of assuming navigation always happens.
+    const handleClose = () => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace('/');
+        }
+    };
     const handleSubmit = async () => {
         // Guard against double-taps creating duplicate logs.
         if (submittingRef.current) return;
         submittingRef.current = true;
         setLoading(true);
+        setError("");
         try{
             const payload = {
                 essay: essayId,
@@ -60,115 +60,125 @@ export default function logVideoModal() {
 
             await createLog(authFetch, payload);
             console.log("Log created successfully");
-            router.back();
-        } catch (error) {
-            console.error("Error creating log:", error);
+            setLoading(false);
+            router.replace('/');
+        } catch (err) {
+            console.error("Error creating log:", err);
+            setError("Couldn't save this log — try again.");
             submittingRef.current = false;
             setLoading(false);
         }
     }
     return(
-        <ThemedView style={styles.largeContainer}> 
+        <ThemedView style={[styles.page, { backgroundColor: theme.surface }]}>
+        <ThemedView style={[styles.largeContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
+          <View style={[styles.header, { borderColor: theme.border }]}>
+            <TouchableOpacity onPress={handleClose} style={styles.headerSide} accessibilityLabel="Close">
+              <Text style={[styles.closeIcon, { color: theme.muted }]}>{"✕"}</Text>
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.text, fontFamily: Fonts?.displayMedium }]}>
+              Log this watch
+            </Text>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={loading}
+              style={[styles.headerSide, styles.headerSideRight]}
+            >
+              <Text style={[styles.saveText, { color: theme.accent, opacity: loading ? 0.5 : 1 }]}>
+                {loading ? "Saving..." : "Save Log"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          <MaterialCommunityIcons name = "arrow-left" size = {40} color = "white" onPress = {handlePress}/>
-          <View style = {styles.buttonRow}> 
-                <Button title = {"Cancel"}
-                onPress = {() => router.back()}
-                /> 
-                <Button 
-                title = {loading ? "Saving..." : "Save Log"}
-                onPress={handleSubmit}
-                disabled = {loading}
-                />
-            </View>
-            <GetVideoEssayScreen id = {essayId}/>
-            <CreateLogScreen 
-            id={essayId} 
-            style={styles.container}  
-            initialRating={ratingValue}
-            reviewText={reviewText}
-            date={date}
-            rewatch={rewatch}
-            onRatingChange={setRatingValue}
-            onReviewTextChange={setReviewText}  // ← pass setter down
-            onDateChange={setDate}              // ← pass setter down
-            onWatchedChange={setRewatch}    
+          {error ? (
+            <Text style={[styles.errorText, { color: theme.accent }]}>{error}</Text>
+          ) : null}
+
+          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+            <GetVideoEssayScreen id={essayId} compact />
+            <CreateLogScreen
+              id={essayId}
+              style={styles.form}
+              initialRating={ratingValue}
+              reviewText={reviewText}
+              date={date}
+              rewatch={rewatch}
+              onRatingChange={setRatingValue}
+              onReviewTextChange={setReviewText}
+              onDateChange={setDate}
+              onWatchedChange={setRewatch}
             />
+          </ScrollView>
         </ThemedView>
-        
-        
+        </ThemedView>
     )
 }
 
 const styles = StyleSheet.create({
+    // On web the modal floats as a capped-width card over the page, like the
+    // mockup; on native it's already presented full-screen by the router, so
+    // it just fills the available space.
+    page: {
+        flex: 1,
+        ...Platform.select({
+            web: {
+                alignItems: 'center',
+            },
+        }),
+    },
     largeContainer: {
         flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 30,
-        paddingBottom: 20,
-        
-    },
-    container: {
         width: '100%',
-        marginBottom: 16,
-    }, 
-    buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-   
-  },
+        ...Platform.select({
+            web: {
+                maxWidth: 480,
+                borderWidth: 1,
+                borderRadius: 10,
+                marginVertical: 32,
+                overflow: 'hidden',
+            },
+        }),
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 20,
+        paddingBottom: 14,
+        borderBottomWidth: 1,
+    },
+    headerSide: {
+        minWidth: 64,
+    },
+    headerSideRight: {
+        alignItems: 'flex-end',
+    },
+    closeIcon: {
+        fontSize: 20,
+    },
+    headerTitle: {
+        fontSize: 17,
+    },
+    saveText: {
+        fontWeight: '700',
+        fontSize: 15,
+    },
+    errorText: {
+        textAlign: 'center',
+        paddingTop: 10,
+        fontSize: 13,
+    },
+    body: {
+        flex: 1,
+    },
+    bodyContent: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 24,
+    },
+    form: {
+        width: '100%',
+        marginTop: 22,
+    },
 });
-
-// export default function logVideoModal() {
-//     const authFetch = useAuthPost();  // ← use this instead of imported authFetch
-//     const [loading, setLoading] = useState(false);
-//     const [ratingValue, setRatingValue] = useState(0);
-//     const [rewatch, setRewatch] = useState(false);
-//     const [reviewText, setReviewText] = useState("");
-//     const [date, setDate] = useState(new Date());
-    
-//     const handleSubmit = async () => {
-//         try {
-//             setLoading(true);
-//             await createLog(authFetch, {
-//                 essay: essayId,
-//                 date: date.toISOString().split('T')[0],
-//                 rating: ratingValue,
-//                 review_text: reviewText,
-//                 rewatch: rewatch
-//             });
-//             console.log("Log created successfully");
-//             router.back();
-//         } catch (error) {
-//             console.error("Error creating log:", error);
-//         } finally {
-//             setLoading(false);
-//         }
-//     }
-
-//     return (
-//         <ThemedView style={styles.largeContainer}> 
-//             <View style={styles.buttonRow}> 
-//                 <Button title="Cancel" onPress={() => router.back()} /> 
-//                 <Button 
-//                     title={loading ? "Saving..." : "Save Log"}
-//                     onPress={handleSubmit}
-//                     disabled={loading}
-//                 />
-//             </View>
-//             <GetVideoEssayScreen id={essayId}/>
-//             <CreateLogScreen 
-//                 id={essayId} 
-//                 style={styles.container}  
-//                 initialRating={ratingValue}
-//                 reviewText={reviewText}
-//                 date={date}
-//                 rewatch={rewatch}
-//                 onRatingChange={setRatingValue}
-//                 onReviewTextChange={setReviewText}  // ← pass setter down
-//                 onDateChange={setDate}              // ← pass setter down
-//                 onWatchedChange={setRewatch}        // ← pass setter down
-//             />
-//         </ThemedView>
-//     )
-// }

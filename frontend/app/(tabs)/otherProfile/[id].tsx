@@ -7,9 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import { useState, useEffect } from 'react'
 import { Log } from '@/src/types/log'
-import { fetchAProfileById } from '@/src/api/users'
+import { fetchAProfileById, followUser } from '@/src/api/users'
 import { useAuth } from '@clerk/clerk-expo'
 import { useAuthUpdate } from '@/src/api/authUpdate'
+import { useAuthPost } from '@/src/api/authPost'
 import { useAuthDelete } from '@/src/api/authDelete'
 import { Profile } from '@/src/types/profile'
 import { useLocalSearchParams } from 'expo-router'
@@ -22,6 +23,7 @@ export default function Page() {
   const { getToken } = useAuth()
   const authUpdate = useAuthUpdate()
   const authDelete = useAuthDelete()
+  const authPost = useAuthPost()
   const { user } = useUser()
 
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -30,6 +32,9 @@ export default function Page() {
   const [numEssays, setNumEssays] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followersCount, setFollowersCount] = useState(0)
+  const [followBusy, setFollowBusy] = useState(false)
 
   useEffect(() => {
     async function loadProfile() {
@@ -46,6 +51,13 @@ export default function Page() {
         setUserLogs(profileData.user_logs)
         setNumLogs(profileData.user_logs.length)
         setNumEssays(new Set(profileData.user_logs.map((item) => item.essay)).size)
+        setFollowersCount(profileData.followers?.length ?? 0)
+        // The Django user's `username` is the Clerk user id (see
+        // ClerkAuthentication.authenticate), so this is how a Clerk-side
+        // user matches themselves in a followers list from the backend.
+        setIsFollowing(
+          profileData.followers?.some((follower) => follower.username === user?.id) ?? false
+        )
       } catch (err) {
         console.error('Failed to load other profile:', err)
         setError('Unable to load profile')
@@ -55,7 +67,24 @@ export default function Page() {
     }
 
     loadProfile()
-  }, [profileId, getToken])
+    // getToken's identity changes on every Clerk render; excluding it keeps
+    // this effect from re-fetching in an infinite loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileId, user?.id])
+
+  async function handleFollowPress() {
+    if (!profileId || followBusy) return
+    setFollowBusy(true)
+    try {
+      const result = await followUser(profileId, authPost)
+      setIsFollowing(result.following)
+      setFollowersCount(result.followers_count)
+    } catch (err) {
+      console.error('Failed to toggle follow:', err)
+    } finally {
+      setFollowBusy(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -90,8 +119,18 @@ export default function Page() {
           )}
 
           <ThemedText style={styles.subheading}>
-            {numLogs} Logs · {numEssays} Essays
+            {numLogs} Logs · {numEssays} Essays · {followersCount} Followers
           </ThemedText>
+
+          <TouchableOpacity
+            style={[styles.followButton, isFollowing && styles.followButtonActive]}
+            onPress={handleFollowPress}
+            disabled={followBusy}
+          >
+            <Text style={[styles.followButtonText, isFollowing && styles.followButtonTextActive]}>
+              {isFollowing ? 'Following' : 'Follow'}
+            </Text>
+          </TouchableOpacity>
 
           <FlatList
             data={userLogs}
@@ -158,6 +197,25 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  followButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  followButtonActive: {
+    backgroundColor: '#334155',
+  },
+  followButtonText: {
+    fontWeight: '700',
+    color: '#334155',
+  },
+  followButtonTextActive: {
+    color: '#ffffff',
   },
   logCard: {
     backgroundColor: '#ffffff',

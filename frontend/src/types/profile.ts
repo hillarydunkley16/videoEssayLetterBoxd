@@ -11,12 +11,27 @@
 //     class Meta: 
 //         model = Profile
 //         fields = ("user", "imageUrl", "userLogs")
-import { UrlObject } from "expo-router/build/global-state/routeInfo";
 import { User } from "./user";
 import { Log } from "./log";
+import { VideoEssay } from "./videoEssay";
+
+// The auto-provisioned "<username>'s Watchlist" Collection, returned inline
+// on the profile response (see ProfileSerializer.get_watchList). Its `essays`
+// are plain VideoEssay objects, not the VideoEssayData shape used elsewhere.
+export interface ProfileWatchList {
+    id: number,
+    public_id: string,
+    name: string,
+    owner: string,
+    essays: VideoEssay[]
+}
+
 export interface Profile {
-    id: Number, 
-    user: User, 
-    imageUrl: UrlObject, 
-    user_logs: Log[]
+    id: Number,
+    user: User,
+    imageUrl: string | null,
+    user_logs: Log[],
+    followers: User[],
+    following: User[],
+    watchList: ProfileWatchList
 }

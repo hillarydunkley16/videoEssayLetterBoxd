@@ -4,7 +4,8 @@ import { ThemedView } from '@/components/themed-view'
 import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
 import { Link } from 'expo-router'
 import { StyleSheet } from 'react-native'
-import VideoEssayListScreen from '@/src/screens/VideoEssayListScreen'
+import RecentLogsScreen from '@/src/screens/RecentLogsScreen'
+import SignedOutHomeScreen from '@/src/screens/SignedOutHomeScreen'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import '../../global.css';
 import SwitchComponent from '@/src/screens/SearchScreen';
@@ -22,14 +23,12 @@ export default function Page() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1, width: '100%' }}>
         
-        {/* <ThemedText style={styles.text}>Welcome!</ThemedText> */}
-        {/* this should be a slick slideshow evetually */}
         <SignedOut>
-          <ThemedText>USER IS UNDEFINED/ NOT SIGNED IN</ThemedText>
+          <SignedOutHomeScreen />
         </SignedOut>
         <SignedIn>
           {/* <ThemedText>Hello {user?.username}</ThemedText> */}
-           <VideoEssayListScreen/>
+           <RecentLogsScreen/>
         </SignedIn>
        
       </SafeAreaView>

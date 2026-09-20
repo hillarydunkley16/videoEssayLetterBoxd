@@ -14,7 +14,7 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import { createLog } from '@/src/api/logs';
 import { useAuthPost } from '@/src/api/authPost';
 
-export default function quickLog() {
+export default function QuickLog() {
     const bottomSheetRef = useRef<BottomSheet>(null);
     const authFetch = useAuthPost();
     const [loading, setLoading] = useState(false);
@@ -37,13 +37,6 @@ export default function quickLog() {
       : undefined;
     
     // console.log("essayID found", essayId)
-     if (typeof essayId !== "string") {
-        return (
-          <View>
-            <Text>Invalid video id</Text>
-          </View>
-        );
-      }
        async function handlePress() {
         router.replace('/');
       }
@@ -66,6 +59,7 @@ export default function quickLog() {
         setRatingIsSet(isSet);
     }, []);
     const handleSubmit = async () => {
+        if (typeof essayId !== "string") return;
         try{
             const payload = {
                 essay: essayId,
@@ -86,7 +80,7 @@ export default function quickLog() {
     useEffect(() => {
         const handleSheetClose = async () => {
             if (sheetIndex === -1) {
-                if (ratingIsSet) {
+                if (ratingIsSet && typeof essayId === "string") {
                   console.log('RATING IS SET');
                   const payload = {
                     essay: essayId,
@@ -109,6 +103,14 @@ export default function quickLog() {
         };
         handleSheetClose();
     }, [sheetIndex, essayId, ratingValue, rewatch, authFetch, ratingIsSet, router]);
+
+    if (typeof essayId !== "string") {
+      return (
+        <View>
+          <Text>Invalid video id</Text>
+        </View>
+      );
+    }
     return(
         <GestureHandlerRootView
         style={styles.container}
@@ -128,6 +130,7 @@ export default function quickLog() {
                   id={essayId}
                   onRatingChange={handleRatingChange}
                   onRatingSetChange={handleRatingSetChange}
+                  onDone={() => bottomSheetRef.current?.close()}
                   style={styles.container}
                 />
               )}

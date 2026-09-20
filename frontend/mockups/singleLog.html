@@ -1,0 +1,420 @@
+<title>Visual Arguments — Single Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1B1D21;
+    --paper: #F1F1EE;
+    --paper-dim: #E2E2DD;
+    --cobalt: #2F5DFF;
+    --teal: #1E7A6C;
+    --slate: #63666C;
+
+    --bg: var(--paper);
+    --surface: var(--paper-dim);
+    --surface-2: #D5D5CF;
+    --text: var(--ink);
+    --muted: var(--slate);
+    --border: rgba(27, 29, 33, 0.14);
+    --accent: var(--cobalt);
+    --accent-ink: #fff;
+    --accent2: var(--teal);
+    --shadow: 0 1px 0 rgba(27,29,33,0.05);
+  }
+
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: var(--ink);
+      --surface: #24262B;
+      --surface-2: #2B2D33;
+      --text: var(--paper);
+      --muted: #93969E;
+      --border: rgba(241,241,238,0.14);
+      --accent: #5B7CFF;
+      --accent2: #2FA593;
+      --shadow: 0 1px 0 rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--ink);
+    --surface: #24262B;
+    --surface-2: #2B2D33;
+    --text: var(--paper);
+    --muted: #93969E;
+    --border: rgba(241,241,238,0.14);
+    --accent: #5B7CFF;
+    --accent2: #2FA593;
+    --shadow: 0 1px 0 rgba(0,0,0,0.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .frame {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100%;
+    padding: 0 0 96px;
+    position: relative;
+  }
+
+  /* ---- top nav ---- */
+  .topnav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .back-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    border: 1px solid var(--border);
+    flex: none;
+    color: var(--text);
+  }
+  .topnav-title {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ---- reviewer header ---- */
+  .log-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px 4px;
+  }
+  .avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    flex: none;
+    background: linear-gradient(155deg, var(--accent2), #123028 130%);
+  }
+  .log-header-text { flex: 1; min-width: 0; }
+  .byline {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .byline .who { color: var(--muted); font-weight: 500; }
+  .log-date {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .rating-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+  }
+  .rating-pill .dots { color: var(--accent); font-size: 15px; letter-spacing: 2px; }
+  .rating-pill .dots .off { color: var(--border); }
+
+  /* ---- review body ---- */
+  .review-block {
+    padding: 14px 20px 4px;
+  }
+  .review-text {
+    font-size: 15px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .tag-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ---- like / comment action row ---- */
+  .interact-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .interact-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .interact-btn.liked { color: var(--accent); }
+  .interact-btn svg { display: block; }
+
+  /* ---- video details card ---- */
+  .section {
+    padding: 20px 20px 4px;
+  }
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .video-card {
+    display: flex;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .video-thumb {
+    position: relative;
+    width: 112px;
+    aspect-ratio: 16/9;
+    border-radius: 4px;
+    overflow: hidden;
+    flex: none;
+    background: linear-gradient(155deg, #3a4a6b 0%, #1c2430 58%, #0e1218 100%);
+  }
+  .video-thumb::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 3px);
+    mix-blend-mode: overlay;
+  }
+  .video-thumb .dur {
+    position: absolute;
+    right: 4px; bottom: 4px;
+    background: rgba(27,29,33,0.72);
+    color: #fff;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+  .video-meta { flex: 1; min-width: 0; }
+  .video-title {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 14.5px;
+    line-height: 1.28;
+    margin: 0 0 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .video-channel {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .video-sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .video-open {
+    margin-top: 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  /* ---- watchlist / rewatch actions ---- */
+  .video-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .chip-btn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+
+  /* ---- comments ---- */
+  .comments-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .comment-row {
+    display: flex;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .comment-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    flex: none;
+    background: linear-gradient(155deg, var(--slate), #2c2e33 140%);
+  }
+  .comment-body { flex: 1; min-width: 0; }
+  .comment-top {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .comment-user { font-size: 12.5px; font-weight: 600; }
+  .comment-text { font-size: 12.5px; line-height: 1.4; margin: 3px 0 0; opacity: 0.9; }
+  .comment-composer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 8px 8px 14px;
+  }
+  .comment-composer input {
+    border: none;
+    background: transparent;
+    outline: none;
+    flex: 1;
+    font-size: 13px;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .comment-composer input::placeholder { color: var(--muted); }
+  .send-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: grid; place-items: center;
+    flex: none;
+  }
+
+  @media (max-width: 380px) {
+    .video-thumb { width: 92px; }
+  }
+</style>
+
+<div class="frame">
+  <div class="topnav">
+    <div class="back-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="topnav-title">Review of The Rule of Threes: How Wes Anderson Blocks a Scene</div>
+  </div>
+
+  <div class="log-header">
+    <div class="avatar"></div>
+    <div class="log-header-text">
+      <div class="byline">hillarydunkley <span class="who">logged this</span></div>
+      <div class="log-date">Watched on 14 September 2026</div>
+    </div>
+    <div class="rating-pill">
+      <span class="dots"><span class="on">●●●●</span><span class="off">●</span></span>
+    </div>
+  </div>
+
+  <div class="review-block">
+    <p class="review-text">Rewatched after Asteroid City. Holds up even better than I remembered — the way he uses the rule of threes as a blocking grammar rather than a gag is genuinely instructive. Wish the last act didn't rush the sound design point though.</p>
+    <div class="tag-row">
+      <span class="tag">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Rewatch
+      </span>
+    </div>
+  </div>
+
+  <div class="interact-row">
+    <div class="interact-btn liked">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.3-9.3-8.1C.9 10.2 1.6 6.6 4.6 5.1c2.3-1.1 4.7-.3 6.1 1.6.4.5 1.2.5 1.6 0 1.4-1.9 3.8-2.7 6.1-1.6 3 1.5 3.7 5.1 1.9 7.8C18.7 16.7 12 21 12 21z"/></svg>
+      12 likes
+    </div>
+    <div class="interact-btn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-8.6 8.4 8.6 8.6 0 0 1-4-1L3 20l1.1-5.3A8.4 8.4 0 0 1 12.4 3a8.4 8.4 0 0 1 8.6 8.5z"/></svg>
+      3 comments
+    </div>
+  </div>
+
+  <div class="section">
+    <span class="section-title">Video details</span>
+    <div class="video-card">
+      <div class="video-thumb">
+        <span class="dur">14:52</span>
+      </div>
+      <div class="video-meta">
+        <h3 class="video-title">The Rule of Threes: How Wes Anderson Blocks a Scene</h3>
+        <div class="video-channel">Every Frame a Painting</div>
+        <div class="video-sub">812K views · 1,204 logs</div>
+        <span class="video-open">
+          Open essay
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+        </span>
+      </div>
+    </div>
+    <div class="video-actions">
+      <div class="chip-btn">+ Watchlist</div>
+      <div class="chip-btn">Log another watch</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="comments-head">
+      <span class="section-title">Comments</span>
+    </div>
+    <div class="comment-row">
+      <div class="comment-avatar"></div>
+      <div class="comment-body">
+        <div class="comment-top">
+          <span class="comment-user">thomasflight</span>
+        </div>
+        <p class="comment-text">Agreed on the sound design bit — felt tacked on compared to the rest of the argument.</p>
+      </div>
+    </div>
+    <div class="comment-row">
+      <div class="comment-avatar"></div>
+      <div class="comment-body">
+        <div class="comment-top">
+          <span class="comment-user">accentedcinema</span>
+        </div>
+        <p class="comment-text">Asteroid City comparison is exactly right, didn't clock that until now.</p>
+      </div>
+    </div>
+    <div class="comment-composer">
+      <input type="text" placeholder="Add a comment…" />
+      <div class="send-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M22 2l-7 20-4-9-9-4 20-7z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  </div>
+</div>

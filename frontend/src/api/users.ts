@@ -8,6 +8,7 @@ import { authFetch } from "./client";
 import {User} from "../types/user";
 import { PaginatedResponse } from "../types/api";
 import { useAuthUpdate } from "./authUpdate";
+import { useAuthPost } from "./authPost";
 import { UrlObject } from "expo-router/build/global-state/routeInfo";
 import { Profile } from "../types/profile";
 export async function fetchUsers(): Promise<PaginatedResponse<User>>{
@@ -33,4 +34,16 @@ export async function updateProfileImageAPI( imageUrl: string,  authFetch: Retur
     console.log("UPDATE user PROFILE IMAGE");
     const response = await authFetch(`/api/users/updatePic`, {imageUrl});
     return response;
+}
+
+export type FollowResult = {
+    following: boolean;
+    followers_count: number;
+}
+
+// Toggles following the given user. Mirrors likeLog's toggle-on-POST shape.
+export async function followUser(userId: number, authFetch: ReturnType<typeof useAuthPost>): Promise<FollowResult> {
+    console.log("toggling follow for user: ", userId);
+    const response = await authFetch(`/api/users/${userId}/follow/`);
+    return response.data;
 }

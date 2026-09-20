@@ -13,7 +13,23 @@ import { useAuthDelete } from "./authDelete";
 
 export async function fetchLogs(token: string): Promise<PaginatedResponse<Log>> {
     console.log("fetch logs functin called!!!");
-  return authFetch("/logList", {}, token);
+  return authFetch("/logList/", {}, token);
+}
+
+// DRF pagination hands back absolute `next`/`previous` URLs — fetch those
+// directly rather than re-deriving a path to feed back through authFetch.
+export async function fetchLogsPage(url: string, token: string): Promise<PaginatedResponse<Log>> {
+    const res = await fetch(url, {
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+        },
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`API error: ${res.status} — ${text}`);
+    }
+    return res.json();
 }
 export async function fetchUserLogs(token: string): Promise<PaginatedResponse<Log>> {
     return authFetch(`/userLogs/`, {}, token);

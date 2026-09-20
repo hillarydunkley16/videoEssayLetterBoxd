@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { useEffect } from 'react'
 import { useNavigation } from 'expo-router'
 import { ReviewsTopNav } from '@/components/ui/reviewsTopNav'
+import { logRoute } from '@/src/helpers/logRoute'
 export default function Modal() {
   const params = useLocalSearchParams<{ essayId?: string | string[] }>(); 
   const navigation = useNavigation();
@@ -46,7 +47,7 @@ export default function Modal() {
        {/* <TouchableOpacity style = {styles.button} onPress={() => router.push(`/logs?essayId=${essayId}`)}>
         <ThemedText style={styles.buttonText}>See Logs</ThemedText>
         </TouchableOpacity> */}
-      <TouchableOpacity style = {styles.button} onPress={() => router.push(`/quickLog?essayId=${essayId}`)}>
+      <TouchableOpacity style = {styles.button} onPress={() => router.push(logRoute(essayId))}>
         <ThemedText style={styles.buttonText}>Log or Review</ThemedText>
       </TouchableOpacity>
     </ThemedView>

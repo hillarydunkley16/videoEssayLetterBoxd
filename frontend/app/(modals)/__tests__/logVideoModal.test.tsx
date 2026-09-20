@@ -72,7 +72,7 @@ describe('logVideoModal Save button', () => {
     expect(mockCreateLog).toHaveBeenCalledTimes(1);
 
     resolveCreate();
-    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1), { timeout: 10000 });
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'), { timeout: 10000 });
 
     // Still exactly one after the request settles and the modal dismisses.
     expect(mockCreateLog).toHaveBeenCalledTimes(1);
@@ -89,7 +89,7 @@ describe('logVideoModal Save button', () => {
     await waitFor(() => expect(mockCreateLog).toHaveBeenCalledTimes(1));
 
     fireEvent.press(screen.getByText('Save Log'));
-    await waitFor(() => expect(mockBack).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
 
     expect(mockCreateLog).toHaveBeenCalledTimes(2);
   });
