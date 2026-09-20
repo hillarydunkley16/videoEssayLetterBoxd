@@ -57,13 +57,6 @@ class ProfileFollowFieldsTests(TestCase):
         self.assertEqual(response.data["followers_count"], 2)
         self.assertEqual(response.data["following_count"], 1)
 
-    def test_counts_ignore_the_legacy_m2m(self):
-        Profile.objects.get(user=self.bob).followers.add(self.alice)
-
-        response = self._profile_of(self.alice, self.bob)
-
-        self.assertEqual(response.data["followers_count"], 0)
-
     def test_is_following_true_when_viewer_follows_the_profile(self):
         Follow.objects.create(follower=self.alice, followee=self.bob)
 

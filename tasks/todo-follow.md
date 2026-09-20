@@ -22,7 +22,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
   - Acceptance: no embedded user lists; constant query count; follower `print`s removed; button state from `is_following`; toggle updates count; double-tap guarded
   - Verify: `python manage.py test`; `npm test`; `npx tsc --noEmit` (no new errors); manual on `expo start --web`
   - Files: `serializers.py`, `views/api.py`, `types/profile.ts`, `otherProfile/[id].tsx`, `ProfileScreen.tsx`, tests
-- [ ] Task 5: Drop `Profile.followers` / `Profile.following` (migration C)
+- [x] Task 5: Drop `Profile.followers` / `Profile.following` (migration C) (0011 reverses by refilling both M2M sides from Follow; suite 101/101; verified on a copy of the dev DB only, prod not touched)
   - Acceptance: no code references the fields; migration applies on a DB with data
   - Verify: full backend suite; grep for stale references; **ask before running against production**
   - Files: `users/models.py`, 1 migration

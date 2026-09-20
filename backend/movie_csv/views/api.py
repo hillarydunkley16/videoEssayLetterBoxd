@@ -577,9 +577,8 @@ class PopularVideoEssays(generics.ListAPIView):
 
 
 class FollowUser(APIView):
-    """Toggles the request user following the given user. users.Follow is the
-    source of truth; the legacy Profile.following / Profile.followers M2Ms are
-    mirrored until they are dropped, because ProfileSerializer still reads them."""
+    """Toggles the request user following the given user by creating or deleting
+    their users.Follow row."""
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -591,17 +590,9 @@ class FollowUser(APIView):
         except User.DoesNotExist:
             return Response({"message": "User not found"}, status=404)
 
-        my_profile, _ = Profile.objects.get_or_create(user=request.user)
-        target_profile, _ = Profile.objects.get_or_create(user=target_user)
-
         follow, following = Follow.objects.get_or_create(follower=request.user, followee=target_user)
-        if following:
-            my_profile.following.add(target_user)
-            target_profile.followers.add(request.user)
-        else:
+        if not following:
             follow.delete()
-            my_profile.following.remove(target_user)
-            target_profile.followers.remove(request.user)
 
         return Response(
             {

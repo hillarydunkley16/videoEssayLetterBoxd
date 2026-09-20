@@ -1,8 +1,6 @@
 """Tests for movie_csv.views.api.FollowUser.
 
-A single POST toggles a users.Follow row, which is the source of truth. Until the
-legacy Profile.followers / Profile.following M2Ms are dropped, the toggle also mirrors
-into them so the profile serializer (still reading them) stays correct.
+A single POST toggles a users.Follow row, which is the only record of a follow.
 
 ClerkAuthentication is bypassed with DRF's force_authenticate.
 """
@@ -57,24 +55,6 @@ class FollowUserTests(TestCase):
         self._post(self.alice, self.bob.id)
 
         self.assertFalse(Follow.objects.filter(follower=self.bob, followee=self.alice).exists())
-
-    def test_follow_state_comes_from_follow_rows_not_the_legacy_m2m(self):
-        # Legacy drift: the old M2M claims alice follows bob, but there is no Follow row.
-        Profile.objects.get_or_create(user=self.alice)[0].following.add(self.bob)
-
-        response = self._post(self.alice, self.bob.id)
-
-        self.assertTrue(response.data["following"])
-        self.assertEqual(Follow.objects.count(), 1)
-
-    def test_legacy_m2m_is_mirrored_until_it_is_dropped(self):
-        self._post(self.alice, self.bob.id)
-        self.assertIn(self.bob, Profile.objects.get(user=self.alice).following.all())
-        self.assertIn(self.alice, Profile.objects.get(user=self.bob).followers.all())
-
-        self._post(self.alice, self.bob.id)
-        self.assertNotIn(self.bob, Profile.objects.get(user=self.alice).following.all())
-        self.assertNotIn(self.alice, Profile.objects.get(user=self.bob).followers.all())
 
     def test_followers_count_reflects_the_target(self):
         self._post(self.alice, self.bob.id)

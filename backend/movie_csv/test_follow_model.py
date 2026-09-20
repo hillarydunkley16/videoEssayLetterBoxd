@@ -1,15 +1,16 @@
-"""Tests for users.models.Follow and the migration that seeds it from the old
-Profile.followers / Profile.following M2Ms.
+"""Tests for users.models.Follow and the migrations around it: 0010 seeds it from the
+old Profile.followers / Profile.following M2Ms, 0011 drops those M2Ms (and restores them
+from Follow if it is ever reversed).
 
 The DB must be the thing that rejects duplicate and self follows, so these tests
 go straight to the model rather than through the toggle view.
 """
 from importlib import import_module
 
-from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.db import IntegrityError, connection, transaction
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TestCase, TransactionTestCase
 
 from users.models import Follow, Profile
 
@@ -59,54 +60,98 @@ class FollowConstraintTests(TestCase):
         self.assertEqual(Follow.objects.count(), 0)
 
 
-class CopyFollowsMigrationTests(TestCase):
-    """0010_copy_follows seeds Follow from the legacy Profile.following M2M."""
+class LegacyFollowFieldsTests(TestCase):
+    def test_profile_no_longer_has_the_legacy_m2ms(self):
+        field_names = {f.name for f in Profile._meta.get_fields()}
+
+        self.assertNotIn("followers", field_names)
+        self.assertNotIn("following", field_names)
+
+
+class FollowMigrationTests(TransactionTestCase):
+    """Runs the real migrations against the historical schema.
+
+    Schema changes cannot live inside TestCase's transaction, and the legacy M2Ms only
+    exist in the historical state, so each test migrates users back, works with the
+    historical models, and always migrates forward again in tearDown.
+    """
+
+    copy_target = ("users", "0009_create_follow")
+    pre_drop_target = ("users", "0010_copy_follows")
 
     def setUp(self):
         self.alice = User.objects.create(username="alice")
         self.bob = User.objects.create(username="bob")
         self.carol = User.objects.create(username="carol")
-        self.profiles = {u.id: Profile.objects.get_or_create(user=u)[0] for u in (self.alice, self.bob, self.carol)}
+        for user in (self.alice, self.bob, self.carol):
+            Profile.objects.get_or_create(user=user)
 
-    def _legacy_follow(self, follower, followee):
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def _migrate_to(self, target):
+        executor = MigrationExecutor(connection)
+        executor.migrate([target])
+        return executor.loader.project_state([target]).apps
+
+    def _legacy_follow(self, old_apps, follower, followee):
         """Write both sides, exactly as the old FollowUser view did."""
-        self.profiles[follower.id].following.add(followee)
-        self.profiles[followee.id].followers.add(follower)
+        Profile = old_apps.get_model("users", "Profile")
+        Profile.objects.get(user_id=follower.id).following.add(followee.id)
+        Profile.objects.get(user_id=followee.id).followers.add(follower.id)
 
-    def _run(self):
-        copy_migration.copy_follows(apps, None)
+    def _copy(self, old_apps):
+        copy_migration.copy_follows(old_apps, None)
+        Follow = old_apps.get_model("users", "Follow")
+        return set(Follow.objects.values_list("follower_id", "followee_id"))
 
     def test_copies_each_legacy_follow_once(self):
-        self._legacy_follow(self.alice, self.bob)
-        self._legacy_follow(self.carol, self.bob)
+        old_apps = self._migrate_to(self.copy_target)
+        self._legacy_follow(old_apps, self.alice, self.bob)
+        self._legacy_follow(old_apps, self.carol, self.bob)
 
-        self._run()
+        pairs = self._copy(old_apps)
 
-        pairs = set(Follow.objects.values_list("follower_id", "followee_id"))
         self.assertEqual(pairs, {(self.alice.id, self.bob.id), (self.carol.id, self.bob.id)})
 
     def test_running_twice_does_not_duplicate(self):
-        self._legacy_follow(self.alice, self.bob)
+        old_apps = self._migrate_to(self.copy_target)
+        self._legacy_follow(old_apps, self.alice, self.bob)
 
-        self._run()
-        self._run()
+        self._copy(old_apps)
+        pairs = self._copy(old_apps)
 
-        self.assertEqual(Follow.objects.count(), 1)
+        self.assertEqual(pairs, {(self.alice.id, self.bob.id)})
 
     def test_skips_legacy_self_follows(self):
-        self.profiles[self.alice.id].following.add(self.alice)
+        old_apps = self._migrate_to(self.copy_target)
+        Profile_ = old_apps.get_model("users", "Profile")
+        Profile_.objects.get(user_id=self.alice.id).following.add(self.alice.id)
 
-        self._run()
-
-        self.assertEqual(Follow.objects.count(), 0)
+        self.assertEqual(self._copy(old_apps), set())
 
     def test_one_sided_followers_row_is_reported_not_copied(self):
         # Drift: bob's Profile.followers lists alice, but alice's Profile.following does not list bob.
-        self.profiles[self.bob.id].followers.add(self.alice)
+        old_apps = self._migrate_to(self.copy_target)
+        old_apps.get_model("users", "Profile").objects.get(user_id=self.bob.id).followers.add(self.alice.id)
 
         with self.assertLogs("users.migrations.0010_copy_follows", level="WARNING") as logs:
-            self._run()
+            pairs = self._copy(old_apps)
 
-        self.assertEqual(Follow.objects.count(), 0)
+        self.assertEqual(pairs, set())
         self.assertIn("alice", logs.output[0])
         self.assertIn("bob", logs.output[0])
+
+    def test_reversing_the_drop_restores_both_m2m_sides_from_follow_rows(self):
+        Follow.objects.create(follower=self.alice, followee=self.bob)
+        Follow.objects.create(follower=self.carol, followee=self.bob)
+
+        old_apps = self._migrate_to(self.pre_drop_target)
+
+        OldProfile = old_apps.get_model("users", "Profile")
+        alice = OldProfile.objects.get(user_id=self.alice.id)
+        bob = OldProfile.objects.get(user_id=self.bob.id)
+        self.assertEqual(set(alice.following.values_list("id", flat=True)), {self.bob.id})
+        self.assertEqual(set(bob.followers.values_list("id", flat=True)), {self.alice.id, self.carol.id})
+        self.assertEqual(set(bob.following.values_list("id", flat=True)), set())

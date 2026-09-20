@@ -20,8 +20,6 @@ class Follow(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null = True, blank = True) 
     imageUrl = models.URLField(blank = True, null = True)
-    followers = models.ManyToManyField(User, related_name='followers', blank=True)
-    following = models.ManyToManyField(User, related_name='following', blank=True)
     # watchlist = models.OneToOneField('WatchList', on_delete=models.CASCADE, null=True, blank=True)
     # Delete profile when user is deleted
     # photo = models.ImageField(upload_to='profile_pics/', null=True, blank=True, default='profile_pics/default.jpg')
