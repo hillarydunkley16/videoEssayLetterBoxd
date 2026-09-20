@@ -9,7 +9,7 @@
  * Clerk, the network and nested screens are stubbed so only this screen's logic runs.
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
@@ -54,6 +54,9 @@ import OtherProfile from '../[id]';
 // The first cold run has to transform the whole RN/Expo module graph.
 jest.setTimeout(20000);
 
+const followButton = () => within(screen.getByTestId('follow-button'));
+const count = (testID: 'followers-count' | 'following-count') => within(screen.getByTestId(testID));
+
 function profile(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
@@ -79,8 +82,9 @@ describe('other profile follow button', () => {
 
     render(<OtherProfile />);
 
-    expect(await screen.findByText('Follow')).toBeTruthy();
-    expect(screen.getByText(/3 Followers/)).toBeTruthy();
+    await screen.findByTestId('follow-button');
+    expect(followButton().getByText('Follow')).toBeTruthy();
+    expect(count('followers-count').getByText('3')).toBeTruthy();
   });
 
   it('shows Following when the backend says the viewer follows them', async () => {
@@ -88,8 +92,9 @@ describe('other profile follow button', () => {
 
     render(<OtherProfile />);
 
-    expect(await screen.findByText('Following')).toBeTruthy();
-    expect(screen.getByText(/4 Followers/)).toBeTruthy();
+    await screen.findByTestId('follow-button');
+    expect(followButton().getByText('Following')).toBeTruthy();
+    expect(count('followers-count').getByText('4')).toBeTruthy();
   });
 
   it('does not decide follow state from a followers list', async () => {
@@ -100,7 +105,8 @@ describe('other profile follow button', () => {
 
     render(<OtherProfile />);
 
-    expect(await screen.findByText('Follow')).toBeTruthy();
+    await screen.findByTestId('follow-button');
+    expect(followButton().getByText('Follow')).toBeTruthy();
   });
 
   it('updates the button and count from the server response on toggle', async () => {
@@ -108,10 +114,10 @@ describe('other profile follow button', () => {
     mockFollowUser.mockResolvedValue({ following: true, followers_count: 4 });
 
     render(<OtherProfile />);
-    fireEvent.press(await screen.findByText('Follow'));
+    fireEvent.press(await screen.findByTestId('follow-button'));
 
-    expect(await screen.findByText('Following')).toBeTruthy();
-    expect(screen.getByText(/4 Followers/)).toBeTruthy();
+    await waitFor(() => expect(followButton().getByText('Following')).toBeTruthy());
+    expect(count('followers-count').getByText('4')).toBeTruthy();
     expect(mockFollowUser).toHaveBeenCalledWith(7, expect.any(Function));
   });
 
@@ -121,12 +127,12 @@ describe('other profile follow button', () => {
     mockFollowUser.mockImplementation(() => new Promise((resolve) => { resolveFollow = resolve; }));
 
     render(<OtherProfile />);
-    const button = await screen.findByText('Follow');
+    const button = await screen.findByTestId('follow-button');
     fireEvent.press(button);
     fireEvent.press(button);
     resolveFollow({ following: true, followers_count: 4 });
 
-    await waitFor(() => expect(screen.getByText('Following')).toBeTruthy());
+    await waitFor(() => expect(followButton().getByText('Following')).toBeTruthy());
     expect(mockFollowUser).toHaveBeenCalledTimes(1);
   });
 
@@ -135,11 +141,11 @@ describe('other profile follow button', () => {
     mockFollowUser.mockRejectedValue(new Error('network'));
 
     render(<OtherProfile />);
-    fireEvent.press(await screen.findByText('Follow'));
+    fireEvent.press(await screen.findByTestId('follow-button'));
 
     await waitFor(() => expect(mockFollowUser).toHaveBeenCalled());
-    expect(screen.getByText('Follow')).toBeTruthy();
-    expect(screen.getByText(/3 Followers/)).toBeTruthy();
+    expect(followButton().getByText('Follow')).toBeTruthy();
+    expect(count('followers-count').getByText('3')).toBeTruthy();
   });
 
   it('opens the followers list from the follower count and the following list from the following count', async () => {
@@ -149,8 +155,17 @@ describe('other profile follow button', () => {
     fireEvent.press(await screen.findByTestId('followers-count'));
     expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/followList', params: { userId: '7', tab: 'followers' } });
 
-    expect(screen.getByText(/5 Following/)).toBeTruthy();
+    expect(count('following-count').getByText('5')).toBeTruthy();
     fireEvent.press(screen.getByTestId('following-count'));
     expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/followList', params: { userId: '7', tab: 'following' } });
+  });
+
+  it('shows an error message instead of a spinner when the profile fails to load', async () => {
+    mockFetchProfile.mockRejectedValue(new Error('network'));
+
+    render(<OtherProfile />);
+
+    expect(await screen.findByText('Unable to load profile')).toBeTruthy();
+    expect(screen.queryByTestId('follow-button')).toBeNull();
   });
 });
