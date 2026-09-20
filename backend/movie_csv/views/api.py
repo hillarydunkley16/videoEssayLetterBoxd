@@ -651,3 +651,20 @@ class RemoveFollower(APIView):
         if not deleted:
             return Response({"message": "Follower not found"}, status=404)
         return Response(status=204)
+
+
+class FollowingFeed(generics.ListAPIView):
+    """Logs by the people the viewer follows (own logs excluded), newest first.
+    Log has no timestamp, so ordering is day-granular with id as the tie-break."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = LogSerializer
+
+    def get_queryset(self):
+        followees = Follow.objects.filter(follower=self.request.user).values("followee_id")
+        return (
+            Log.objects.filter(owner_id__in=followees)
+            .select_related("essay", "owner", "owner__profile")
+            .prefetch_related("likes", "comments__user")
+            .order_by("-date", "-id")
+        )

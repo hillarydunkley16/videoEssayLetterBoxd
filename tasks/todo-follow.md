@@ -44,7 +44,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
 **Checkpoint 2:** lists reachable from both profiles, removal works, suites green
 
 ## Phase 3: follow-feed (independent of Phase 2)
-- [ ] Task 9: `GET /api/feed/`
+- [x] Task 9: `GET /api/feed/` (9 new tests, backend 135/135; query count constant with likes/comments prefetched)
   - Acceptance: only followed users' logs; own excluded; `-date, -id`; paginated; empty 200 when following nobody; auth required; constant queries; unfollow removes their logs
   - Verify: `python manage.py test movie_csv.test_follow_feed`
   - Files: `views/api.py`, `urls/api.py`, test
