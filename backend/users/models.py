@@ -2,6 +2,21 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class Follow(models.Model):
+    follower = models.ForeignKey(User, related_name='following_set', on_delete=models.CASCADE)
+    followee = models.ForeignKey(User, related_name='follower_set', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['follower', 'followee'], name='unique_follow'),
+            models.CheckConstraint(condition=~models.Q(follower=models.F('followee')), name='no_self_follow'),
+        ]
+
+    def __str__(self):
+        return f'{self.follower_id} follows {self.followee_id}'
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null = True, blank = True) 
     imageUrl = models.URLField(blank = True, null = True)
