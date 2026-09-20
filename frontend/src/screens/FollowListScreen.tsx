@@ -49,7 +49,9 @@ export default function FollowListScreen({ userId, tab: initialTab = "followers"
       const token = await getToken();
       if (!token) return;
       const fetchPage = tab === "followers" ? fetchFollowers : fetchFollowing;
+      console.log("fetchPage called")
       const data = await fetchPage(userId, nextPage.current, token);
+      console.log("data from fetchPage: ", data)
       if (mine !== generation.current) return;
       nextPage.current += 1;
       setRows((prev) => [...prev, ...data.results]);

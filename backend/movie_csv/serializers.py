@@ -104,6 +104,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     
     
     
+    user = serializers.SerializerMethodField()
     user_logs = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
@@ -115,6 +116,9 @@ class ProfileSerializer(serializers.ModelSerializer):
         owner=obj.user
         )
         return CollectionSerializer(watchList).data
+    def get_user(self, obj):
+        # The frontend's Profile type expects the user as an object, not a bare pk.
+        return {"id": obj.user_id, "username": obj.user.username, "imageUrl": obj.imageUrl}
     def get_user_logs(self, obj): 
        
         logs = Log.objects.filter(owner = obj.user)

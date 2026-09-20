@@ -2,7 +2,10 @@ import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TopNav } from '@/components/ui/TopNav';
 import { ReviewsTopNav } from '@/components/ui/reviewsTopNav';
+import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 export default function Layout() {
+    const theme = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark'];
     return(
         <Stack>
             {/* <Stack.Screen
@@ -77,6 +80,10 @@ export default function Layout() {
                 options = {{
                     title: 'Connections',
                     headerShown: true,
+                    headerShadowVisible: false,
+                    headerTintColor: theme.text,
+                    headerStyle: { backgroundColor: theme.background },
+                    headerTitleStyle: { color: theme.text, fontFamily: Fonts?.displayMedium, fontSize: 22 },
                 }}
             />
             <Stack.Screen
