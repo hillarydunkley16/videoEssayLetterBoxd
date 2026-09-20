@@ -18,7 +18,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
   - Acceptance: response shape unchanged; tests assert on `Follow`; unauthenticated rejected; repeated toggles consistent
   - Verify: `python manage.py test movie_csv.test_follow`
   - Files: `views/api.py`, `test_follow.py`
-- [ ] Task 4: Profile `followers_count` / `following_count` / `is_following`, end to end
+- [x] Task 4: Profile `followers_count` / `following_count` / `is_following`, end to end (backend 102/102; jest 8/8; tsc error set unchanged at 37; web export OK)
   - Acceptance: no embedded user lists; constant query count; follower `print`s removed; button state from `is_following`; toggle updates count; double-tap guarded
   - Verify: `python manage.py test`; `npm test`; `npx tsc --noEmit` (no new errors); manual on `expo start --web`
   - Files: `serializers.py`, `views/api.py`, `types/profile.ts`, `otherProfile/[id].tsx`, `ProfileScreen.tsx`, tests

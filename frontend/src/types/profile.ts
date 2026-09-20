@@ -31,7 +31,8 @@ export interface Profile {
     user: User,
     imageUrl: string | null,
     user_logs: Log[],
-    followers: User[],
-    following: User[],
+    followers_count: number,
+    following_count: number,
+    is_following: boolean,
     watchList: ProfileWatchList
 }

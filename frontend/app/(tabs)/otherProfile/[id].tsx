@@ -51,13 +51,8 @@ export default function Page() {
         setUserLogs(profileData.user_logs)
         setNumLogs(profileData.user_logs.length)
         setNumEssays(new Set(profileData.user_logs.map((item) => item.essay)).size)
-        setFollowersCount(profileData.followers?.length ?? 0)
-        // The Django user's `username` is the Clerk user id (see
-        // ClerkAuthentication.authenticate), so this is how a Clerk-side
-        // user matches themselves in a followers list from the backend.
-        setIsFollowing(
-          profileData.followers?.some((follower) => follower.username === user?.id) ?? false
-        )
+        setFollowersCount(profileData.followers_count)
+        setIsFollowing(profileData.is_following)
       } catch (err) {
         console.error('Failed to load other profile:', err)
         setError('Unable to load profile')

@@ -1,7 +1,7 @@
 from rest_framework import serializers 
 from .models import VideoEssay, Log, Like, Comment, Collection
 from django.contrib.auth.models import User
-from users.models import Profile
+from users.models import Follow, Profile
 #a serializer defines the columns/data that will be used in the views. 
 class VideoEssaySerializer(serializers.ModelSerializer):
     # id = serializers.CharField(source = 'public_id', read_only=True)
@@ -105,8 +105,9 @@ class ProfileSerializer(serializers.ModelSerializer):
     
     
     user_logs = serializers.SerializerMethodField()
-    followers = serializers.SerializerMethodField()
-    following = serializers.SerializerMethodField()
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
     watchList = serializers.SerializerMethodField()
     def get_watchList(self, obj): 
         watchList, created = Collection.objects.get_or_create(
@@ -118,16 +119,21 @@ class ProfileSerializer(serializers.ModelSerializer):
        
         logs = Log.objects.filter(owner = obj.user)
         return LogSerializer(logs, many = True, context = self.context).data
-    def get_followers(self, obj):
-        followers = obj.followers.all()
-        return UserSerializer(followers, many=True, context=self.context).data
-    def get_following(self, obj):
-        following = obj.following.all()
-        return UserSerializer(following, many=True, context=self.context).data
+    def get_followers_count(self, obj):
+        return Follow.objects.filter(followee=obj.user).count()
+    def get_following_count(self, obj):
+        return Follow.objects.filter(follower=obj.user).count()
+    def get_is_following(self, obj):
+        # Relative to whoever is viewing; never true for your own profile.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        if viewer is None or not viewer.is_authenticated or viewer.id == obj.user_id:
+            return False
+        return Follow.objects.filter(follower=viewer, followee=obj.user).exists()
     
     class Meta: 
         model = Profile
-        fields = ("user", "imageUrl", "user_logs", "followers", "following", "watchList")
+        fields = ("user", "imageUrl", "user_logs", "followers_count", "following_count", "is_following", "watchList")
 
 class CollectionSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source="owner.username")

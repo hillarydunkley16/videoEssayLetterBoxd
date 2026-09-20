@@ -154,8 +154,8 @@ export default function ProfileScreen() {
         <View style={[styles.statsRow, { borderColor: theme.border }]}>
           <Stat n={numLogs} label="Logs" theme={theme} />
           <Stat n={numEssays} label="Essays" theme={theme} />
-          <Stat n={profile.followers.length} label="Followers" theme={theme} />
-          <Stat n={profile.following.length} label="Following" theme={theme} isLast />
+          <Stat n={profile.followers_count} label="Followers" theme={theme} />
+          <Stat n={profile.following_count} label="Following" theme={theme} isLast />
         </View>
       </View>
 

@@ -218,15 +218,8 @@ class ProfileDetail(generics.RetrieveAPIView):
 
     def get(self, request): 
         try:
-            print("THE REQUEST USER: ", request.user)
             profile = Profile.objects.get(user=request.user)
-            # print(profile.__dict__)
-            
-            serializer = ProfileSerializer(profile)
-            print("SERIALIZER!!: ", ProfileSerializer(profile))
-            print("PROFILE DATA: ", serializer.data)
-            print("FOLLOWERS: ", profile.followers.count())
-            print("FOLLOWING: ", profile.following.count())
+            serializer = ProfileSerializer(profile, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Profile.DoesNotExist:
             return Response({"message": "Profile not found"}, status=404)
@@ -239,12 +232,8 @@ class ProfileDetailById(generics.RetrieveAPIView):
     lookup_field = "user_id"
     def get(self, request, user_id):
         try:
-            print("USER ID FROM URL: ", user_id)
             profile = Profile.objects.get(user_id=user_id)
-            serializer = ProfileSerializer(profile)
-            print("SERIALIZER!!: ", ProfileSerializer(profile))
-            print("FOLLOWERS: ", profile.followers.count())
-            print("FOLLOWING: ", profile.following.count())
+            serializer = ProfileSerializer(profile, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Profile.DoesNotExist:
             return Response({"message": "Profile not found"}, status=404)
