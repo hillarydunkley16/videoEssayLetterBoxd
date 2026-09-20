@@ -34,7 +34,7 @@ from movie_csv.authentication import ClerkAuthentication
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
-from users.models import Profile
+from users.models import Follow, Profile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -588,8 +588,9 @@ class PopularVideoEssays(generics.ListAPIView):
 
 
 class FollowUser(APIView):
-    """Toggles the request user following the given user, keeping both
-    Profile.following (mine) and Profile.followers (theirs) in sync."""
+    """Toggles the request user following the given user. users.Follow is the
+    source of truth; the legacy Profile.following / Profile.followers M2Ms are
+    mirrored until they are dropped, because ProfileSerializer still reads them."""
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -604,19 +605,19 @@ class FollowUser(APIView):
         my_profile, _ = Profile.objects.get_or_create(user=request.user)
         target_profile, _ = Profile.objects.get_or_create(user=target_user)
 
-        if my_profile.following.filter(id=target_user.id).exists():
-            my_profile.following.remove(target_user)
-            target_profile.followers.remove(request.user)
-            following = False
-        else:
+        follow, following = Follow.objects.get_or_create(follower=request.user, followee=target_user)
+        if following:
             my_profile.following.add(target_user)
             target_profile.followers.add(request.user)
-            following = True
+        else:
+            follow.delete()
+            my_profile.following.remove(target_user)
+            target_profile.followers.remove(request.user)
 
         return Response(
             {
                 "following": following,
-                "followers_count": target_profile.followers.count(),
+                "followers_count": Follow.objects.filter(followee=target_user).count(),
             },
             status=200,
         )

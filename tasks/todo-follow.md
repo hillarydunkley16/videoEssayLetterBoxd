@@ -14,7 +14,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
   - Acceptance: rows copied exactly once; DB rejects duplicate and self follows; migrations 0007/0008 untouched
   - Verify: `python manage.py test movie_csv.test_follow_model`; `makemigrations --check`; full suite
   - Files: models, 2 migrations, `test_follow_model.py`
-- [ ] Task 3: Toggle endpoint backed by `Follow`
+- [x] Task 3: Toggle endpoint backed by `Follow` (also mirrors to the legacy M2Ms until Task 5 removes them; 11 tests, suite 94/94)
   - Acceptance: response shape unchanged; tests assert on `Follow`; unauthenticated rejected; repeated toggles consistent
   - Verify: `python manage.py test movie_csv.test_follow`
   - Files: `views/api.py`, `test_follow.py`
