@@ -135,6 +135,16 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ("user", "imageUrl", "user_logs", "followers_count", "following_count", "is_following", "watchList")
 
+class FollowListUserSerializer(serializers.ModelSerializer):
+    """Row for followers/following lists. `is_following` is an annotation set by the view."""
+    imageUrl = serializers.CharField(source="profile.imageUrl", read_only=True, allow_null=True, default=None)
+    is_following = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "imageUrl", "is_following")
+
+
 class CollectionSerializer(serializers.ModelSerializer):
     owner = serializers.ReadOnlyField(source="owner.username")
     essays = VideoEssaySerializer(many=True, read_only=True)

@@ -37,6 +37,7 @@ urlpatterns = [
     path("collections/<uuid:collection_public_id>/remove/", RemoveCollection.as_view(), name="delete-collection"),
     path("VideoEssays/popular/", PopularVideoEssays.as_view(), name="popular-video-essays"),
     path("users/<int:user_id>/follow/", FollowUser.as_view(), name="follow-user"),
+    path("users/<int:user_id>/followers/", FollowersList.as_view(), name="followers-list"),
     # path("collections/")
     # path("lists/", ListCreateView.as_view(), name="lists"),
     # path("lists/<uuid:public_id>/", ListDetailView.as_view(), name="list-detail"),

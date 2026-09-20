@@ -154,7 +154,12 @@ export default function ProfileScreen() {
         <View style={[styles.statsRow, { borderColor: theme.border }]}>
           <Stat n={numLogs} label="Logs" theme={theme} />
           <Stat n={numEssays} label="Essays" theme={theme} />
-          <Stat n={profile.followers_count} label="Followers" theme={theme} />
+          <Stat
+            n={profile.followers_count}
+            label="Followers"
+            theme={theme}
+            onPress={() => router.push({ pathname: "/followList", params: { userId: String(profile.user.id) } })}
+          />
           <Stat n={profile.following_count} label="Following" theme={theme} isLast />
         </View>
       </View>
@@ -209,17 +214,23 @@ function Stat({
   label,
   theme,
   isLast,
+  onPress,
 }: {
   n: number;
   label: string;
   theme: (typeof Colors)["light"];
   isLast?: boolean;
+  onPress?: () => void;
 }) {
+  const Wrapper = onPress ? TouchableOpacity : View;
   return (
-    <View style={[styles.stat, !isLast && { borderColor: theme.border, borderRightWidth: StyleSheet.hairlineWidth }]}>
+    <Wrapper
+      style={[styles.stat, !isLast && { borderColor: theme.border, borderRightWidth: StyleSheet.hairlineWidth }]}
+      {...(onPress ? { onPress } : {})}
+    >
       <Text style={[styles.statN, { color: theme.text, fontFamily: Fonts?.displayMedium }]}>{n}</Text>
       <Text style={[styles.statLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>{label}</Text>
-    </View>
+    </Wrapper>
   );
 }
 

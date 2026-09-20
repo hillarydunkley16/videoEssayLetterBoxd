@@ -13,7 +13,7 @@ import { useAuthUpdate } from '@/src/api/authUpdate'
 import { useAuthPost } from '@/src/api/authPost'
 import { useAuthDelete } from '@/src/api/authDelete'
 import { Profile } from '@/src/types/profile'
-import { useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 
 export default function Page() {
   const params = useLocalSearchParams<{ id?: string | string[] }>()
@@ -114,7 +114,13 @@ export default function Page() {
           )}
 
           <ThemedText style={styles.subheading}>
-            {numLogs} Logs · {numEssays} Essays · {followersCount} Followers
+            {numLogs} Logs · {numEssays} Essays ·{' '}
+            <Text
+              testID="followers-count"
+              onPress={() => router.push({ pathname: '/followList', params: { userId: String(profileId) } })}
+            >
+              {followersCount} Followers
+            </Text>
           </ThemedText>
 
           <TouchableOpacity

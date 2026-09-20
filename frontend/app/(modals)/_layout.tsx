@@ -73,6 +73,13 @@ export default function Layout() {
                 }}
             />
             <Stack.Screen
+                name = "followList"
+                options = {{
+                    title: 'Followers',
+                    headerShown: true,
+                }}
+            />
+            <Stack.Screen
                 name = "newList"
                 options = {{
                     presentation: 'modal',

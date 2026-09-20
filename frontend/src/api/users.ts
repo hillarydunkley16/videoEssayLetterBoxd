@@ -47,3 +47,14 @@ export async function followUser(userId: number, authFetch: ReturnType<typeof us
     const response = await authFetch(`/api/users/${userId}/follow/`);
     return response.data;
 }
+
+export type FollowListUser = {
+    id: number;
+    username: string;
+    imageUrl: string | null;
+    is_following: boolean;
+}
+
+export async function fetchFollowers(userId: number, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
+    return authFetch(`/users/${userId}/followers/?page=${page}`, {}, token);
+}

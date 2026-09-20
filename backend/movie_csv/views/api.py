@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 # from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.generics import DestroyAPIView
 from ..models import VideoEssay, Log, Like, Comment, Collection
-from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer, CollectionSerializer
+from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer, CollectionSerializer, FollowListUserSerializer
 from rest_framework import generics, permissions, filters
 from ..permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
@@ -17,7 +17,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from urllib.parse import urlparse, parse_qs
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -31,7 +31,7 @@ from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from movie_csv.authentication import ClerkAuthentication
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Exists, OuterRef, F
 from django.utils import timezone
 from datetime import timedelta
 from users.models import Follow, Profile
@@ -600,4 +600,22 @@ class FollowUser(APIView):
                 "followers_count": Follow.objects.filter(followee=target_user).count(),
             },
             status=200,
+        )
+
+
+class FollowersList(generics.ListAPIView):
+    """Users who follow <user_id>, newest follow first. `is_following` is relative to the viewer."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = FollowListUserSerializer
+
+    def get_queryset(self):
+        target_id = self.kwargs["user_id"]
+        get_object_or_404(User, id=target_id)
+        viewer_follows = Follow.objects.filter(follower=self.request.user, followee=OuterRef("pk"))
+        return (
+            User.objects.filter(following_set__followee_id=target_id)
+            .select_related("profile")
+            .annotate(is_following=Exists(viewer_follows), followed_at=F("following_set__created_at"))
+            .order_by("-followed_at", "-id")
         )

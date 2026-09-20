@@ -30,7 +30,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
 **Checkpoint 1: human review before Phases 2 and 3** (backend suite, jest, no new tsc/lint errors, manual follow/unfollow on web)
 
 ## Phase 2: follow-lists
-- [ ] Task 6: Followers list, end to end
+- [x] Task 6: Followers list, end to end (backend 109/109; jest 16/16; tsc 39 vs 37 baseline, the 2 new are `/followList` missing from the gitignored generated typed-routes file, cleared when `expo start` regenerates it; web export OK; manual web check not done, needs Clerk sign-in)
   - Acceptance: paginated, ordered, viewer-relative `is_following`, 404 unknown user, constant queries; screen paginates, row toggle updates that row, empty state; follower count tappable on both profiles
   - Verify: `python manage.py test movie_csv.test_follow_lists`; jest for `FollowListScreen`; manual on web
   - Files: `views/api.py`, `serializers.py`, `urls/api.py`, `users.ts`, `(modals)/followList.tsx`, `FollowListScreen.tsx`, 2 profile screens, tests
