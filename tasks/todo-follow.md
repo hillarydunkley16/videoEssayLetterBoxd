@@ -48,7 +48,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
   - Acceptance: only followed users' logs; own excluded; `-date, -id`; paginated; empty 200 when following nobody; auth required; constant queries; unfollow removes their logs
   - Verify: `python manage.py test movie_csv.test_follow_feed`
   - Files: `views/api.py`, `urls/api.py`, test
-- [ ] Task 10: Following feed section on home
+- [x] Task 10: Following feed section on home (Everyone | Following switch on home; row card extracted to `components/ui/LogRow.tsx`; jest 35/35; tsc 41 unchanged; lint errors 3 unchanged, +9 warnings from test-file conventions; web export OK; manual web check not done, needs Clerk sign-in)
   - Acceptance: shows logs; infinite scroll; pull to refresh; empty state links to search
   - Verify: `npm test`; `npx tsc --noEmit` (no new errors); manual on web
   - Files: `logs.ts`, `(home)/index.tsx`, test

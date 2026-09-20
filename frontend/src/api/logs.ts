@@ -31,6 +31,10 @@ export async function fetchLogsPage(url: string, token: string): Promise<Paginat
     }
     return res.json();
 }
+// Logs by the people the viewer follows (own excluded), newest first. Later pages via fetchLogsPage(next).
+export async function fetchFollowingFeed(token: string): Promise<PaginatedResponse<Log>> {
+    return authFetch("/feed/", {}, token);
+}
 export async function fetchUserLogs(token: string): Promise<PaginatedResponse<Log>> {
     return authFetch(`/userLogs/`, {}, token);
 }

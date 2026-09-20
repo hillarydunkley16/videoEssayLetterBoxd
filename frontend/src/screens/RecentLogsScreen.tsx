@@ -9,7 +9,7 @@ import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { Colors, Fonts } from "@/constants/theme";
-import { RatingDots } from "@/components/ui/RatingDots";
+import { LogRow } from "@/components/ui/LogRow";
 
 // Global "what people are watching" feed — every log across every user,
 // newest first (logList/ is unfiltered, ordered by Log.Meta not set so this
@@ -152,47 +152,7 @@ export default function RecentLogsScreen() {
             No one has logged anything yet.
           </ThemedText>
         }
-        renderItem={({ item }) => (
-          <View style={[styles.row, { borderColor: theme.border }]}>
-            <TouchableOpacity
-              onPress={() => router.push(`/videoInfo?essayId=${item.essay_details.public_id}`)}
-            >
-              <View style={[styles.thumbWrap, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-                {item.essay_details.thumbnail ? (
-                  <Image source={{ uri: item.essay_details.thumbnail }} style={styles.thumbnail} />
-                ) : (
-                  <View style={[styles.thumbnail, { backgroundColor: theme.surface }]} />
-                )}
-                {item.essay_details.duration ? (
-                  <View style={styles.durationBadge}>
-                    <Text style={styles.durationText}>{item.essay_details.duration}</Text>
-                  </View>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.body}
-              onPress={() => router.push(`/singleLog?logId=${item.public_id}`)}
-            >
-              <Text style={[styles.who, { color: theme.text, fontFamily: Fonts?.sansSemiBold }]}>
-                {item.owner}{" "}
-                <Text style={[styles.on, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                  watched {item.essay_details.title}
-                </Text>
-              </Text>
-              {item.review_text ? (
-                <Text
-                  style={[styles.review, { color: theme.text, fontFamily: Fonts?.sans }]}
-                  numberOfLines={2}
-                >
-                  {item.review_text}
-                </Text>
-              ) : null}
-              <RatingDots value={item.rating} />
-            </TouchableOpacity>
-          </View>
-        )}
+        renderItem={({ item }) => <LogRow item={item} />}
       />
     </ThemedView>
   );
@@ -211,19 +171,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 32,
   },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  thumbWrap: {
-    width: 120,
-    aspectRatio: 16 / 9,
-    borderRadius: 2,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
   thumbnail: {
     width: "100%",
     height: "100%",
@@ -241,21 +188,6 @@ const styles = StyleSheet.create({
     color: "#F1F1EE",
     fontSize: 11,
     fontVariant: ["tabular-nums"],
-  },
-  body: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 4,
-  },
-  who: {
-    fontSize: 14,
-  },
-  on: {
-    fontWeight: "400",
-  },
-  review: {
-    fontSize: 13,
-    lineHeight: 18,
   },
   popularSection: {
     marginBottom: 8,
