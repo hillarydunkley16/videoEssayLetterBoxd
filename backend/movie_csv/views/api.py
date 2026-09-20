@@ -668,3 +668,24 @@ class FollowingFeed(generics.ListAPIView):
             .prefetch_related("likes", "comments__user")
             .order_by("-date", "-id")
         )
+
+
+class SuggestedUsers(generics.ListAPIView):
+    """Up to 5 users the viewer doesn't follow yet (never themself), most-followed first.
+    A plain list, not paginated — it feeds a small home-screen card."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = FollowListUserSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        me = self.request.user
+        already_following = Follow.objects.filter(follower=me, followee=OuterRef("pk"))
+        return (
+            User.objects.exclude(id=me.id)
+            .annotate(followed=Exists(already_following), follower_total=Count("follower_set"))
+            .filter(followed=False)
+            .annotate(is_following=Exists(already_following))
+            .select_related("profile")
+            .order_by("-follower_total", "id")[:5]
+        )

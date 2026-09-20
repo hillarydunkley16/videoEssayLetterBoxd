@@ -4,9 +4,11 @@ import { ThemedView } from '@/components/themed-view'
 import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
 import { Link } from 'expo-router'
 import { useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native'
 import { Colors, Fonts } from '@/constants/theme'
 import RecentLogsScreen from '@/src/screens/RecentLogsScreen'
+import { ProfileCard } from '@/components/ui/ProfileCard'
+import { PeopleToFollowCard, PopularThisWeekCard } from '@/components/ui/SidebarCards'
 import FollowingFeedScreen from '@/src/screens/FollowingFeedScreen'
 import SignedOutHomeScreen from '@/src/screens/SignedOutHomeScreen'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
@@ -16,6 +18,8 @@ export default function Page() {
   const [feed, setFeed] = useState<'everyone' | 'following'>('everyone')
   const theme = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark']
   const { user } = useUser()
+  const { width } = useWindowDimensions()
+  const showSidebar = width >= 900
   console.log("User is undefined: ", user == undefined); 
   // If your user isn't appearing as signed in,
   // it's possible they have session tasks to complete.
@@ -47,7 +51,18 @@ export default function Page() {
                </TouchableOpacity>
              ))}
            </View>
-           {feed === 'everyone' ? <RecentLogsScreen/> : <FollowingFeedScreen/>}
+           <View style={styles.body}>
+             <View style={styles.feed}>
+               {feed === 'everyone' ? <RecentLogsScreen/> : <FollowingFeedScreen/>}
+             </View>
+             {showSidebar && (
+               <View style={styles.sidebar}>
+                 <ProfileCard />
+                 <PopularThisWeekCard />
+                 <PeopleToFollowCard />
+               </View>
+             )}
+           </View>
         </SignedIn>
        
       </SafeAreaView>
@@ -69,6 +84,18 @@ const styles = StyleSheet.create({
   feedTab: {
     marginRight: 22,
     paddingVertical: 12,
+  },
+  body: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  feed: {
+    flex: 1,
+  },
+  sidebar: {
+    width: 300,
+    marginRight: 20,
+    marginTop: 20,
   },
   text: {
     fontSize: 35,

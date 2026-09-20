@@ -68,3 +68,8 @@ export async function fetchFollowing(userId: number, page: number, token: string
 export async function removeFollower(userId: number, followerId: number, authFetch: ReturnType<typeof useAuthDelete>): Promise<void> {
     await authFetch(`/api/users/${userId}/followers/${followerId}/`);
 }
+
+// Up to 5 users the viewer doesn't follow yet (plain list, not paginated).
+export async function fetchSuggestedUsers(token: string): Promise<FollowListUser[]> {
+    return authFetch(`/users/suggestions/`, {}, token);
+}
