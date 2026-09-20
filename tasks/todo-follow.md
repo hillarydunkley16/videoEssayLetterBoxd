@@ -37,7 +37,7 @@ Python: use `backend/.venv/bin/python`. Do tasks in order; write the failing tes
 - [x] Task 7: Following list, end to end (backend 117/117; jest 21/21; tsc 41 vs 37 baseline, all 4 new are `/followList` missing from the gitignored generated typed-routes file; web export OK; manual web check not done, needs Clerk sign-in)
   - Acceptance: same guarantees for `/following/`; Following tab in the same screen; following count tappable
   - Verify: extend `test_follow_lists.py` and the screen test; manual on web
-- [ ] Task 8: Remove follower
+- [x] Task 8: Remove follower (backend 126/126; jest 27/27; tsc 41, same as after Task 7; lint unchanged at 171; web export OK; own profile now reloads on focus so its counts refresh; manual web check not done, needs Clerk sign-in)
   - Acceptance: only the followee may remove (403 otherwise), 404 if no follow, 204 on success; re-follow allowed; counts and list update; "Remove" only on own followers list
   - Verify: backend permission-matrix tests; jest for the button
 

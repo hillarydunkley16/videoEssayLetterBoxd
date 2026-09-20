@@ -13,8 +13,9 @@ import { router } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
-import { FollowListUser, fetchFollowers, fetchFollowing, fetchProfile, followUser } from "@/src/api/users";
+import { FollowListUser, fetchFollowers, fetchFollowing, fetchProfile, followUser, removeFollower } from "@/src/api/users";
 import { useAuthPost } from "@/src/api/authPost";
+import { useAuthDelete } from "@/src/api/authDelete";
 
 export type FollowListTab = "followers" | "following";
 
@@ -27,6 +28,7 @@ export default function FollowListScreen({ userId, tab: initialTab = "followers"
   const theme = Colors[(useColorScheme() ?? "light") as "light" | "dark"];
   const { getToken } = useAuth();
   const authPost = useAuthPost();
+  const authDelete = useAuthDelete();
 
   const [tab, setTab] = useState<FollowListTab>(initialTab);
   const [rows, setRows] = useState<FollowListUser[]>([]);
@@ -101,9 +103,24 @@ export default function FollowListScreen({ userId, tab: initialTab = "followers"
     }
   }
 
+  async function remove(id: number) {
+    if (busyIds.includes(id)) return;
+    setBusyIds((prev) => [...prev, id]);
+    try {
+      await removeFollower(userId, id, authDelete);
+      setRows((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Failed to remove follower:", err);
+    } finally {
+      setBusyIds((prev) => prev.filter((b) => b !== id));
+    }
+  }
+
   function openProfile(id: number) {
     router.push(id === me ? "/profile" : `/otherProfile/${id}`);
   }
+
+  const canRemove = tab === "followers" && me === userId;
 
   return (
     <ThemedView style={styles.container}>
@@ -143,6 +160,16 @@ export default function FollowListScreen({ userId, tab: initialTab = "followers"
               )}
               <Text style={[styles.username, { color: theme.text, fontFamily: Fonts?.sans }]}>{item.username}</Text>
             </TouchableOpacity>
+            {canRemove && (
+              <TouchableOpacity
+                testID={`remove-follower-${item.id}`}
+                style={[styles.button, styles.removeButton, { borderColor: theme.border }]}
+                onPress={() => remove(item.id)}
+                disabled={busyIds.includes(item.id)}
+              >
+                <Text style={{ color: theme.muted, fontFamily: Fonts?.sans }}>Remove</Text>
+              </TouchableOpacity>
+            )}
             {item.id !== me && (
               <TouchableOpacity
                 testID={`follow-toggle-${item.id}`}
@@ -178,6 +205,7 @@ const styles = StyleSheet.create({
   person: { flexDirection: "row", alignItems: "center", flex: 1 },
   avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
   username: { fontSize: 15 },
+  removeButton: { marginRight: 8 },
   button: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
   empty: { textAlign: "center", marginTop: 32, fontSize: 15 },
 });

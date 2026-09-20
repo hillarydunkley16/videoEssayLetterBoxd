@@ -636,3 +636,18 @@ class FollowingList(FollowListBase):
     """Users <user_id> follows."""
     relation = "follower_set"  # Follow rows where the listed user is the followee
     target_field = "follower"
+
+
+class RemoveFollower(APIView):
+    """Lets a user remove someone from their own followers. Not a block: the removed
+    user can follow again."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, user_id, follower_id):
+        if request.user.id != user_id:
+            return Response({"message": "You can only remove your own followers"}, status=403)
+        deleted, _ = Follow.objects.filter(follower_id=follower_id, followee_id=user_id).delete()
+        if not deleted:
+            return Response({"message": "Follower not found"}, status=404)
+        return Response(status=204)

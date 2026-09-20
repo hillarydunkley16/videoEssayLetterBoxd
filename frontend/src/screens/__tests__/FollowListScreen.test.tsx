@@ -6,7 +6,7 @@
  * answer, and an empty list shows an empty state. Clerk, the network and navigation are stubbed.
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
@@ -21,13 +21,16 @@ const mockFetchFollowers = jest.fn();
 const mockFetchFollowing = jest.fn();
 const mockFetchProfile = jest.fn();
 const mockFollowUser = jest.fn();
+const mockRemoveFollower = jest.fn();
 jest.mock('@/src/api/users', () => ({
   fetchFollowers: (...args: unknown[]) => mockFetchFollowers(...args),
   fetchFollowing: (...args: unknown[]) => mockFetchFollowing(...args),
   fetchProfile: (...args: unknown[]) => mockFetchProfile(...args),
   followUser: (...args: unknown[]) => mockFollowUser(...args),
+  removeFollower: (...args: unknown[]) => mockRemoveFollower(...args),
 }));
 jest.mock('@/src/api/authPost', () => ({ useAuthPost: () => jest.fn() }));
+jest.mock('@/src/api/authDelete', () => ({ useAuthDelete: () => jest.fn() }));
 
 jest.mock('@/components/themed-view', () => {
   const { View } = require('react-native');
@@ -192,5 +195,83 @@ describe('FollowListScreen (following tab)', () => {
 
     expect(await screen.findByText('dan')).toBeTruthy();
     expect(mockFetchFollowing).toHaveBeenLastCalledWith(9, 2, 'token');
+  });
+});
+
+describe('FollowListScreen remove follower', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetchProfile.mockResolvedValue({ user: { id: 1, username: 'me' } });
+  });
+
+  it('shows Remove on each row of the viewer\'s own followers list', async () => {
+    mockFetchFollowers.mockResolvedValue(page([row(2, 'ann'), row(3, 'ben')]));
+    render(<FollowListScreen userId={1} />);
+    await screen.findByText('ann');
+
+    expect(screen.getByTestId('remove-follower-2')).toBeTruthy();
+    expect(screen.getByTestId('remove-follower-3')).toBeTruthy();
+  });
+
+  it('does not show Remove on someone else\'s followers list', async () => {
+    mockFetchFollowers.mockResolvedValue(page([row(2, 'ann')]));
+    render(<FollowListScreen userId={9} />);
+    await screen.findByText('ann');
+    await waitFor(() => expect(mockFetchProfile).toHaveBeenCalled());
+
+    expect(screen.queryByTestId('remove-follower-2')).toBeNull();
+  });
+
+  it('does not show Remove on the viewer\'s own following tab', async () => {
+    mockFetchFollowing.mockResolvedValue(page([row(4, 'cat')]));
+    render(<FollowListScreen userId={1} tab="following" />);
+    await screen.findByText('cat');
+    await waitFor(() => expect(mockFetchProfile).toHaveBeenCalled());
+
+    expect(screen.queryByTestId('remove-follower-4')).toBeNull();
+  });
+
+  it('removes only that follower from the list', async () => {
+    mockFetchFollowers.mockResolvedValue(page([row(2, 'ann'), row(3, 'ben')]));
+    mockRemoveFollower.mockResolvedValue(undefined);
+    render(<FollowListScreen userId={1} />);
+    await screen.findByText('ann');
+
+    fireEvent.press(screen.getByTestId('remove-follower-2'));
+
+    await waitFor(() => expect(mockRemoveFollower).toHaveBeenCalledWith(1, 2, expect.anything()));
+    await waitFor(() => expect(screen.queryByText('ann')).toBeNull());
+    expect(screen.getByText('ben')).toBeTruthy();
+    expect(mockRemoveFollower).toHaveBeenCalledWith(1, 2, expect.anything());
+  });
+
+  it('keeps the row when removal fails', async () => {
+    mockFetchFollowers.mockResolvedValue(page([row(2, 'ann')]));
+    mockRemoveFollower.mockRejectedValue(new Error('boom'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    render(<FollowListScreen userId={1} />);
+    await screen.findByText('ann');
+
+    fireEvent.press(screen.getByTestId('remove-follower-2'));
+
+    await waitFor(() => expect(mockRemoveFollower).toHaveBeenCalled());
+    expect(screen.getByText('ann')).toBeTruthy();
+  });
+
+  it('removes only once when Remove is double-tapped', async () => {
+    mockFetchFollowers.mockResolvedValue(page([row(2, 'ann')]));
+    let resolve: () => void = () => {};
+    mockRemoveFollower.mockImplementation(() => new Promise<void>((r) => { resolve = r; }));
+    render(<FollowListScreen userId={1} />);
+    await screen.findByText('ann');
+
+    fireEvent.press(screen.getByTestId('remove-follower-2'));
+    fireEvent.press(screen.getByTestId('remove-follower-2'));
+    await act(async () => {
+      resolve();
+    });
+
+    expect(screen.queryByText('ann')).toBeNull();
+    expect(mockRemoveFollower).toHaveBeenCalledTimes(1);
   });
 });

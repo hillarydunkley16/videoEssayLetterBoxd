@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from movie_csv.views.api import FollowersList, FollowingList
+from movie_csv.views.api import FollowersList, FollowingList, FollowUser, RemoveFollower
 from users.models import Follow
 
 User = get_user_model()
@@ -219,3 +219,91 @@ class FollowingListTests(TestCase):
             self._follow(self.target, user)
         with self.assertNumQueries(3):
             self._get(self.target.id, self.viewer)
+
+
+class RemoveFollowerTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.owner = User.objects.create(username="owner")
+        self.fan = User.objects.create(username="fan")
+        self.other = User.objects.create(username="other")
+
+    def _delete(self, actor, user_id, follower_id):
+        request = self.factory.delete(f"/api/users/{user_id}/followers/{follower_id}/")
+        if actor is not None:
+            force_authenticate(request, user=actor)
+        return RemoveFollower.as_view()(request, user_id=user_id, follower_id=follower_id)
+
+    def _toggle_follow(self, actor, target_id):
+        request = self.factory.post(f"/api/users/{target_id}/follow/")
+        force_authenticate(request, user=actor)
+        return FollowUser.as_view()(request, user_id=target_id)
+
+    def test_unauthenticated_is_rejected(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+        response = self._delete(None, self.owner.id, self.fan.id)
+        self.assertIn(response.status_code, (401, 403))
+        self.assertTrue(Follow.objects.filter(follower=self.fan, followee=self.owner).exists())
+
+    def test_owner_removes_a_follower(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+
+        response = self._delete(self.owner, self.owner.id, self.fan.id)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Follow.objects.filter(follower=self.fan, followee=self.owner).exists())
+
+    def test_removal_only_touches_that_follow(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+        Follow.objects.create(follower=self.other, followee=self.owner)
+        Follow.objects.create(follower=self.owner, followee=self.fan)  # owner still follows fan
+
+        self._delete(self.owner, self.owner.id, self.fan.id)
+
+        self.assertEqual(Follow.objects.count(), 2)
+        self.assertTrue(Follow.objects.filter(follower=self.owner, followee=self.fan).exists())
+
+    def test_another_user_cannot_remove_and_the_follow_survives(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+
+        response = self._delete(self.other, self.owner.id, self.fan.id)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Follow.objects.filter(follower=self.fan, followee=self.owner).exists())
+
+    def test_the_follower_cannot_remove_themselves_this_way(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+
+        response = self._delete(self.fan, self.owner.id, self.fan.id)
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_no_such_follow_is_404(self):
+        response = self._delete(self.owner, self.owner.id, self.fan.id)
+        self.assertEqual(response.status_code, 404)
+
+    def test_removing_twice_is_404_the_second_time(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+        self._delete(self.owner, self.owner.id, self.fan.id)
+
+        self.assertEqual(self._delete(self.owner, self.owner.id, self.fan.id).status_code, 404)
+
+    def test_removed_follower_can_follow_again(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+        self._delete(self.owner, self.owner.id, self.fan.id)
+
+        response = self._toggle_follow(self.fan, self.owner.id)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["following"])
+        self.assertTrue(Follow.objects.filter(follower=self.fan, followee=self.owner).exists())
+
+    def test_removal_is_reflected_in_the_followers_list(self):
+        Follow.objects.create(follower=self.fan, followee=self.owner)
+        self._delete(self.owner, self.owner.id, self.fan.id)
+
+        request = self.factory.get(f"/api/users/{self.owner.id}/followers/")
+        force_authenticate(request, user=self.owner)
+        response = FollowersList.as_view()(request, user_id=self.owner.id)
+
+        self.assertEqual(response.data["count"], 0)

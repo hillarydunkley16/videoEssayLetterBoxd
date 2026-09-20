@@ -9,6 +9,7 @@ import {User} from "../types/user";
 import { PaginatedResponse } from "../types/api";
 import { useAuthUpdate } from "./authUpdate";
 import { useAuthPost } from "./authPost";
+import { useAuthDelete } from "./authDelete";
 import { UrlObject } from "expo-router/build/global-state/routeInfo";
 import { Profile } from "../types/profile";
 export async function fetchUsers(): Promise<PaginatedResponse<User>>{
@@ -61,4 +62,9 @@ export async function fetchFollowers(userId: number, page: number, token: string
 
 export async function fetchFollowing(userId: number, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
     return authFetch(`/users/${userId}/following/?page=${page}`, {}, token);
+}
+
+// Removes followerId from userId's followers (userId must be the signed-in user). Not a block.
+export async function removeFollower(userId: number, followerId: number, authFetch: ReturnType<typeof useAuthDelete>): Promise<void> {
+    await authFetch(`/api/users/${userId}/followers/${followerId}/`);
 }

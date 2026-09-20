@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,7 +10,7 @@ import {
   useColorScheme,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAuth, useClerk, useUser } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
@@ -69,10 +69,13 @@ export default function ProfileScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-    loadProfile();
-  }, [isLoaded, isSignedIn, loadProfile]);
+  // Reload on every focus so counts reflect changes made in the follow list.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoaded || !isSignedIn) return;
+      loadProfile();
+    }, [isLoaded, isSignedIn, loadProfile]),
+  );
 
   async function handleChangePhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
