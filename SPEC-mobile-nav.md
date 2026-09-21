@@ -112,7 +112,7 @@ Match existing files: function components, `StyleSheet.create` at bottom, theme 
 const isLog = pathname.includes('search') && mode === 'log'
 <NavItem href="/(tabs)/lists" label="Lists" icon="format-list-bulleted"
   active={pathname.includes('lists')} theme={theme} />
-<LogButton href={{ pathname: '/(tabs)/search', params: { mode: 'log', focus: '1' } }}
+<LogButton href={{ pathname: '/(tabs)/search', params: { mode: 'log', focus: String(Date.now()) } }}
   active={isLog} theme={theme} />
 ```
 

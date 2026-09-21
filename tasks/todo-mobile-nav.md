@@ -104,7 +104,7 @@ to `logVideoModal`, and the return to Home. Debugging task; fix only what blocks
 
 ---
 
-## Task 3: MobileNav → Home · Lists · Log (+) · Profile
+## Task 3: MobileNav → Home · Lists · Log (+) · Profile  ✅ DONE (automated; manual tap-through pending)
 
 **Description:** Replace the Search item with Lists and an emphasized Log button that
 navigates to `/(tabs)/search?mode=log&focus=<Date.now()>`. Active state: Lists on `lists`, Log on
@@ -112,16 +112,16 @@ navigates to `/(tabs)/search?mode=log&focus=<Date.now()>`. Active state: Lists o
 signed-in gating are unchanged.
 
 **Acceptance criteria:**
-- [ ] Bar shows exactly Home, Lists, Log, Profile in that order; no Search item
-- [ ] Log is visually emphasized and uses a distinct testID
-- [ ] Tapping Lists opens `ListsScreen`; tapping Log opens search in log mode
-- [ ] Correct active highlight per route; Log active only in log mode
-- [ ] Signed-out users see no bar; `WebNav` untouched
+- [x] Bar shows exactly Home, Lists, Log, Profile in that order; no Search item
+- [x] Log is visually emphasized and uses a distinct testID
+- [x] Tapping Lists opens `ListsScreen`; tapping Log opens search in log mode
+- [x] Correct active highlight per route; Log active only in log mode
+- [x] Signed-out users see no bar; `WebNav` untouched
 
 **Verification:**
-- [ ] `npx jest components/ui/__tests__/MobileNav.test.tsx` passes (order, no Search, active states via mocked `usePathname`/params)
-- [ ] `npx tsc --noEmit` / `npm run lint`: no new errors
-- [ ] Manual: iOS sim tap through all four tabs
+- [x] `npx jest components/ui/__tests__/MobileNav.test.tsx` passes (order, no Search, active states via mocked `usePathname`/params)
+- [x] `npx tsc --noEmit` / `npm run lint`: no new errors
+- [ ] Manual: iOS sim tap through all four tabs (needs a human)
 
 **Dependencies:** T1 (T2 for the flow to be usable)
 **Files likely touched:**
