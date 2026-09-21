@@ -43,13 +43,14 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 - Files: `views/api.py`, `test_collection_privacy.py`, ≤2 existing tests · Scope: S
 - Done: 9 new tests; `public_collections()` added; `CollectionList` uses it; `CollectionDetail` 404s foreign watchlists. Only existing test changed: `test_watchlist.py::test_collection_detail_and_list_use_the_derived_title_and_flag` (it asserted a friend could read the watchlist; now the owner reads it via detail and the list omits it, renamed accordingly). Full suite 256 OK.
 
-### T3: Owner-only writes on `CollectionDetail`  ✅ approved
-- [ ] Test first: non-owner PUT/PATCH/DELETE → 403/404; owner unchanged; reads unchanged
-- [ ] Use existing `IsOwnerOrReadOnly` on `CollectionDetail`. **Found in T2:** its method is misspelled `has_objects_permission` (DRF calls `has_object_permission`), so as written it enforces nothing. Fix the spelling too; it is imported in `views/api.py` but applied to no view, so nothing else changes. Add a test that fails before the rename.
+### T3: Owner-only writes on `CollectionDetail`  ✅ DONE
+- [x] Test first: non-owner PUT/PATCH/DELETE → 403/404; owner unchanged; reads unchanged
+- [x] Use existing `IsOwnerOrReadOnly` on `CollectionDetail`. **Found in T2:** its method is misspelled `has_objects_permission` (DRF calls `has_object_permission`), so as written it enforces nothing. Fix the spelling too; it is imported in `views/api.py` but applied to no view, so nothing else changes. Add a test that fails before the rename.
 - [ ] Note (own data, not privacy, leave unless asked): `CollectionDetail` DELETE can delete the owner's own watchlist, which `RemoveCollection` forbids
 - Acceptance: a signed-in user cannot modify another user's list by UUID
 - Verify: new tests + full suite
 - Files: `views/api.py`, `permissions.py`, `test_collection_privacy.py` · Scope: XS · Depends on: T2
+- Done: 5 new tests (`CollectionDetailWriteTests`); confirmed the tests still fail with the class wired in but the typo unfixed, pass after the rename. Full suite 261 OK. Non-owner write → 403; owner and reads unchanged.
 
 ### T4: `list-search` — `GET /api/collections/search/`
 - [ ] `test_list_search.py` first: name substring/case; **watchlist never returned** (other's, own, legacy-named flagged row); ordinary lists returned; exact→prefix→essay count→id; owner is display name; 401 (not anonymous); constant queries; `q` <2 → empty

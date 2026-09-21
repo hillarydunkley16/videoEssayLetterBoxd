@@ -506,7 +506,7 @@ class CollectionList(generics.ListCreateAPIView):
 class CollectionDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CollectionSerializer
     authentication_classes = [ClerkAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = "public_id"
 
     def get_queryset(self):

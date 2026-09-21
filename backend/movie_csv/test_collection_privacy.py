@@ -96,3 +96,53 @@ class CollectionPrivacyTests(TestCase):
         hidden = self._detail(self.their_watchlist, self.me)
         self.assertEqual(hidden.status_code, missing.status_code)
         self.assertEqual(hidden.data, missing.data)
+
+
+class CollectionDetailWriteTests(TestCase):
+    """Only the owner may change or delete a list through `/api/collections/<uuid>/`.
+
+    The view was a RetrieveUpdateDestroyAPIView guarded only by IsAuthenticated, so any signed-in
+    user could rename or delete anyone's list by UUID. Reads stay open for ordinary lists.
+    """
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.me = _make_user("user_2meClerkId", "me_handle")
+        self.friend = _make_user("user_2friendClerkId", "friend_handle")
+        self.mine = Collection.objects.create(name="Mine", description="keep", owner=self.me)
+
+    def _write(self, method, viewer, data=None):
+        request = getattr(self.factory, method)("/api/anything/", data, format="json")
+        if viewer is not None:
+            force_authenticate(request, user=viewer)
+        return CollectionDetail.as_view()(request, public_id=self.mine.public_id)
+
+    def test_a_non_owner_cannot_rename_a_list(self):
+        for method in ("patch", "put"):
+            response = self._write(method, self.friend, {"name": "Hijacked", "description": "x"})
+            self.assertEqual(response.status_code, 403, method)
+        self.mine.refresh_from_db()
+        self.assertEqual((self.mine.name, self.mine.description), ("Mine", "keep"))
+
+    def test_a_non_owner_cannot_delete_a_list(self):
+        self.assertEqual(self._write("delete", self.friend).status_code, 403)
+        self.assertTrue(Collection.objects.filter(pk=self.mine.pk).exists())
+
+    def test_an_anonymous_user_cannot_write(self):
+        for method in ("patch", "delete"):
+            self.assertIn(self._write(method, None, {"name": "x"}).status_code, (401, 403), method)
+        self.mine.refresh_from_db()
+        self.assertEqual(self.mine.name, "Mine")
+
+    def test_the_owner_can_rename_and_delete_their_list(self):
+        renamed = self._write("patch", self.me, {"name": "Renamed"})
+        self.assertEqual(renamed.status_code, 200)
+        self.assertEqual(renamed.data["name"], "Renamed")
+        self.assertEqual(self._write("delete", self.me).status_code, 204)
+        self.assertFalse(Collection.objects.filter(pk=self.mine.pk).exists())
+
+    def test_anyone_signed_in_can_still_read_an_ordinary_list(self):
+        request = self.factory.get("/api/anything/")
+        force_authenticate(request, user=self.friend)
+        response = CollectionDetail.as_view()(request, public_id=self.mine.public_id)
+        self.assertEqual(response.status_code, 200)
