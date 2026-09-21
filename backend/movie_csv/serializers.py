@@ -43,7 +43,9 @@ class LikeSerializer(serializers.ModelSerializer):
         model = Like
         fields = ['user', 'post']
 class CommentSerializer(serializers.ModelSerializer): 
-    user = serializers.ReadOnlyField(source = "user.username")
+    user = serializers.SerializerMethodField()
+    def get_user(self, obj):
+        return display_username(obj.user)
     log = serializers.SlugRelatedField(
         slug_field = "public_id", 
         queryset = Log.objects.all()
@@ -59,8 +61,16 @@ class CommentSerializer(serializers.ModelSerializer):
             "text"
         )
 class LogSerializer(serializers.HyperlinkedModelSerializer): 
-    owner = serializers.ReadOnlyField(source="owner.username")
+    owner = serializers.SerializerMethodField()
     owner_id = serializers.ReadOnlyField(source = "owner.id")
+    is_mine = serializers.SerializerMethodField()
+    def get_owner(self, obj):
+        return display_username(obj.owner)
+    def get_is_mine(self, obj):
+        # Relative to whoever is viewing; False when no request is in the context.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        return bool(viewer is not None and viewer.is_authenticated and viewer.id == obj.owner_id)
     essay = serializers.SlugRelatedField(
         slug_field='public_id',
         queryset=VideoEssay.objects.all()
@@ -92,6 +102,7 @@ class LogSerializer(serializers.HyperlinkedModelSerializer):
             "rewatch",
             "owner",
             "owner_id",
+            "is_mine",
             "owner_image",
             "likes",
             "comments"

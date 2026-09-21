@@ -89,10 +89,18 @@ class  VideoEssays(generics.ListCreateAPIView):
         serializer = VideoEssaySerializer(videoEssay)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+def with_log_relations(queryset):
+    """Everything LogSerializer touches per row (essay, owner name, comment authors'
+    names, likes), fetched up front so list endpoints run a constant number of queries."""
+    return queryset.select_related("essay", "owner__profile").prefetch_related(
+        "likes", "comments__user__profile"
+    )
+
+
 class logList(generics.ListCreateAPIView): 
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [AllowAny]
-    queryset = Log.objects.all()
+    queryset = with_log_relations(Log.objects.all())
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
@@ -157,10 +165,10 @@ class userLogs(generics.ListCreateAPIView):
        
 
         print("USER LOGS: ", Log.objects.filter(owner_id =self.request.user.id))
-        return Log.objects.filter(owner=self.request.user)
+        return with_log_relations(Log.objects.filter(owner=self.request.user))
 class logDetail(generics.RetrieveUpdateDestroyAPIView): 
     # authentication_classes = [JWTAuthentication]
-    queryset = Log.objects.all()
+    queryset = with_log_relations(Log.objects.all())
     profile_queryset = Profile.objects.all()
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
@@ -182,7 +190,7 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
         print(log.likes)
         
         return Response({
-            "log": LogSerializer(log).data,
+            "log": LogSerializer(log, context={"request": request}).data,
         })
 
 class logFormView():
@@ -254,11 +262,11 @@ class VideoInfo(generics.RetrieveAPIView):
 
     def get(self, request, public_id):
         video = self.get_object()
-        logs = Log.objects.filter(essay=video)
+        logs = with_log_relations(Log.objects.filter(essay=video))
         print(logs)
         return Response({
             "video": VideoEssaySerializer(video).data,
-            "logs": LogSerializer(logs, many=True).data,
+            "logs": LogSerializer(logs, many=True, context={"request": request}).data,
             "log_count": logs.count(),
         })
 class VideoEssayList(generics.ListAPIView):
@@ -662,12 +670,7 @@ class FollowingFeed(generics.ListAPIView):
 
     def get_queryset(self):
         followees = Follow.objects.filter(follower=self.request.user).values("followee_id")
-        return (
-            Log.objects.filter(owner_id__in=followees)
-            .select_related("essay", "owner", "owner__profile")
-            .prefetch_related("likes", "comments__user")
-            .order_by("-date", "-id")
-        )
+        return with_log_relations(Log.objects.filter(owner_id__in=followees)).order_by("-date", "-id")
 
 
 class SuggestedUsers(generics.ListAPIView):

@@ -61,7 +61,7 @@ T2–T5 all depend on T1 and are independent of each other after it; ordered by 
 - [ ] People to follow / followers / following / other profile show usernames in the running app
 
 ### Phase 3: Owners
-- [ ] T4: Log and comment owners (+ `is_mine`)
+- [x] T4: Log and comment owners (+ `is_mine`)
 - [ ] T5: Collection owners (+ `is_owner`)
 
 ### Phase 4: Verify + backfill

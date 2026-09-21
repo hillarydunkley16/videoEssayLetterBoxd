@@ -23,6 +23,8 @@ class FollowingFeedTests(TestCase):
         self.factory = APIRequestFactory()
         self.viewer = User.objects.create(username="viewer")
         self.friend = User.objects.create(username="friend")
+        self.friend.profile.display_username = "friend"
+        self.friend.profile.save()
         self.stranger = User.objects.create(username="stranger")
         self.essay = VideoEssay.objects.create(title="An Essay", owner=self.stranger)
         Follow.objects.create(follower=self.viewer, followee=self.friend)

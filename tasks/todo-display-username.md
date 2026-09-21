@@ -54,11 +54,11 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 ## Phase 3: Owners
 
 ### T4: Log and comment owners
-- [ ] `LogSerializer.owner` and `CommentSerializer.user` use the helper (`owner_id` unchanged)
-- [ ] Add viewer-relative `is_mine` to `LogSerializer` (`request.user == obj.owner`; `False` with no request)
-- [ ] Pass `context={"request": request}` where `LogSerializer` is built manually (VideoInfo, `views/api.py:185`)
-- [ ] `logInfo.tsx` uses `log.is_mine` instead of `parseInt(user.id)` (fixes "You" never showing); add `is_mine` to `types/log.ts`
-- [ ] Add `select_related("owner__profile")` / `prefetch_related("comments__user__profile")` to log views (logList, userLogs, VideoInfo, logDetail as applicable)
+- [x] `LogSerializer.owner` and `CommentSerializer.user` use the helper (`owner_id` unchanged)
+- [x] Add viewer-relative `is_mine` to `LogSerializer` (`request.user == obj.owner`; `False` with no request)
+- [x] Pass `context={"request": request}` where `LogSerializer` is built manually (VideoInfo, `views/api.py:185`)
+- [x] `logInfo.tsx` uses `log.is_mine` instead of `parseInt(user.id)` (fixes "You" never showing); add `is_mine` to `types/log.ts`
+- [x] Add `select_related("owner__profile")` / `prefetch_related("comments__user__profile")` to log views (logList, userLogs, VideoInfo, logDetail as applicable)
 - Acceptance: log/comment payloads show usernames; `is_mine` true only for the viewer's own logs; constant query count across N logs (`assertNumQueries`); `FollowingFeed` unaffected; own log detail shows "You"
 - Verify: `python manage.py test movie_csv.test_log_create movie_csv.test_follow_feed movie_csv.test_popular_video_essays` plus new owner test; manual: own vs other user's log
 - Files: `movie_csv/serializers.py`, `movie_csv/views/api.py`, `movie_csv/test_log_owner_username.py` (new), `frontend/src/screens/logInfo.tsx`, `frontend/src/types/log.ts` · Scope: M (5 files, at limit; split the frontend `is_mine` piece off if it grows)

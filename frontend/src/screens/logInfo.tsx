@@ -130,7 +130,7 @@ export default function LogInfo({ id, onTitleLoaded }: Props) {
   if (loading) return <ActivityIndicator size="large" color={theme.accent} style={styles.loading} />;
   if (!log) return <Text style={{ color: theme.text }}>Log not found</Text>;
 
-  const isMine = log.owner_id === parseInt(user?.id || '0');
+  const isMine = log.is_mine;
   const video = log.essay_details;
   const views = formatViews(video.views);
 
