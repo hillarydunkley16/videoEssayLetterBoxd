@@ -101,4 +101,5 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 ## Follow-up ticket (out of scope)
 - [ ] Watchlist cleanup: data migration setting `is_watchlist=True` on `*'s Watchlist` rows + rename to "Watchlist"; `get_watchList` looks up by flag; `RemoveCollection` checks flag instead of `"Watchlist" in name`
 - [ ] Clerk claim live in prod before deploy; expect "Anonymous" until users re-auth
+- [ ] **Every user must have a `display_username`** — users without one are invisible to People search (`SPEC-find-people.md` decision 4). Enforce at sign-up / finish backfill, then remove the caveat
 - [ ] Ready for review / PR
