@@ -480,6 +480,12 @@ class VideoEssaySearch(APIView):
     def get_queryset(self, request, query):
         VideoEssay.objects.filter(title__icontains = query)
 
+def public_collections():
+    """Every collection that may be shown to someone other than its owner: all but watchlists,
+    which are private. The one place that rule lives; list and search views build on it."""
+    return Collection.objects.filter(is_watchlist=False)
+
+
 def with_collection_relations(queryset):
     """Owner name and essays fetched up front so list endpoints run a constant number of queries."""
     return queryset.select_related("owner__profile").prefetch_related("essays")
@@ -492,7 +498,7 @@ class CollectionList(generics.ListCreateAPIView):
     queryset = Collection.objects.all()
     permission_classes = [AllowAny]
     def get_queryset(self):
-        return with_collection_relations(Collection.objects.all())
+        return with_collection_relations(public_collections())
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -504,7 +510,9 @@ class CollectionDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "public_id"
 
     def get_queryset(self):
-        return with_collection_relations(Collection.objects.all())
+        # Another user's watchlist is a 404, not a 403, so its existence isn't confirmed.
+        visible = Q(is_watchlist=False) | Q(owner=self.request.user)
+        return with_collection_relations(Collection.objects.filter(visible))
     
 class CollectionByUser(generics.ListAPIView):
     serializer_class = CollectionSerializer

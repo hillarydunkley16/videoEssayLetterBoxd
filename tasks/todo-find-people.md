@@ -34,20 +34,22 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 - Verify: `manage.py test movie_csv.test_user_search` then full suite
 - Files: `views/api.py`, `urls/api.py`, `test_user_search.py` · Scope: S
 
-### T2: `collection-privacy` — close the read leaks
-- [ ] `test_collection_privacy.py` first: list has no watchlist for anonymous / other / own viewer; detail 404 on another user's watchlist, 200 on own, 200 on others' ordinary lists
-- [ ] `public_collections()` helper; `CollectionList` uses it; `CollectionDetail` 404s foreign watchlists
-- [ ] Update only the assertions in `test_collection_owner.py` / `test_watchlist.py` that assumed the leak
+### T2: `collection-privacy` — close the read leaks  ✅ DONE
+- [x] `test_collection_privacy.py` first: list has no watchlist for anonymous / other / own viewer; detail 404 on another user's watchlist, 200 on own, 200 on others' ordinary lists
+- [x] `public_collections()` helper; `CollectionList` uses it; `CollectionDetail` 404s foreign watchlists
+- [x] Update only the assertions in `test_collection_owner.py` / `test_watchlist.py` that assumed the leak
 - Acceptance: spec 0a–0c; `popularLists` and own-watchlist detail still work
 - Verify: `manage.py test movie_csv.test_collection_privacy movie_csv.test_collection_owner movie_csv.test_watchlist` then full suite
 - Files: `views/api.py`, `test_collection_privacy.py`, ≤2 existing tests · Scope: S
+- Done: 9 new tests; `public_collections()` added; `CollectionList` uses it; `CollectionDetail` 404s foreign watchlists. Only existing test changed: `test_watchlist.py::test_collection_detail_and_list_use_the_derived_title_and_flag` (it asserted a friend could read the watchlist; now the owner reads it via detail and the list omits it, renamed accordingly). Full suite 256 OK.
 
 ### T3: Owner-only writes on `CollectionDetail`  ✅ approved
 - [ ] Test first: non-owner PUT/PATCH/DELETE → 403/404; owner unchanged; reads unchanged
-- [ ] Use existing `IsOwnerOrReadOnly` on `CollectionDetail`
+- [ ] Use existing `IsOwnerOrReadOnly` on `CollectionDetail`. **Found in T2:** its method is misspelled `has_objects_permission` (DRF calls `has_object_permission`), so as written it enforces nothing. Fix the spelling too; it is imported in `views/api.py` but applied to no view, so nothing else changes. Add a test that fails before the rename.
+- [ ] Note (own data, not privacy, leave unless asked): `CollectionDetail` DELETE can delete the owner's own watchlist, which `RemoveCollection` forbids
 - Acceptance: a signed-in user cannot modify another user's list by UUID
 - Verify: new tests + full suite
-- Files: `views/api.py`, `test_collection_privacy.py` · Scope: XS · Depends on: T2
+- Files: `views/api.py`, `permissions.py`, `test_collection_privacy.py` · Scope: XS · Depends on: T2
 
 ### T4: `list-search` — `GET /api/collections/search/`
 - [ ] `test_list_search.py` first: name substring/case; **watchlist never returned** (other's, own, legacy-named flagged row); ordinary lists returned; exact→prefix→essay count→id; owner is display name; 401 (not anonymous); constant queries; `q` <2 → empty

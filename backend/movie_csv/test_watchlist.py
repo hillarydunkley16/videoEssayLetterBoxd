@@ -130,12 +130,14 @@ class WatchlistTests(TestCase):
         Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me, is_watchlist=True)
         self.assertNotIn("user_2", str(self._profile_watchlist(self.me)))
 
-    def test_collection_detail_and_list_use_the_derived_title_and_flag(self):
+    def test_collection_detail_uses_the_derived_title_and_flag_and_the_list_omits_it(self):
+        # Watchlists are private (test_collection_privacy.py): the owner reads theirs through
+        # detail; the public list never contains one.
         watchlist = Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me, is_watchlist=True)
-        detail = self._call(CollectionDetail.as_view(), "get", self.friend, public_id=watchlist.public_id)
+        detail = self._call(CollectionDetail.as_view(), "get", self.me, public_id=watchlist.public_id)
         self.assertEqual((detail.data["name"], detail.data["is_watchlist"]), ("hillary's Watchlist", True))
         rows = self._call(CollectionList.as_view(), "get", self.friend).data["results"]
-        self.assertEqual([r["name"] for r in rows], ["hillary's Watchlist"])
+        self.assertEqual(rows, [])
 
     def test_ordinary_lists_keep_their_own_name(self):
         Collection.objects.create(name="My Watchlist favorites", owner=self.me)
