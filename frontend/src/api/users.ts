@@ -73,3 +73,8 @@ export async function removeFollower(userId: number, followerId: number, authFet
 export async function fetchSuggestedUsers(token: string): Promise<FollowListUser[]> {
     return authFetch(`/users/suggestions/`, {}, token);
 }
+
+// People whose username contains q, never the viewer. q under 2 characters returns an empty page.
+export async function searchUsers(q: string, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
+    return authFetch(`/users/search/?q=${encodeURIComponent(q)}&page=${page}`, {}, token);
+}

@@ -17,6 +17,11 @@ export async function  fetchUsersCollections(token: string) {
     return authFetch("/collections/user/", {}, token);
 }
 
+// Lists whose name contains q. Watchlists are never returned. q under 2 characters returns an empty page.
+export async function searchCollections(q: string, page: number, token: string): Promise<PaginatedCollections> {
+    return authFetch(`/collections/search/?q=${encodeURIComponent(q)}&page=${page}`, {}, token);
+}
+
 export async function fetchACollection(public_id: string, token: string): Promise<Collection> {
     console.log(`THIS IS WHAT FETCH A COLLECTION IS TAKING IN ${public_id}`)
     return authFetch(`/collections/${public_id}/`, {}, token)

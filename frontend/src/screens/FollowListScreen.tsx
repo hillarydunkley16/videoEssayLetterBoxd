@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,6 +15,7 @@ import { Colors, Fonts } from "@/constants/theme";
 import { FollowListUser, fetchFollowers, fetchFollowing, fetchProfile, followUser, removeFollower } from "@/src/api/users";
 import { useAuthPost } from "@/src/api/authPost";
 import { useAuthDelete } from "@/src/api/authDelete";
+import UserRow from "./UserRow";
 
 export type FollowListTab = "followers" | "following";
 
@@ -153,38 +153,14 @@ export default function FollowListScreen({ userId, tab: initialTab = "followers"
           <Text style={[styles.empty, { color: theme.muted, fontFamily: Fonts?.sans }]}>{EMPTY_TEXT[tab]}</Text>
         }
         renderItem={({ item }) => (
-          <View style={[styles.row, { borderColor: theme.border }]}>
-            <TouchableOpacity style={styles.person} onPress={() => openProfile(item.id)}>
-              {item.imageUrl ? (
-                <Image source={{ uri: item.imageUrl }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, { backgroundColor: theme.border }]} />
-              )}
-              <Text style={[styles.username, { color: theme.text, fontFamily: Fonts?.sans }]}>{item.username}</Text>
-            </TouchableOpacity>
-            {canRemove && (
-              <TouchableOpacity
-                testID={`remove-follower-${item.id}`}
-                style={[styles.button, styles.removeButton, { borderColor: theme.border }]}
-                onPress={() => remove(item.id)}
-                disabled={busyIds.includes(item.id)}
-              >
-                <Text style={{ color: theme.muted, fontFamily: Fonts?.sans }}>Remove</Text>
-              </TouchableOpacity>
-            )}
-            {item.id !== me && (
-              <TouchableOpacity
-                testID={`follow-toggle-${item.id}`}
-                style={[styles.button, { borderColor: theme.border }]}
-                onPress={() => toggle(item.id)}
-                disabled={busyIds.includes(item.id)}
-              >
-                <Text style={{ color: theme.text, fontFamily: Fonts?.sans }}>
-                  {item.is_following ? "Following" : "Follow"}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <UserRow
+            user={item}
+            showFollow={item.id !== me}
+            busy={busyIds.includes(item.id)}
+            onOpen={openProfile}
+            onToggleFollow={toggle}
+            onRemove={canRemove ? remove : undefined}
+          />
         )}
       />
       )}
@@ -197,17 +173,5 @@ const styles = StyleSheet.create({
   loading: { marginTop: 32 },
   tabs: { flexDirection: "row", borderBottomWidth: 1 },
   tab: { marginRight: 22, paddingVertical: 12 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  person: { flexDirection: "row", alignItems: "center", flex: 1 },
-  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
-  username: { fontSize: 15 },
-  removeButton: { marginRight: 8 },
-  button: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
   empty: { textAlign: "center", marginTop: 32, fontSize: 15 },
 });

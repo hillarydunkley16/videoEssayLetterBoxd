@@ -67,12 +67,13 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 
 ## Phase B — Frontend
 
-### T5: API functions + extract `UserRow`
-- [ ] `searchUsers(q, page, token)` in `users.ts`; `searchCollections(q, page, token)` in `collection.ts` (paginated types)
-- [ ] Extract row (avatar, name, follow button, busy guard, open profile) from `FollowListScreen` into `UserRow.tsx`; `FollowListScreen` uses it
+### T5: API functions + extract `UserRow`  ✅ DONE
+- [x] `searchUsers(q, page, token)` in `users.ts`; `searchCollections(q, page, token)` in `collection.ts` (paginated types)
+- [x] Extract row (avatar, name, follow button, busy guard, open profile) from `FollowListScreen` into `UserRow.tsx`; `FollowListScreen` uses it
 - Acceptance: no visible change; existing `FollowListScreen` tests pass unmodified
 - Verify: `npx jest` · `tsc` · lint
 - Files: `users.ts`, `collection.ts`, `UserRow.tsx`, `FollowListScreen.tsx`, types · Scope: S
+- Done: 11 new tests (4 API URL/encoding, 7 `UserRow`). `FollowListScreen.test.tsx` unmodified, 18/18 pass. `UserRow` is presentational (busy state and toggle logic stay in the parent); T6 will need its own small toggle in `PeopleResults`. Gates: jest 16 suites / 84 tests (was 14 / 73), `tsc` 38 (= baseline), lint 3 errors (= baseline), 194 warnings (baseline 195). Web export deferred to T8.
 
 ### T6: Modes scaffold + People view + feed button
 - [ ] Jest first: `type` param picks view; unknown → essays; essays behavior unchanged; `mode=log` forces essays; mode switch keeps `q`; debounce; stale-response drop across keystroke and mode; empty input shows suggested; follow toggle + busy guard; empty/error states
