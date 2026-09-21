@@ -61,7 +61,7 @@ npx expo start                        # manual check on iOS sim / Android emulat
 |---|---|---|---|---|
 | 1 | Home | `home` | `router.push('/')` | pathname is `/` |
 | 2 | Lists | `format-list-bulleted` | `/(tabs)/lists` | pathname includes `lists` |
-| 3 | Log | `plus-circle` (larger, accent-filled) | `/(tabs)/search?mode=log&focus=1` | pathname includes `search` **and** `mode=log` |
+| 3 | Log | `plus-circle` (larger, accent-filled) | `/(tabs)/search?mode=log&focus=<Date.now()>` | pathname includes `search` **and** `mode=log` |
 | 4 | Profile | `account` | `/(tabs)/profile` | pathname includes `profile` |
 
 - The Log button is visually emphasized (bigger icon, accent color) but stays inside the

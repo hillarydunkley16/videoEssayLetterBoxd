@@ -40,7 +40,11 @@ const SwitchComponent: React.FunctionComponent<SearchBarComponentProps> = () => 
 // via the `q` route param and signals "run the full API search" via a
 // `submittedAt` param bump (set on Enter), rather than this screen owning
 // its own text field.
-const { q: initialQuery, submittedAt } = useLocalSearchParams<{ q?: string; submittedAt?: string }>();
+const { q: initialQuery, submittedAt, mode } = useLocalSearchParams<{ q?: string; submittedAt?: string; mode?: string }>();
+// `mode=log` comes from the mobile Log tab: picking a result opens the quick-log
+// sheet instead of the full log modal.
+const isLogMode = mode === 'log';
+const logPathname = isLogMode ? "/quickLog" : "/logVideoModal";
 const {convertYouTubeResultToVideoEssay} = useVideoApi();
 const [search, setSearch] = useState(initialQuery ?? "");
 const [loading, setLoading] = useState(false);
@@ -183,7 +187,11 @@ return (
           }
           ListEmptyComponent={() => (
             <Text style={[styles.emptyText, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-              {search.trim() ? 'No results found' : 'Search for video essays by title. Press enter to search YouTube.'}
+              {search.trim()
+                ? 'No results found'
+                : isLogMode
+                ? 'Search for the essay you want to log'
+                : 'Search for video essays by title. Press enter to search YouTube.'}
             </Text>
           )}
           renderItem={({ item }) => (
@@ -192,14 +200,14 @@ return (
               onPress={async () => {
                 if (item.source === "database") {
                   router.push({
-                    pathname: "/logVideoModal",
+                    pathname: logPathname,
                     params: { essayId: item.video.public_id },
                   });
                 } else {
                   const result = await convertYouTubeResultToVideoEssay(item.video);
                   if (result.source === 'database') {
                     router.push({
-                      pathname: "/logVideoModal",
+                      pathname: logPathname,
                       params: {
                         essayId: result.video.public_id,
                       },
