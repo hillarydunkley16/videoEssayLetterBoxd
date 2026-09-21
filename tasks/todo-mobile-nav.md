@@ -132,7 +132,9 @@ signed-in gating are unchanged.
 
 ---
 
-## Task 4: Real Settings screen with Sign out, linked from own Profile
+## Task 4: Real Settings screen with Sign out, linked from own Profile  ⏭️ SKIPPED (premise was wrong — needs a decision)
+
+> `ProfileScreen` already has Sign out in its own-profile header (and change-photo). A Settings screen with only Sign out would duplicate it, so nothing was built. `settings.tsx` stub left untouched (still has no default export). Decide: leave as is, delete the stub, or scope real Settings (change password / delete account via Clerk).
 
 **Description:** `app/(tabs)/settings.tsx` is a comments-only stub with no component and
 no inbound link. Make it a screen with Sign out (reuse `components/ui/SignOutButton.tsx`),
@@ -158,20 +160,20 @@ register it in `(tabs)/_layout.tsx`, and add a Settings entry on the own-profile
 
 ---
 
-## Task 5: Final gates and manual pass
+## Task 5: Final gates and manual pass  ✅ automated gates run; manual pass pending
 
 **Description:** Run every gate and walk the full spec checklist on device/simulator.
 
 **Acceptance criteria:**
 - [ ] All 7 success criteria in `SPEC-mobile-nav.md` verified
 - [ ] Top search bar → result tap still opens `/logVideoModal`
-- [ ] No new `tsc`/lint errors vs. the pre-change baseline
+- [x] No new `tsc`/lint errors vs. the pre-change baseline (tsc 38 = 38; lint: 0 errors in changed files, 3 pre-existing elsewhere e.g. `sign-in.tsx`)
 
 **Verification:**
-- [ ] `npx tsc --noEmit`
-- [ ] `npm run lint`
-- [ ] `npm test`
-- [ ] `npx expo export --platform web`
+- [x] `npx tsc --noEmit`
+- [x] `npm run lint` (190 problems: 3 errors, all pre-existing)
+- [x] `npm test` (9 suites / 57 tests)
+- [x] `npx expo export --platform web`
 - [ ] Manual on iOS sim and Android emulator
 
 **Dependencies:** T1–T4
