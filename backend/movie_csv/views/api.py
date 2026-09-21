@@ -31,7 +31,7 @@ from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from movie_csv.authentication import ClerkAuthentication
-from django.db.models import Count, Q, Exists, OuterRef, F
+from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Q, Value, When
 from django.utils import timezone
 from datetime import timedelta
 from users.models import Follow, Profile
@@ -697,6 +697,42 @@ class SuggestedUsers(generics.ListAPIView):
             .annotate(is_following=Exists(already_following))
             .select_related("profile")
             .order_by("-follower_total", "id")[:5]
+        )
+
+
+class UserSearch(generics.ListAPIView):
+    """Users whose Clerk username (`Profile.display_username`) contains ?q, never the viewer.
+    Exact matches first, then prefix matches, then most-followed; `id` breaks ties so pages
+    are stable. A missing or under-2-character ?q is an empty page, so this can't be used
+    to list everyone. Users with no display_username are not searchable. `is_following`
+    is relative to the viewer."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = FollowListUserSerializer
+    MIN_QUERY_LENGTH = 2
+
+    def get_queryset(self):
+        me = self.request.user
+        q = self.request.query_params.get("q", "").strip()
+        if len(q) < self.MIN_QUERY_LENGTH:
+            return User.objects.none()
+        already_following = Follow.objects.filter(follower=me, followee=OuterRef("pk"))
+        name = "profile__display_username"
+        return (
+            User.objects.exclude(id=me.id)
+            .filter(**{f"{name}__icontains": q})
+            .annotate(
+                is_following=Exists(already_following),
+                follower_total=Count("follower_set"),
+                match_rank=Case(
+                    When(**{f"{name}__iexact": q}, then=Value(0)),
+                    When(**{f"{name}__istartswith": q}, then=Value(1)),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                ),
+            )
+            .select_related("profile")
+            .order_by("match_rank", "-follower_total", "id")
         )
 
 

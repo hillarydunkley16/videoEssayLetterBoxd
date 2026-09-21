@@ -27,9 +27,9 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 - [x] Record current results of the four gates (counts / known errors) at the top of this file
 - Acceptance: later "no new errors" claims have a baseline · Files: this file · Scope: XS
 
-### T1: `people-search` — `GET /api/users/search/`
-- [ ] `test_user_search.py` first: substring/case; exact→prefix→followers→id order; viewer excluded; null `display_username` excluded; `is_following`; `q` <2 chars → empty; `%`/`_` literal; 401; stable pagination; `assertNumQueries` constant
-- [ ] `UserSearch` view (beside `SuggestedUsers`) + route `users/search/`
+### T1: `people-search` — `GET /api/users/search/`  ✅ DONE
+- [x] `test_user_search.py` first: substring/case; exact→prefix→followers→id order; viewer excluded; null `display_username` excluded; `is_following`; `q` <2 chars → empty; `%`/`_` literal; 401; stable pagination; `assertNumQueries` constant
+- [x] `UserSearch` view (beside `SuggestedUsers`) + route `users/search/`
 - Acceptance: spec criteria 6; Clerk id never in payload
 - Verify: `manage.py test movie_csv.test_user_search` then full suite
 - Files: `views/api.py`, `urls/api.py`, `test_user_search.py` · Scope: S
