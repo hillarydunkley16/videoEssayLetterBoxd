@@ -111,13 +111,13 @@ describe('FollowingFeedScreen', () => {
     expect(mockFetchFeed).toHaveBeenCalledTimes(2);
   });
 
-  it('shows an empty state that links to search when following nobody', async () => {
+  it('shows an empty state that links to people search when following nobody', async () => {
     mockFetchFeed.mockResolvedValue(page([]));
     render(<FollowingFeedScreen />);
 
     expect(await screen.findByText(/Follow people to see their logs here/)).toBeTruthy();
     fireEvent.press(screen.getByTestId('feed-empty-search'));
-    expect(mockPush).toHaveBeenCalledWith('/search');
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/search', params: { type: 'people' } });
   });
 
   it('shows the empty state rather than crashing when the request fails', async () => {

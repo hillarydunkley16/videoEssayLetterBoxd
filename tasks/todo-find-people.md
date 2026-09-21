@@ -75,12 +75,17 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 - Files: `users.ts`, `collection.ts`, `UserRow.tsx`, `FollowListScreen.tsx`, types · Scope: S
 - Done: 11 new tests (4 API URL/encoding, 7 `UserRow`). `FollowListScreen.test.tsx` unmodified, 18/18 pass. `UserRow` is presentational (busy state and toggle logic stay in the parent); T6 will need its own small toggle in `PeopleResults`. Gates: jest 16 suites / 84 tests (was 14 / 73), `tsc` 38 (= baseline), lint 3 errors (= baseline), 194 warnings (baseline 195). Web export deferred to T8.
 
-### T6: Modes scaffold + People view + feed button
-- [ ] Jest first: `type` param picks view; unknown → essays; essays behavior unchanged; `mode=log` forces essays; mode switch keeps `q`; debounce; stale-response drop across keystroke and mode; empty input shows suggested; follow toggle + busy guard; empty/error states
-- [ ] `SearchScreen`: read `type`, mode switch (Essays | People | Lists), render `PeopleResults`; `SearchField` placeholder follows `type`; `FollowingFeedScreen` button → `/search?type=people`
+### T6: Modes scaffold + People view + feed button  ✅ DONE
+- [x] Jest first: `type` param picks view; unknown → essays; essays behavior unchanged; `mode=log` forces essays; mode switch keeps `q`; debounce; stale-response drop across keystroke and mode; empty input shows suggested; follow toggle + busy guard; empty/error states
+- [x] `SearchScreen`: read `type`, mode switch (Essays | People | Lists), render `PeopleResults`; `SearchField` placeholder follows `type`; `FollowingFeedScreen` button → `/search?type=people`
 - Acceptance: spec criteria 1–5, 6–7, 10 (People)
 - Verify: `npx jest` · `tsc` · lint · manual `expo start --web`
 - Files: `SearchScreen.tsx`, `PeopleResults.tsx`, `SearchField.tsx`, `FollowingFeedScreen.tsx`, test · Scope: M · Depends on: T1, T5
+- Done: 41 new tests across `searchModes`, `PeopleResults`, `SearchScreen.modes`, `SearchField` (placeholder). `SearchScreen.logMode.test.tsx` and `FollowListScreen.test.tsx` unmodified and green. Two existing tests touched, both intended: `FollowingFeedScreen.test.tsx` (button now pushes `{ pathname: '/search', params: { type: 'people' } }`) and `SearchField.test.tsx` (mock records props; no assertion changed).
+- Essays untouched: the old component is renamed `EssayResults` with its body unchanged; a new `SearchScreen` wrapper adds the switch and picks the view. The switch shows Essays | People only; **T7 adds the Lists chip**, and `type=lists` falls back to essays until then (`searchModes.ts`, tested).
+- Decisions to review: a 1-character query shows Suggested (backend returns nothing under 2); the follow toggle in `PeopleResults` is a ~10-line copy of the one in `FollowListScreen` (not extracted); while typing, the list is replaced by a spinner per query, matching the essay screen.
+- Gates: jest 19 suites / 125 tests (baseline 14 / 73); `tsc` 38 (= baseline); lint 3 errors (= baseline), warnings 198 vs 195 (new tests follow the repo's existing `jest.mock`-then-import style). Mutation check: removing the stale-answer guard fails its test.
+- Not verified in a browser/device (web export and manual pass are T8).
 
 ### T7: Lists view
 - [ ] Jest first: lists mode queries `searchCollections`; empty input shows "Search lists by name"; tap → `collectionDetail`; empty/error states

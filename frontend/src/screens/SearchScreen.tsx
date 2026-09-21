@@ -16,6 +16,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/clerk-expo';
 import { Colors, Fonts } from '@/constants/theme';
+import PeopleResults from './PeopleResults';
+import { SEARCH_LABEL, SEARCH_MODES, resolveSearchType } from './searchModes';
 
 type SearchBarComponentProps = Record<string, never>;
 
@@ -34,7 +36,7 @@ const DB_FILTER_DEBOUNCE_MS = 250;
  *
  *
 */
-const SwitchComponent: React.FunctionComponent<SearchBarComponentProps> = () => {
+const EssayResults: React.FunctionComponent<SearchBarComponentProps> = () => {
 // WebNav's top-nav search bar is the only search input now (see WebNav.tsx) —
 // it lives outside this screen's render tree, so it hands typed text down
 // via the `q` route param and signals "run the full API search" via a
@@ -252,6 +254,21 @@ return (
 };
 
 const styles = StyleSheet.create({
+screen: {
+  flex: 1,
+},
+modeRow: {
+  flexDirection: 'row',
+  gap: 8,
+  paddingHorizontal: 16,
+  paddingTop: 12,
+},
+modeChip: {
+  borderWidth: 1,
+  borderRadius: 16,
+  paddingHorizontal: 14,
+  paddingVertical: 6,
+},
 safeArea: {
   flex: 1,
   paddingHorizontal: 16,
@@ -337,4 +354,50 @@ emptyText: {
 },
 });
 
-export default SwitchComponent;
+// The screen behind the top-nav search bar. The `type` route param picks the mode (essays by
+// default); the switch writes only `type`, so the typed `q` survives a mode change. `mode=log`
+// (mobile Log tab) is always the essay search and has no switch.
+const SearchScreen: React.FunctionComponent<SearchBarComponentProps> = () => {
+    const { q, type: rawType, mode } = useLocalSearchParams<{ q?: string; type?: string; mode?: string }>();
+    const theme = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark'];
+    const type = resolveSearchType({ type: rawType, mode });
+
+    return (
+        <View style={styles.screen}>
+            {mode !== 'log' ? (
+                <View style={styles.modeRow}>
+                    {SEARCH_MODES.map((m) => {
+                        const selected = m === type;
+                        return (
+                            <TouchableOpacity
+                                key={m}
+                                testID={`search-mode-${m}`}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected }}
+                                onPress={() => router.setParams({ type: m })}
+                                style={[
+                                    styles.modeChip,
+                                    { borderColor: theme.border },
+                                    selected && { backgroundColor: theme.text, borderColor: theme.text },
+                                ]}
+                            >
+                                <Text
+                                    style={{
+                                        color: selected ? theme.background : theme.muted,
+                                        fontFamily: Fonts?.sansMedium,
+                                        fontSize: 13,
+                                    }}
+                                >
+                                    {SEARCH_LABEL[m]}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            ) : null}
+            {type === 'people' ? <PeopleResults q={q ?? ''} /> : <EssayResults />}
+        </View>
+    );
+};
+
+export default SearchScreen;

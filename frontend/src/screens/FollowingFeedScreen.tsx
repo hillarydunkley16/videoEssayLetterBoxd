@@ -87,7 +87,7 @@ export default function FollowingFeedScreen() {
             <TouchableOpacity
               testID="feed-empty-search"
               style={[styles.searchButton, { borderColor: theme.border }]}
-              onPress={() => router.push("/search")}
+              onPress={() => router.push({ pathname: "/search", params: { type: "people" } })}
             >
               <Text style={{ color: theme.text, fontFamily: Fonts?.sans }}>Find people to follow</Text>
             </TouchableOpacity>

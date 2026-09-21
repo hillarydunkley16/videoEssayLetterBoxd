@@ -8,6 +8,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 
 const mockFocus = jest.fn();
+let mockSearchBarProps: Record<string, any> = {};
 let mockGlobalParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), setParams: jest.fn() },
@@ -18,7 +19,8 @@ jest.mock('expo-router', () => ({
 jest.mock('@rneui/themed', () => {
   const React = require('react');
   return {
-    SearchBar: React.forwardRef(function MockSearchBar(_props: unknown, ref: React.Ref<unknown>) {
+    SearchBar: React.forwardRef(function MockSearchBar(props: Record<string, any>, ref: React.Ref<unknown>) {
+      mockSearchBarProps = props;
       React.useImperativeHandle(ref, () => ({ focus: mockFocus }));
       return null;
     }),
@@ -49,5 +51,29 @@ describe('SearchField focus param', () => {
     mockGlobalParams = {};
     render(<SearchField theme={Colors.light} />);
     expect(mockFocus).not.toHaveBeenCalled();
+  });
+});
+
+describe('SearchField placeholder follows the search mode', () => {
+  it.each([
+    [{}, 'Search a video essay…'],
+    [{ type: 'essays' }, 'Search a video essay…'],
+    [{ type: 'people' }, 'Search people…'],
+    [{ type: 'nonsense' }, 'Search a video essay…'],
+    [{ mode: 'log', type: 'people' }, 'Search a video essay…'],
+  ])('with params %j shows %j', (params, placeholder) => {
+    mockGlobalParams = params;
+    render(<SearchField theme={Colors.light} />);
+    expect(mockSearchBarProps.placeholder).toBe(placeholder);
+  });
+
+  it('typing updates only q on the search screen, so the mode is kept', () => {
+    const { router } = require('expo-router');
+    mockGlobalParams = { type: 'people' };
+    render(<SearchField theme={Colors.light} />);
+
+    mockSearchBarProps.onChangeText('film');
+
+    expect(router.setParams).toHaveBeenLastCalledWith({ q: 'film' });
   });
 });

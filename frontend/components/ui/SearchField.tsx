@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SearchBar } from '@rneui/themed'
 import { router, useGlobalSearchParams, usePathname } from 'expo-router'
 import { Colors, Fonts } from '@/constants/theme'
+import { SEARCH_PLACEHOLDER, resolveSearchType } from '@/src/screens/searchModes'
 
 // Shared top-nav search field for both WebNav and MobileTopNav. It lives
 // outside the (tabs)/search screen's render tree, so it drives that
@@ -21,7 +22,7 @@ export function SearchField({
   const inputRef = useRef<any>(null)
   // The mobile Log tab navigates here with a fresh `focus` value (a timestamp) each
   // tap, so this input — which lives outside the search screen — grabs the keyboard.
-  const { focus } = useGlobalSearchParams<{ focus?: string }>()
+  const { focus, type, mode } = useGlobalSearchParams<{ focus?: string; type?: string; mode?: string }>()
 
   useEffect(() => {
     if (focus) inputRef.current?.focus()
@@ -50,7 +51,7 @@ export function SearchField({
   return (
     <SearchBar
       ref={inputRef}
-      placeholder="Search a video essay…"
+      placeholder={SEARCH_PLACEHOLDER[resolveSearchType({ type, mode })]}
       onFocus={() => pushQuery(search.trim())}
       onSubmitEditing={handleSubmit}
       value={search}
