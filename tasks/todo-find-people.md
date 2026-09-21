@@ -52,15 +52,16 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 - Files: `views/api.py`, `permissions.py`, `test_collection_privacy.py` · Scope: XS · Depends on: T2
 - Done: 5 new tests (`CollectionDetailWriteTests`); confirmed the tests still fail with the class wired in but the typo unfixed, pass after the rename. Full suite 261 OK. Non-owner write → 403; owner and reads unchanged.
 
-### T4: `list-search` — `GET /api/collections/search/`
-- [ ] `test_list_search.py` first: name substring/case; **watchlist never returned** (other's, own, legacy-named flagged row); ordinary lists returned; exact→prefix→essay count→id; owner is display name; 401 (not anonymous); constant queries; `q` <2 → empty
-- [ ] `CollectionSearch` (IsAuthenticated) built on `public_collections()` + route
+### T4: `list-search` — `GET /api/collections/search/`  ✅ DONE
+- [x] `test_list_search.py` first: name substring/case; **watchlist never returned** (other's, own, legacy-named flagged row); ordinary lists returned; exact→prefix→essay count→id; owner is display name; 401 (not anonymous); constant queries; `q` <2 → empty
+- [x] `CollectionSearch` (IsAuthenticated) built on `public_collections()` + route
 - Acceptance: spec criteria 8–9
 - Verify: `manage.py test movie_csv.test_list_search` then full suite
 - Files: `views/api.py`, `urls/api.py`, `test_list_search.py` · Scope: S · Depends on: T2
+- Done: 12 new tests. Mutation-checked: making `public_collections()` return everything fails `test_a_watchlist_is_never_returned`. Full suite 273 OK; both search routes resolve to their own views.
 
 ### Checkpoint A
-- [ ] Full backend suite green; `makemigrations --check` clean
+- [x] Full backend suite green (273); `makemigrations --check` clean
 - [ ] Manual: both endpoints as a signed-in user; watchlist absent everywhere
 - [ ] Review before Phase B
 

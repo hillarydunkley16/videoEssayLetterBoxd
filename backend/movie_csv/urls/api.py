@@ -33,6 +33,7 @@ urlpatterns = [
     path("collections/<uuid:public_id>/", CollectionDetail.as_view(), name="collection-detail"),
     path("collections/<uuid:collection_public_id>/add/<uuid:videoessay_public_id>/", AddVideoEssayToCollection.as_view(), name="update-collection"),
     path("collections/user/", CollectionByUser.as_view(), name="collections-by-user"),
+    path("collections/search/", CollectionSearch.as_view(), name="collection-search"),
     # path("collections/<uuid:public_id>/", CollectionDetail.as_view(), name="collection-detail"),
     path("collections/<uuid:collection_public_id>/remove/<uuid:videoessay_public_id>/", RemoveEssayFromCollection.as_view(), name="remove-from-collection"),
     path("collections/<uuid:collection_public_id>/remove/", RemoveCollection.as_view(), name="delete-collection"),

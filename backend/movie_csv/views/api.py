@@ -514,6 +514,36 @@ class CollectionDetail(generics.RetrieveUpdateDestroyAPIView):
         visible = Q(is_watchlist=False) | Q(owner=self.request.user)
         return with_collection_relations(Collection.objects.filter(visible))
     
+class CollectionSearch(generics.ListAPIView):
+    """Lists whose name contains ?q (name only). Watchlists are never results, for any viewer,
+    because the queryset starts from public_collections(). Exact matches first, then prefix
+    matches, then lists with the most essays; `id` breaks ties so pages are stable. A missing
+    or under-2-character ?q is an empty page. Signed-in only, unlike CollectionList."""
+    serializer_class = CollectionSerializer
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    MIN_QUERY_LENGTH = 2
+
+    def get_queryset(self):
+        q = self.request.query_params.get("q", "").strip()
+        if len(q) < self.MIN_QUERY_LENGTH:
+            return Collection.objects.none()
+        return (
+            with_collection_relations(public_collections())
+            .filter(name__icontains=q)
+            .annotate(
+                essay_total=Count("essays"),
+                match_rank=Case(
+                    When(name__iexact=q, then=Value(0)),
+                    When(name__istartswith=q, then=Value(1)),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                ),
+            )
+            .order_by("match_rank", "-essay_total", "id")
+        )
+
+
 class CollectionByUser(generics.ListAPIView):
     serializer_class = CollectionSerializer
     authentication_classes = [ClerkAuthentication]
