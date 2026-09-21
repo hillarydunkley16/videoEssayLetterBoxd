@@ -62,8 +62,8 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 
 ### Checkpoint A
 - [x] Full backend suite green (273); `makemigrations --check` clean
-- [ ] Manual: both endpoints as a signed-in user; watchlist absent everywhere
-- [ ] Review before Phase B
+- [ ] Manual (yours): both endpoints as a real signed-in user; watchlist absent everywhere (automated equivalent: `test_search_routes.py`)
+- [x] Review before Phase B (approved by continuing)
 
 ## Phase B — Frontend
 
@@ -96,15 +96,28 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 - Gates: jest 21 suites / 144 tests (baseline 14 / 73); `tsc` 38 (= baseline); lint 3 errors (= baseline), warnings 201 vs 195 (new tests follow the repo's `jest.mock`-then-import style). Mutation check: removing the stale-answer guard fails its test.
 - Follow-ups noticed: `ListResults` and `PeopleResults` share ~50 lines of debounce/pagination/stale-guard logic (a `usePagedSearch` hook would remove it; both suites would guard the refactor). `app/(home)/popularLists.tsx` still filters watchlists client-side by name (`!name.includes("Watchlist")`); redundant now, and hides any list merely named with that word.
 
-### T8: Mobile + full gates
-- [ ] Mode switch works on mobile top nav; Log tab (`mode=log`) still opens quick log
-- [ ] All gates; manual: watchlist item added → watchlist never appears in Lists search
-- Acceptance: spec success criteria all met
-- Files: as needed (≤3) · Scope: S · Depends on: T6, T7
+### T8: Mobile + full gates  ✅ DONE (automated); manual items below are yours
+- [x] Mobile: `MobileTopNav` uses the shared `SearchField` and reaches the same search screen, so the switch and placeholder apply on mobile with no extra code. Log tab (`mode=log`) hides the switch and stays on essays even with a stale `type=people|lists` (tested in `SearchScreen.modes` and `SearchField`).
+- [x] Added `backend/movie_csv/test_search_routes.py` (5 tests): both routes are registered and reject no/bad Clerk tokens through the real auth stack; a watchlist is absent from `/api/collections/` (signed in and anonymous) and from list search. Mutation-checked: deleting the list-search route fails 3 of them.
+- [x] All gates, fresh: backend 278 tests OK, `makemigrations --check` clean, `manage.py check` clean; jest 21 suites / 144 tests; `tsc` 38 (= baseline); lint 3 errors (= baseline), 201 warnings (baseline 195; new tests use the repo's mock-then-import style); `expo export --platform web` succeeds and the bundle contains the new screens and both endpoint paths.
+- Files: `backend/movie_csv/test_search_routes.py`, this file · Scope: S
+
+**Manual checks still to do (need a browser/device and a real Clerk session; not run):**
+- [ ] `expo start --web`: empty feed -> "Find people to follow" -> People mode with suggestions; type 2+ chars; follow; row flips
+- [ ] Add an essay to your watchlist, then search Lists for its name: the watchlist must not appear (also try someone else's)
+- [ ] Top-nav bar in each mode: placeholder changes, `q` survives a mode switch
+- [ ] Mobile (simulator/device): switch visible under the top bar; Log tab still opens quick log
+- [ ] Backend: `curl` both search endpoints with a real token after deploy
 
 ### Checkpoint B / Final
-- [ ] All `SPEC-find-people.md` success criteria met · no new `tsc`/lint errors vs T0
-- [ ] Ready for review / PR (org PR template)
+Spec success criteria, verified by automated evidence:
+- [x] Acceptance criteria 1-10 covered by tests (backend 278, frontend 144)
+- [x] Watchlist provably absent from Lists search, both owners + legacy-named row (`test_list_search`, `test_collection_privacy`, `test_search_routes`)
+- [x] Essays search unchanged (existing `SearchScreen.logMode` tests pass unmodified)
+- [x] Both endpoints run a constant number of queries; no new `tsc`/lint errors vs T0 (`tsc` 38 = 38, lint errors 3 = 3); web export builds
+Still open:
+- [ ] Manual walkthrough in a browser/device with a real Clerk session (list under T8)
+- [ ] Human review, then PR using the org PR template (backend deploys before frontend)
 
 ---
 
