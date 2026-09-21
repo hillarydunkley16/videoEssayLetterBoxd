@@ -1,6 +1,5 @@
-// sign out 
-// change password 
-// delete account 
-// change profile picture a
+import SettingsScreen from '@/src/screens/SettingsScreen'
 
-// I CAN JUST USE CLERK USERBUTTON INSTEAD OF MAKING CUSTOM SETTINGS 
+export default function Page() {
+  return <SettingsScreen />
+}

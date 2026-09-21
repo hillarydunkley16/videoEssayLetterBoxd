@@ -19,6 +19,7 @@ export default function Layout() {
         headerShown: false,
       }}
       />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="otherProfile/[id]" options={{ headerShown: false }} />
 
     </Stack>

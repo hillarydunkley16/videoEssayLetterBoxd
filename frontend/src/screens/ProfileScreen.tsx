@@ -9,16 +9,16 @@ import {
   View,
   useColorScheme,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect } from "expo-router";
-import { useAuth, useClerk, useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { RatingDots } from "@/components/ui/RatingDots";
-import { fetchProfile, updateProfileImageAPI } from "@/src/api/users";
+import { fetchProfile } from "@/src/api/users";
 import { fetchUsersCollections } from "@/src/api/collection";
 import { deleteLog } from "@/src/api/logs";
-import { useAuthUpdate } from "@/src/api/authUpdate";
+import { useChangeProfilePhoto } from "@/src/hooks/useChangeProfilePhoto";
 import { useAuthDelete } from "@/src/api/authDelete";
 import { Log } from "@/src/types/log";
 import { Profile } from "@/src/types/profile";
@@ -35,9 +35,8 @@ function formatShortDate(value: string | Date) {
 export default function ProfileScreen() {
   const theme = Colors[useColorScheme() ?? "light"];
   const { user } = useUser();
-  const { signOut } = useClerk();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const authUpdate = useAuthUpdate();
+  const { changePhoto } = useChangeProfilePhoto();
   const authDelete = useAuthDelete();
 
   const [profile, setProfile] = useState<Profile>();
@@ -77,23 +76,6 @@ export default function ProfileScreen() {
     }, [isLoaded, isSignedIn, loadProfile]),
   );
 
-  async function handleChangePhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-    if (result.canceled) return;
-
-    const uri = result.assets[0].uri;
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    await user?.setProfileImage({ file: blob });
-    await user?.reload();
-    await updateProfileImageAPI(user?.imageUrl ?? "", authUpdate);
-  }
-
   async function handleDeleteLog(publicId: string) {
     try {
       const token = await getToken();
@@ -103,15 +85,6 @@ export default function ProfileScreen() {
       );
     } catch (error) {
       console.error("Failed to delete log:", error);
-    }
-  }
-
-  async function handleSignOut() {
-    try {
-      await signOut();
-      router.replace("/");
-    } catch (error) {
-      console.error("Failed to sign out:", error);
     }
   }
 
@@ -128,14 +101,14 @@ export default function ProfileScreen() {
     <View>
       <View style={styles.topbar}>
         <Text style={[styles.pageLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>Profile</Text>
-        <TouchableOpacity onPress={handleSignOut} accessibilityLabel="Sign out">
-          <Text style={[styles.signOut, { color: theme.muted, fontFamily: Fonts?.sansMedium }]}>Sign out</Text>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/settings")} accessibilityLabel="Settings">
+          <IconSymbol name="gearshape" size={20} color={theme.muted} />
         </TouchableOpacity>
       </View>
 
       <View style={[styles.identityRow, { paddingBottom: 22, borderColor: theme.border }]}>
         <View style={styles.idRow}>
-          <TouchableOpacity onPress={handleChangePhoto} accessibilityLabel="Change profile photo">
+          <TouchableOpacity onPress={changePhoto} accessibilityLabel="Change profile photo">
             {user?.imageUrl ? (
               <Image source={{ uri: user.imageUrl }} style={[styles.avatar, { borderColor: theme.background }]} />
             ) : (
@@ -385,9 +358,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     textTransform: "uppercase",
-  },
-  signOut: {
-    fontSize: 13,
   },
   identityRow: {
     paddingHorizontal: 20,
