@@ -32,8 +32,8 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 ## Phase 2: Show it
 
 ### T2: Follow lists + suggested users show usernames
-- [ ] Add `display_username(user)` helper: `profile.display_username or "Anonymous"`
-- [ ] `FollowListUserSerializer.username` uses it
+- [x] Add `display_username(user)` helper: `profile.display_username or "Anonymous"`
+- [x] `FollowListUserSerializer.username` uses it
 - Acceptance: followers / following / suggested rows return the username; no username → `"Anonymous"`; query count unchanged (views already `select_related("profile")`)
 - Verify: `python manage.py test movie_csv.test_follow_lists movie_csv.test_suggested_users`
 - Files: `movie_csv/serializers.py`, `movie_csv/test_follow_lists.py`, `movie_csv/test_suggested_users.py` · Scope: S

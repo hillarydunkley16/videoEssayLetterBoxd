@@ -54,7 +54,7 @@ T2–T5 all depend on T1 and are independent of each other after it; ordered by 
 - [ ] `test_authentication` green; a real token yields `display_username`
 
 ### Phase 2: Show it (backend slices, each user-visible)
-- [ ] T2: Follow lists + suggested users
+- [x] T2: Follow lists + suggested users
 - [ ] T3: Other-user profile
 
 ### Checkpoint: Follow surface

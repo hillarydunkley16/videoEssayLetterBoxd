@@ -3,6 +3,18 @@ from .models import VideoEssay, Log, Like, Comment, Collection
 from django.contrib.auth.models import User
 from users.models import Follow, Profile
 #a serializer defines the columns/data that will be used in the views. 
+
+ANONYMOUS = "Anonymous"
+
+
+def display_username(user):
+    """The name to show for a user: their Clerk username, never the raw Clerk id
+    that Django stores as `User.username`. Touches `user.profile`, so list views
+    should `select_related("profile")`."""
+    profile = getattr(user, "profile", None)
+    return (profile.display_username if profile else None) or ANONYMOUS
+
+
 class VideoEssaySerializer(serializers.ModelSerializer):
     # id = serializers.CharField(source = 'public_id', read_only=True)
     # Only present when the queryset annotates `log_count` (see PopularVideoEssays);
@@ -143,6 +155,10 @@ class FollowListUserSerializer(serializers.ModelSerializer):
     """Row for followers/following lists. `is_following` is an annotation set by the view."""
     imageUrl = serializers.CharField(source="profile.imageUrl", read_only=True, allow_null=True, default=None)
     is_following = serializers.BooleanField(read_only=True)
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        return display_username(obj)
 
     class Meta:
         model = User

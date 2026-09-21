@@ -5,7 +5,9 @@ ClerkAuthentication is bypassed with DRF's force_authenticate.
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
@@ -15,12 +17,21 @@ from users.models import Follow
 User = get_user_model()
 
 
+def _make_user(username, display_username=True, **kwargs):
+    """Create a user whose Profile carries a Clerk username (as ClerkAuthentication stores it)."""
+    user = User.objects.create(username=username, **kwargs)
+    if display_username:
+        user.profile.display_username = username
+        user.profile.save()
+    return user
+
+
 class FollowersListTests(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
         self.view = FollowersList.as_view()
-        self.target = User.objects.create(username="target")
-        self.viewer = User.objects.create(username="viewer")
+        self.target = _make_user(username="target")
+        self.viewer = _make_user(username="viewer")
 
     def _get(self, user_id, viewer=None, query=""):
         request = self.factory.get(f"/api/users/{user_id}/followers/{query}")
@@ -36,7 +47,7 @@ class FollowersListTests(TestCase):
         return follow
 
     def _make_followers(self, n):
-        users = [User.objects.create(username=f"f{i}") for i in range(n)]
+        users = [_make_user(username=f"f{i}") for i in range(n)]
         for i, user in enumerate(users):
             self._follow(user, self.target, age_minutes=i)
         return users
@@ -50,7 +61,7 @@ class FollowersListTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_rows_have_expected_fields_and_no_private_data(self):
-        a = User.objects.create(username="a", email="a@example.com")
+        a = _make_user(username="a", email="a@example.com")
         a.profile.imageUrl = "https://img.example.com/a.png"
         a.profile.save()
         self._follow(a, self.target)
@@ -70,8 +81,8 @@ class FollowersListTests(TestCase):
         )
 
     def test_ordered_newest_follow_first(self):
-        old = User.objects.create(username="old")
-        new = User.objects.create(username="new")
+        old = _make_user(username="old")
+        new = _make_user(username="new")
         self._follow(old, self.target, age_minutes=60)
         self._follow(new, self.target, age_minutes=1)
 
@@ -92,7 +103,7 @@ class FollowersListTests(TestCase):
         self.assertIsNone(page2.data["next"])
 
     def test_is_following_is_relative_to_the_viewer(self):
-        a, b = User.objects.create(username="a"), User.objects.create(username="b")
+        a, b = _make_user(username="a"), _make_user(username="b")
         self._follow(a, self.target, age_minutes=2)
         self._follow(b, self.target, age_minutes=1)
         self._follow(self.viewer, a)
@@ -101,6 +112,34 @@ class FollowersListTests(TestCase):
         flags = {r["username"]: r["is_following"] for r in response.data["results"]}
 
         self.assertEqual(flags, {"a": True, "b": False})
+
+    def test_shows_display_username_not_the_clerk_id(self):
+        clerk_user = User.objects.create(username="user_2abcClerkId")
+        clerk_user.profile.display_username = "hillary"
+        clerk_user.profile.save()
+        self._follow(clerk_user, self.target)
+
+        response = self._get(self.target.id, self.viewer)
+
+        self.assertEqual(response.data["results"][0]["username"], "hillary")
+
+    def test_user_without_display_username_shows_anonymous(self):
+        no_name = _make_user("user_2abcClerkId", display_username=False)
+        self._follow(no_name, self.target)
+
+        response = self._get(self.target.id, self.viewer)
+
+        self.assertEqual(response.data["results"][0]["username"], "Anonymous")
+
+    def test_query_count_does_not_grow_with_rows(self):
+        self._make_followers(2)
+        with CaptureQueriesContext(connection) as small:
+            self._get(self.target.id, self.viewer)
+        for i in range(8):
+            self._follow(_make_user(f"extra{i}"), self.target)
+        with CaptureQueriesContext(connection) as large:
+            self._get(self.target.id, self.viewer)
+        self.assertEqual(len(small), len(large))
 
     def test_viewers_own_row_is_not_following(self):
         self._follow(self.viewer, self.target)
@@ -126,8 +165,8 @@ class FollowingListTests(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
         self.view = FollowingList.as_view()
-        self.target = User.objects.create(username="target")
-        self.viewer = User.objects.create(username="viewer")
+        self.target = _make_user(username="target")
+        self.viewer = _make_user(username="viewer")
 
     def _get(self, user_id, viewer=None, query=""):
         request = self.factory.get(f"/api/users/{user_id}/following/{query}")
@@ -148,10 +187,10 @@ class FollowingListTests(TestCase):
         self.assertEqual(self._get(999999, self.viewer).status_code, 404)
 
     def test_lists_only_who_the_user_follows_with_expected_fields(self):
-        a = User.objects.create(username="a", email="a@example.com")
+        a = _make_user(username="a", email="a@example.com")
         a.profile.imageUrl = "https://img.example.com/a.png"
         a.profile.save()
-        stranger = User.objects.create(username="stranger")
+        stranger = _make_user(username="stranger")
         self._follow(self.target, a)
         self._follow(stranger, self.target)  # a follower, not someone target follows
 
@@ -169,8 +208,8 @@ class FollowingListTests(TestCase):
         )
 
     def test_ordered_newest_follow_first(self):
-        old = User.objects.create(username="old")
-        new = User.objects.create(username="new")
+        old = _make_user(username="old")
+        new = _make_user(username="new")
         self._follow(self.target, old, age_minutes=60)
         self._follow(self.target, new, age_minutes=1)
 
@@ -180,7 +219,7 @@ class FollowingListTests(TestCase):
 
     def test_pagination_second_page(self):
         for i in range(12):
-            self._follow(self.target, User.objects.create(username=f"f{i}"), age_minutes=i)
+            self._follow(self.target, _make_user(username=f"f{i}"), age_minutes=i)
 
         page1 = self._get(self.target.id, self.viewer)
         page2 = self._get(self.target.id, self.viewer, "?page=2")
@@ -192,7 +231,7 @@ class FollowingListTests(TestCase):
         self.assertIsNone(page2.data["next"])
 
     def test_is_following_is_relative_to_the_viewer(self):
-        a, b = User.objects.create(username="a"), User.objects.create(username="b")
+        a, b = _make_user(username="a"), _make_user(username="b")
         self._follow(self.target, a, age_minutes=2)
         self._follow(self.target, b, age_minutes=1)
         self._follow(self.viewer, a)
@@ -211,7 +250,7 @@ class FollowingListTests(TestCase):
 
     def test_query_count_is_constant_in_row_count(self):
         for i in range(2):
-            self._follow(self.target, User.objects.create(username=f"f{i}"))
+            self._follow(self.target, _make_user(username=f"f{i}"))
         with self.assertNumQueries(3):
             self._get(self.target.id, self.viewer)
 
@@ -224,9 +263,9 @@ class FollowingListTests(TestCase):
 class RemoveFollowerTests(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
-        self.owner = User.objects.create(username="owner")
-        self.fan = User.objects.create(username="fan")
-        self.other = User.objects.create(username="other")
+        self.owner = _make_user(username="owner")
+        self.fan = _make_user(username="fan")
+        self.other = _make_user(username="other")
 
     def _delete(self, actor, user_id, follower_id):
         request = self.factory.delete(f"/api/users/{user_id}/followers/{follower_id}/")
