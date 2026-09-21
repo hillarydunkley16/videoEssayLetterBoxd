@@ -81,6 +81,13 @@ class ClerkAuthentication(BaseAuthentication):
             username=clerk_id,
             defaults={"email": payload.get("email", "")},
         )
+        # An absent, null, or empty claim never overwrites a stored name.
+        username = payload.get("username")
+        if username:
+            profile, _ = Profile.objects.get_or_create(user=user)
+            if profile.display_username != username:
+                profile.display_username = username
+                profile.save(update_fields=["display_username"])
         image_url = payload.get("imageUrl", "")
         if image_url:
             Profile.objects.update_or_create(user=user, defaults={"imageUrl": image_url})

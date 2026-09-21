@@ -48,7 +48,7 @@ T2–T5 all depend on T1 and are independent of each other after it; ordered by 
 
 ### Phase 1: Capture
 - [ ] T0: Clerk claim + confirm claim name (manual)
-- [ ] T1: Store the username on first/next auth
+- [x] T1: Store the username on first/next auth
 
 ### Checkpoint: Capture
 - [ ] `test_authentication` green; a real token yields `display_username`

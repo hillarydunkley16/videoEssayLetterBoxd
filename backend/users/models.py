@@ -23,7 +23,10 @@ class Profile(models.Model):
     # watchlist = models.OneToOneField('WatchList', on_delete=models.CASCADE, null=True, blank=True)
     # Delete profile when user is deleted
     # photo = models.ImageField(upload_to='profile_pics/', null=True, blank=True, default='profile_pics/default.jpg')
-    # display_username = models.CharField(max_length=50, blank = True, null = True, default = None)
+    # The Clerk username, copied from the session token's `username` claim (see
+    # ClerkAuthentication). Deliberately not unique: Clerk enforces uniqueness, and a DB
+    # constraint could turn a cross-instance collision into a login-blocking IntegrityError.
+    display_username = models.CharField(max_length=150, blank=True, null=True, default=None)
     def __str__(self):
         return f'{self.user.username} Profile' #show how we want it to be displayed
      # Override the save method of the model

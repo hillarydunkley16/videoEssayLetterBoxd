@@ -110,6 +110,56 @@ class TokenVerificationTests(TestCase):
         self.assertIn("https://dev.clerk.example.com", issuer_arg)
 
 
+class DisplayUsernameCaptureTests(TestCase):
+    """The Clerk `username` claim is stored on Profile.display_username."""
+
+    def setUp(self):
+        authentication.reset_jwks_cache()
+
+    def _authenticate(self, payload):
+        with mock.patch("movie_csv.authentication.requests.get") as mock_get, \
+                mock.patch("movie_csv.authentication.jwt.get_unverified_header") as mock_hdr, \
+                mock.patch("movie_csv.authentication.jwt.decode") as mock_decode:
+            mock_get.return_value = mock.Mock(json=lambda: _FAKE_JWKS)
+            mock_hdr.return_value = {"kid": "kid-1"}
+            mock_decode.return_value = {"sub": "clerk_abc", **payload}
+            user, _ = ClerkAuthentication().authenticate(_request("Bearer good.token.sig"))
+        user.profile.refresh_from_db()
+        return user
+
+    def test_username_claim_is_stored_on_profile(self):
+        user = self._authenticate({"username": "hillary"})
+        self.assertEqual(user.profile.display_username, "hillary")
+
+    def test_changed_username_claim_updates_profile(self):
+        self._authenticate({"username": "hillary"})
+        user = self._authenticate({"username": "hillary2"})
+        self.assertEqual(user.profile.display_username, "hillary2")
+
+    def test_django_username_stays_the_clerk_sub(self):
+        user = self._authenticate({"username": "hillary"})
+        self.assertEqual(user.username, "clerk_abc")
+
+    def test_missing_null_or_empty_claim_never_overwrites_stored_value(self):
+        self._authenticate({"username": "hillary"})
+        for payload in ({}, {"username": None}, {"username": ""}):
+            with self.subTest(payload=payload):
+                user = self._authenticate(payload)
+                self.assertEqual(user.profile.display_username, "hillary")
+
+    def test_unchanged_claim_does_not_write_profile(self):
+        self._authenticate({"username": "hillary"})
+        with mock.patch("users.models.Profile.save") as mock_save:
+            self._authenticate({"username": "hillary"})
+        mock_save.assert_not_called()
+
+    def test_user_without_profile_row_is_handled(self):
+        User.objects.create(username="clerk_abc")
+        User.objects.get(username="clerk_abc").profile.delete()
+        user = self._authenticate({"username": "hillary"})
+        self.assertEqual(user.profile.display_username, "hillary")
+
+
 class SourceHygieneTests(SimpleTestCase):
     def test_no_print_and_no_hardcoded_issuer(self):
         from pathlib import Path

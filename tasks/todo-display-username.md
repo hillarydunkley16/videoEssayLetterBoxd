@@ -14,9 +14,9 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 - Files: none · Scope: XS
 
 ### T1: Store the username on auth
-- [ ] Write failing tests first (Prove-It)
-- [ ] `Profile.display_username` (CharField 150, null/blank, **no** unique) + migration `0012`
-- [ ] `ClerkAuthentication` saves claim to `Profile`
+- [x] Write failing tests first (Prove-It)
+- [x] `Profile.display_username` (CharField 150, null/blank, **no** unique) + migration `0012`
+- [x] `ClerkAuthentication` saves claim to `Profile`
 - Acceptance:
   - claim present → stored; changed claim → updated
   - claim missing → stored value untouched (never blanked)
