@@ -55,7 +55,7 @@ T2–T5 all depend on T1 and are independent of each other after it; ordered by 
 
 ### Phase 2: Show it (backend slices, each user-visible)
 - [x] T2: Follow lists + suggested users
-- [ ] T3: Other-user profile
+- [x] T3: Other-user profile
 
 ### Checkpoint: Follow surface
 - [ ] People to follow / followers / following / other profile show usernames in the running app

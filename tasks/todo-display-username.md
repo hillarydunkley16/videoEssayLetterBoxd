@@ -40,7 +40,7 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 - Depends on: T1
 
 ### T3: Other-user profile shows username
-- [ ] `ProfileSerializer.get_user` uses the helper; **leave `get_watchList` naming alone**
+- [x] `ProfileSerializer.get_user` uses the helper; **leave `get_watchList` naming alone**
 - Acceptance: `user.username` in profile payload is the display username / `"Anonymous"`; `/otherProfile/[id]` title and `@handle` render it
 - Verify: `python manage.py test movie_csv.test_profile_user_shape movie_csv.test_profile_follow_fields`; manual check on web
 - Files: `movie_csv/serializers.py`, `movie_csv/test_profile_user_shape.py` · Scope: S
