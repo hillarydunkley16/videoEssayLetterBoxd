@@ -65,7 +65,7 @@ T2–T5 all depend on T1 and are independent of each other after it; ordered by 
 - [x] T5: Collection owners (+ `is_owner`)
 
 ### Phase 4: Verify + backfill
-- [ ] T6: Frontend sweep + full gates
+- [x] T6: Frontend sweep + full gates
 - [ ] T7: Backfill command for users who haven't re-authed
 
 ### Checkpoint: Complete

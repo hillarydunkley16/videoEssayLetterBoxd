@@ -79,7 +79,7 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 ## Phase 4: Verify
 
 ### T6: Frontend sweep + full gates
-- [ ] Grep remaining raw-ID exposure (`log.owner`, `item.owner`, `@handle` in otherProfile) and fix stragglers
+- [x] Grep remaining raw-ID exposure (`log.owner`, `item.owner`, `@handle` in otherProfile) and fix stragglers
 - Acceptance: no screen shows a Clerk `user_…` id for another user
 - Verify: `python manage.py test` · `npx tsc --noEmit` · `npm run lint` · `npm test` · `npx expo export --platform web`
 - Files: as needed (≤5) · Scope: S
