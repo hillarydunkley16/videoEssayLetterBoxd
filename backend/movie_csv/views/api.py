@@ -36,6 +36,7 @@ from django.utils import timezone
 from datetime import timedelta
 from users.models import Follow, Profile
 import logging
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -697,3 +698,29 @@ class SuggestedUsers(generics.ListAPIView):
             .select_related("profile")
             .order_by("-follower_total", "id")[:5]
         )
+
+
+class DeleteAccount(APIView):
+    """Delete the caller's Django user and everything that cascades from it.
+
+    VideoEssay.owner cascades, so essays the caller added would take other users'
+    logs with them. Before deleting, hand each such essay to another user who logged
+    it (or listed it) so their data survives. The client deletes the Clerk user
+    afterwards; if that fails, ClerkAuthentication lazily recreates the Django user.
+    """
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        with transaction.atomic():
+            for essay in VideoEssay.objects.filter(owner=user):
+                heir = (
+                    User.objects.filter(logs__essay=essay).exclude(pk=user.pk).order_by("logs__id").first()
+                    or User.objects.filter(lists__essays=essay).exclude(pk=user.pk).order_by("id").first()
+                )
+                if heir:
+                    essay.owner = heir
+                    essay.save(update_fields=["owner"])
+            user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

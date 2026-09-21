@@ -25,6 +25,7 @@ urlpatterns = [
     path("logList/<uuid:public_id>/like/delete/<int:pk>/", UnLikePost.as_view()),
     path("logList/<uuid:public_id>/comment/", CommentOnPost.as_view()),
     path("users/updatePic", updateProfileImage.as_view()), 
+    path("account/", DeleteAccount.as_view(), name="delete-account"),
     path("users/profile", ProfileDetail.as_view()), 
     path("logList/<uuid:public_id>/delete", DeleteLog.as_view()),
     path("users/profile/<int:user_id>/", ProfileDetailById.as_view()), 
