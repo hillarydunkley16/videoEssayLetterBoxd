@@ -164,7 +164,7 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
     profile_queryset = Profile.objects.all()
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     # permission_classes = [AllowAny]
     lookup_field = "public_id"
     def get(self, request, public_id):
@@ -332,7 +332,7 @@ class DeleteLog(DestroyAPIView):
     queryset = Log.objects.all(); 
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = 'public_id'
 
 class CommentOnPost(generics.CreateAPIView):
@@ -497,7 +497,7 @@ class CollectionList(generics.ListCreateAPIView):
 class CollectionDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CollectionSerializer
     authentication_classes = [ClerkAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = "public_id"
 
     def get_queryset(self):
