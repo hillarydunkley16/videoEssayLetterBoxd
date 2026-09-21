@@ -11,7 +11,7 @@ import {
   useColorScheme,
 } from 'react-native'
 import { router } from 'expo-router'
-import { useAuth, useUser } from '@clerk/clerk-expo'
+import { useAuth } from '@clerk/clerk-expo'
 import { Colors, Fonts } from '@/constants/theme'
 import { fetchACollection, removeFromWatchlist, deleteCollection } from '@/src/api/collection'
 import { useAuthDelete } from '@/src/api/authDelete'
@@ -21,7 +21,6 @@ import { VideoEssay } from '@/src/types/videoEssay'
 export default function CollectionInfo({ public_id }: { public_id: string }) {
   const theme = Colors[useColorScheme() ?? 'light']
   const { getToken } = useAuth()
-  const { user } = useUser()
   const authDelete = useAuthDelete()
 
   const [collection, setCollection] = useState<Collection>()
@@ -60,7 +59,7 @@ export default function CollectionInfo({ public_id }: { public_id: string }) {
     }
   }
 
-  const isOwner = !!user && collection?.owner === user.id
+  const isOwner = !!collection?.is_owner
 
   async function handleRemoveEssay(essayPublicId: string) {
     if (!collection || removingId) return

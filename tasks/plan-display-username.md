@@ -62,7 +62,7 @@ T2–T5 all depend on T1 and are independent of each other after it; ordered by 
 
 ### Phase 3: Owners
 - [x] T4: Log and comment owners (+ `is_mine`)
-- [ ] T5: Collection owners (+ `is_owner`)
+- [x] T5: Collection owners (+ `is_owner`)
 
 ### Phase 4: Verify + backfill
 - [ ] T6: Frontend sweep + full gates

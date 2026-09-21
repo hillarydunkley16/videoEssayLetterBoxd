@@ -138,7 +138,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         name=f"{obj.user.username}'s Watchlist", 
         owner=obj.user
         )
-        return CollectionSerializer(watchList).data
+        return CollectionSerializer(watchList, context=self.context).data
     def get_user(self, obj):
         # The frontend's Profile type expects the user as an object, not a bare pk.
         return {"id": obj.user_id, "username": obj.display_username or ANONYMOUS, "imageUrl": obj.imageUrl}
@@ -177,7 +177,16 @@ class FollowListUserSerializer(serializers.ModelSerializer):
 
 
 class CollectionSerializer(serializers.ModelSerializer):
-    owner = serializers.ReadOnlyField(source="owner.username")
+    owner = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
+    def get_owner(self, obj):
+        return display_username(obj.owner)
+    def get_is_owner(self, obj):
+        # Relative to whoever is viewing; False when no request is in the context.
+        # The frontend can't compare `owner` to the Clerk id any more, so we say it here.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        return bool(viewer is not None and viewer.is_authenticated and viewer.id == obj.owner_id)
     essays = VideoEssaySerializer(many=True, read_only=True)
     class Meta:
         model = Collection
@@ -187,6 +196,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "owner",
+            "is_owner",
             "essays",
             "is_watchlist",
         )

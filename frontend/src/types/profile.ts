@@ -23,6 +23,7 @@ export interface ProfileWatchList {
     public_id: string,
     name: string,
     owner: string,
+    is_owner: boolean,
     essays: VideoEssay[]
 }
 

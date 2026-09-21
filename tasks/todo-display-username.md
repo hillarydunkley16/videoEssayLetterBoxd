@@ -65,12 +65,12 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 - Depends on: T2
 
 ### T5: Collection owners + `is_owner`
-- [ ] (Resolved) `user` in `collectionInfo.tsx` is Clerk `useUser()`; its id = Clerk `sub` = old `owner` string
-- [ ] `CollectionSerializer.owner` uses the helper; add viewer-relative `is_owner` (`request.user == obj.owner`; `False` with no request). Do NOT expose the Clerk `sub`
-- [ ] `ProfileSerializer.get_watchList` passes `context=self.context` to `CollectionSerializer`
-- [ ] `collectionInfo.tsx` `isOwner` = `collection.is_owner`; add to `types/collection.ts`
-- [ ] `select_related("owner__profile")` in collection views
-- [ ] Leave watchlist `name` and `get_or_create` lookup untouched
+- [x] (Resolved) `user` in `collectionInfo.tsx` is Clerk `useUser()`; its id = Clerk `sub` = old `owner` string
+- [x] `CollectionSerializer.owner` uses the helper; add viewer-relative `is_owner` (`request.user == obj.owner`; `False` with no request). Do NOT expose the Clerk `sub`
+- [x] `ProfileSerializer.get_watchList` passes `context=self.context` to `CollectionSerializer`
+- [x] `collectionInfo.tsx` `isOwner` = `collection.is_owner`; add to `types/collection.ts`
+- [x] `select_related("owner__profile")` in collection views
+- [x] Leave watchlist `name` and `get_or_create` lookup untouched
 - Acceptance: owner sees edit/delete on own collection (no regression); other users see username; watchlist not duplicated; query count constant
 - Verify: `python manage.py test movie_csv` (collection tests) · manual: own vs other user's collection
 - Files: `movie_csv/serializers.py`, `movie_csv/views/api.py`, `frontend/src/screens/collectionInfo.tsx`, `frontend/src/types/collection.ts`, `movie_csv/test_collection_owner.py` (new) · Scope: M

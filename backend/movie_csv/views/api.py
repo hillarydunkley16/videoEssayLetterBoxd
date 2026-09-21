@@ -375,7 +375,7 @@ class updateProfileImage(generics.UpdateAPIView):
         profile.refresh_from_db()
         print("AFTER REFRESH FROM DB: ", profile.imageUrl)
         
-        serializer = ProfileSerializer(profile)
+        serializer = ProfileSerializer(profile, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 @login_required
 def log_movie(request, videoEssay_id): 
@@ -479,6 +479,11 @@ class VideoEssaySearch(APIView):
     def get_queryset(self, request, query):
         VideoEssay.objects.filter(title__icontains = query)
 
+def with_collection_relations(queryset):
+    """Owner name and essays fetched up front so list endpoints run a constant number of queries."""
+    return queryset.select_related("owner__profile").prefetch_related("essays")
+
+
 class CollectionList(generics.ListCreateAPIView):
     serializer_class = CollectionSerializer
     # authentication_classes = [ClerkAuthentication]
@@ -486,7 +491,7 @@ class CollectionList(generics.ListCreateAPIView):
     queryset = Collection.objects.all()
     permission_classes = [AllowAny]
     def get_queryset(self):
-        return Collection.objects.all()
+        return with_collection_relations(Collection.objects.all())
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -498,7 +503,7 @@ class CollectionDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "public_id"
 
     def get_queryset(self):
-        return Collection.objects.all()
+        return with_collection_relations(Collection.objects.all())
     
 class CollectionByUser(generics.ListAPIView):
     serializer_class = CollectionSerializer
@@ -506,7 +511,7 @@ class CollectionByUser(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Collection.objects.filter(owner=self.request.user)
+        return with_collection_relations(Collection.objects.filter(owner=self.request.user))
 
     
 class AddVideoEssayToCollection(APIView): 

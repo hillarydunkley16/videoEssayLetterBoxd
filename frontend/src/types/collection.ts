@@ -5,7 +5,8 @@ export interface Collection {
     public_id: string;
     name: string;
     description: string;
-    owner: string;        // the owner's username (see CollectionSerializer)
+    owner: string;        // the owner's display username (see CollectionSerializer)
+    is_owner: boolean;    // whether the signed-in viewer owns this collection (computed by the backend)
     essays: VideoEssay[];
     is_watchlist: boolean;
 }
