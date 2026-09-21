@@ -85,9 +85,9 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 - Files: as needed (≤5) · Scope: S
 
 ### T7: Backfill command for users who haven't re-authed
-- [ ] Management command `backfill_display_usernames` in `users/management/commands/`: pages Clerk Backend API `GET /users` (`limit=500`, `offset`), matches Clerk `id` to `User.username`, sets `Profile.display_username` where the Clerk username is non-empty (create Profile if missing)
-- [ ] Idempotent; `--dry-run` flag; reads `CLERK_SECRET_KEY` from env only, errors clearly if unset
-- [ ] Do NOT add the key to `render.yaml` (run once in the Render shell with the var set); no change to `test_render_blueprint.py`
+- [x] Management command `backfill_display_usernames` in `users/management/commands/`: pages Clerk Backend API `GET /users` (`limit=500`, `offset`), matches Clerk `id` to `User.username`, sets `Profile.display_username` where the Clerk username is non-empty (create Profile if missing)
+- [x] Idempotent; `--dry-run` flag; reads `CLERK_SECRET_KEY` from env only, errors clearly if unset
+- [x] Do NOT add the key to `render.yaml` (run once in the Render shell with the var set); no change to `test_render_blueprint.py`
 - Acceptance: second run changes nothing; users missing in Clerk are skipped; existing values never blanked; Clerk API mocked in tests
 - Verify: `python manage.py test users` (new test file, HTTP mocked) · `--dry-run` against the dev Clerk instance
 - Files: `users/management/commands/backfill_display_usernames.py` (+ `__init__.py` files), `users/test_backfill_display_usernames.py` · Scope: S

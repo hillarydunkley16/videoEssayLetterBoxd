@@ -66,7 +66,7 @@ T2–T5 all depend on T1 and are independent of each other after it; ordered by 
 
 ### Phase 4: Verify + backfill
 - [x] T6: Frontend sweep + full gates
-- [ ] T7: Backfill command for users who haven't re-authed
+- [x] T7: Backfill command for users who haven't re-authed
 
 ### Checkpoint: Complete
 - [ ] All spec success criteria met; ready for review
