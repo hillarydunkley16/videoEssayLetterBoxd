@@ -41,7 +41,18 @@ function ListCoverCollage({ essays, theme }: { essays: VideoEssay[]; theme: (typ
   );
 }
 
-export function ListCard({ list, theme, width }: { list: Collection; theme: (typeof Colors)["light"]; width?: number }) {
+export function ListCard({
+  list,
+  theme,
+  width,
+  showOwner,
+}: {
+  list: Collection;
+  theme: (typeof Colors)["light"];
+  width?: number;
+  // Search results show whose list it is; "Your Lists" doesn't need to.
+  showOwner?: boolean;
+}) {
   return (
     <TouchableOpacity
       style={[styles.listCard, { borderColor: theme.border, backgroundColor: theme.surface }, width ? { width } : styles.listCardFluid]}
@@ -58,6 +69,11 @@ export function ListCard({ list, theme, width }: { list: Collection; theme: (typ
         <Text style={[styles.listCardMeta, { color: theme.muted, fontFamily: Fonts?.sans }]}>
           {list.essays.length} {list.essays.length === 1 ? "essay" : "essays"}
         </Text>
+        {showOwner ? (
+          <Text style={[styles.listCardMeta, { color: theme.muted, fontFamily: Fonts?.sans }]} numberOfLines={1}>
+            by {list.owner}
+          </Text>
+        ) : null}
         {list.description ? (
           <Text style={[styles.listCardDesc, { color: theme.text, fontFamily: Fonts?.sans }]} numberOfLines={2}>
             {list.description}

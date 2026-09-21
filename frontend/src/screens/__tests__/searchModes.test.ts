@@ -13,10 +13,11 @@ describe('parseSearchType', () => {
   it('accepts the known modes', () => {
     expect(parseSearchType('essays')).toBe('essays');
     expect(parseSearchType('people')).toBe('people');
+    expect(parseSearchType('lists')).toBe('lists');
   });
 
   it('falls back to essays for anything else', () => {
-    expect(parseSearchType('lists')).toBe('essays'); // until the Lists view exists
+    expect(parseSearchType('Lists')).toBe('essays');
     expect(parseSearchType('PEOPLE')).toBe('essays');
     expect(parseSearchType('nonsense')).toBe('essays');
     expect(parseSearchType(['people', 'essays'])).toBe('essays');
@@ -25,5 +26,6 @@ describe('parseSearchType', () => {
   it('has a placeholder for every mode', () => {
     expect(SEARCH_PLACEHOLDER.essays).toBe('Search a video essay…');
     expect(SEARCH_PLACEHOLDER.people).toBe('Search people…');
+    expect(SEARCH_PLACEHOLDER.lists).toBe('Search lists…');
   });
 });

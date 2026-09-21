@@ -59,6 +59,7 @@ describe('SearchField placeholder follows the search mode', () => {
     [{}, 'Search a video essay…'],
     [{ type: 'essays' }, 'Search a video essay…'],
     [{ type: 'people' }, 'Search people…'],
+    [{ type: 'lists' }, 'Search lists…'],
     [{ type: 'nonsense' }, 'Search a video essay…'],
     [{ mode: 'log', type: 'people' }, 'Search a video essay…'],
   ])('with params %j shows %j', (params, placeholder) => {

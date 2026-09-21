@@ -1,16 +1,18 @@
 // The search screen's modes, selected by the `type` route param. Shared by SearchScreen (which
 // view to show) and SearchField (which placeholder to show) so the two can't drift apart.
-export const SEARCH_MODES = ["essays", "people"] as const;
+export const SEARCH_MODES = ["essays", "people", "lists"] as const;
 export type SearchType = (typeof SEARCH_MODES)[number];
 
 export const SEARCH_LABEL: Record<SearchType, string> = {
   essays: "Essays",
   people: "People",
+  lists: "Lists",
 };
 
 export const SEARCH_PLACEHOLDER: Record<SearchType, string> = {
   essays: "Search a video essay…",
   people: "Search people…",
+  lists: "Search lists…",
 };
 
 // Anything that isn't a known mode (stale, hand-edited, or a repeated param arriving as an

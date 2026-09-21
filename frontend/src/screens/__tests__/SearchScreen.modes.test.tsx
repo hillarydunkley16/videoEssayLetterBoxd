@@ -1,5 +1,5 @@
 /**
- * Search screen modes (Essays | People), driven by the `type` route param.
+ * Search screen modes (Essays | People | Lists), driven by the `type` route param.
  *
  * Essays stays the default and is untouched (SearchScreen.logMode.test.tsx still covers its
  * behavior); People swaps the results; the switch writes only `type`, so `q` is kept. Log mode
@@ -39,6 +39,11 @@ jest.mock('@/src/api/videos', () => ({
   useVideoApi: () => ({ convertYouTubeResultToVideoEssay: jest.fn() }),
 }));
 
+const mockSearchCollections = jest.fn();
+jest.mock('@/src/api/collection', () => ({
+  searchCollections: (...args: unknown[]) => mockSearchCollections(...args),
+}));
+
 const mockSearchUsers = jest.fn();
 const mockFetchSuggestedUsers = jest.fn();
 jest.mock('@/src/api/users', () => ({
@@ -63,16 +68,18 @@ beforeEach(() => {
   mockSearchDataBase.mockReset().mockResolvedValue([]);
   mockCallSerpAPI.mockReset().mockResolvedValue([]);
   mockSearchUsers.mockReset().mockResolvedValue(peoplePage());
+  mockSearchCollections.mockReset().mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
   mockFetchSuggestedUsers.mockReset().mockResolvedValue([person(9, 'suggested_sam')]);
 });
 
 describe('SearchScreen modes', () => {
-  it('defaults to the essays view and shows the mode switch', () => {
+  it('defaults to the essays view and shows the mode switch with all three modes', () => {
     render(<SearchScreen />);
 
     expect(screen.getByText(ESSAY_HINT)).toBeTruthy();
     expect(screen.getByTestId('search-mode-essays')).toBeTruthy();
     expect(screen.getByTestId('search-mode-people')).toBeTruthy();
+    expect(screen.getByTestId('search-mode-lists')).toBeTruthy();
     expect(screen.getByTestId('search-mode-essays').props.accessibilityState).toMatchObject({ selected: true });
     expect(mockFetchSuggestedUsers).not.toHaveBeenCalled();
   });
@@ -87,7 +94,7 @@ describe('SearchScreen modes', () => {
     expect(mockSearchDataBase).not.toHaveBeenCalled();
   });
 
-  it.each(['lists', 'nonsense', ''])('falls back to essays for type=%j', (type) => {
+  it.each(['nonsense', ''])('falls back to essays for type=%j', (type) => {
     mockParams = { type };
     render(<SearchScreen />);
     expect(screen.getByText(ESSAY_HINT)).toBeTruthy();
@@ -110,12 +117,40 @@ describe('SearchScreen modes', () => {
     expect(mockCallSerpAPI).not.toHaveBeenCalled();
   });
 
+  it('shows the lists view for type=lists, without running the essay or people search', async () => {
+    mockParams = { type: 'lists' };
+    render(<SearchScreen />);
+
+    expect(screen.getByText('Search lists by name')).toBeTruthy();
+    expect(screen.getByTestId('search-mode-lists').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByText(ESSAY_HINT)).toBeNull();
+    expect(mockSearchDataBase).not.toHaveBeenCalled();
+    expect(mockFetchSuggestedUsers).not.toHaveBeenCalled();
+  });
+
+  it('searches lists with the q param, never calling YouTube', async () => {
+    mockParams = { type: 'lists', q: 'film', submittedAt: '1' };
+    mockSearchCollections.mockResolvedValue({
+      count: 1, next: null, previous: null,
+      results: [{ id: 1, public_id: 'a', name: 'Film picks', description: '', owner: 'ann', is_owner: false, essays: [], is_watchlist: false }],
+    });
+    render(<SearchScreen />);
+
+    expect(await screen.findByText('Film picks')).toBeTruthy();
+    expect(mockSearchCollections).toHaveBeenCalledWith('film', 1, 'token');
+    expect(mockCallSerpAPI).not.toHaveBeenCalled();
+    expect(mockSearchUsers).not.toHaveBeenCalled();
+  });
+
   it('writes only `type` when a mode is chosen, so the query is kept', () => {
     mockParams = { q: 'film' };
     render(<SearchScreen />);
 
     fireEvent.press(screen.getByTestId('search-mode-people'));
     expect(mockSetParams).toHaveBeenLastCalledWith({ type: 'people' });
+
+    fireEvent.press(screen.getByTestId('search-mode-lists'));
+    expect(mockSetParams).toHaveBeenLastCalledWith({ type: 'lists' });
 
     fireEvent.press(screen.getByTestId('search-mode-essays'));
     expect(mockSetParams).toHaveBeenLastCalledWith({ type: 'essays' });
@@ -158,12 +193,13 @@ describe('SearchScreen modes', () => {
     expect(screen.getByText('benji')).toBeTruthy();
   });
 
-  it('hides the switch and stays on essays in log mode, whatever `type` says', () => {
-    mockParams = { mode: 'log', type: 'people' };
+  it.each(['people', 'lists'])('hides the switch and stays on essays in log mode, whatever `type` says (%s)', (type) => {
+    mockParams = { mode: 'log', type };
     render(<SearchScreen />);
 
     expect(screen.queryByTestId('search-mode-people')).toBeNull();
     expect(screen.queryByTestId('search-mode-essays')).toBeNull();
+    expect(screen.queryByTestId('search-mode-lists')).toBeNull();
     expect(screen.getByText('Search for the essay you want to log')).toBeTruthy();
     expect(mockFetchSuggestedUsers).not.toHaveBeenCalled();
   });

@@ -16,6 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/clerk-expo';
 import { Colors, Fonts } from '@/constants/theme';
+import ListResults from './ListResults';
 import PeopleResults from './PeopleResults';
 import { SEARCH_LABEL, SEARCH_MODES, resolveSearchType } from './searchModes';
 
@@ -395,7 +396,13 @@ const SearchScreen: React.FunctionComponent<SearchBarComponentProps> = () => {
                     })}
                 </View>
             ) : null}
-            {type === 'people' ? <PeopleResults q={q ?? ''} /> : <EssayResults />}
+            {type === 'people' ? (
+                <PeopleResults q={q ?? ''} />
+            ) : type === 'lists' ? (
+                <ListResults q={q ?? ''} />
+            ) : (
+                <EssayResults />
+            )}
         </View>
     );
 };

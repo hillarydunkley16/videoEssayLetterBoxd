@@ -87,11 +87,14 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 - Gates: jest 19 suites / 125 tests (baseline 14 / 73); `tsc` 38 (= baseline); lint 3 errors (= baseline), warnings 198 vs 195 (new tests follow the repo's existing `jest.mock`-then-import style). Mutation check: removing the stale-answer guard fails its test.
 - Not verified in a browser/device (web export and manual pass are T8).
 
-### T7: Lists view
-- [ ] Jest first: lists mode queries `searchCollections`; empty input shows "Search lists by name"; tap → `collectionDetail`; empty/error states
-- [ ] `ListResults.tsx` reusing the existing list card
+### T7: Lists view  ✅ DONE
+- [x] Jest first: lists mode queries `searchCollections`; empty input shows "Search lists by name"; tap → `collectionDetail`; empty/error states
+- [x] `ListResults.tsx` reusing the existing list card
 - Acceptance: spec criteria 8–10 (Lists)
 - Files: `ListResults.tsx`, `SearchScreen.tsx`, test · Scope: S · Depends on: T4, T6
+- Done: 20 new tests (`ListResults` 13, `ListCard` 3, plus Lists cases in `SearchScreen.modes`, `searchModes`, `SearchField`). Existing assertions changed on purpose (T6 had `lists` fall back to essays until this task): `searchModes.test.ts`, `SearchScreen.modes.test.tsx`. `ListCard` gained an opt-in `showOwner` prop ("by <owner>"); "Your Lists" is unchanged.
+- Gates: jest 21 suites / 144 tests (baseline 14 / 73); `tsc` 38 (= baseline); lint 3 errors (= baseline), warnings 201 vs 195 (new tests follow the repo's `jest.mock`-then-import style). Mutation check: removing the stale-answer guard fails its test.
+- Follow-ups noticed: `ListResults` and `PeopleResults` share ~50 lines of debounce/pagination/stale-guard logic (a `usePagedSearch` hook would remove it; both suites would guard the refactor). `app/(home)/popularLists.tsx` still filters watchlists client-side by name (`!name.includes("Watchlist")`); redundant now, and hides any list merely named with that word.
 
 ### T8: Mobile + full gates
 - [ ] Mode switch works on mobile top nav; Log tab (`mode=log`) still opens quick log
