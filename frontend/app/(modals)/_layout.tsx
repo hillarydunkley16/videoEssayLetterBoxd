@@ -87,6 +87,13 @@ export default function Layout() {
                 }}
             />
             <Stack.Screen
+                name = "addEssayToList"
+                options = {{
+                    presentation: 'modal',
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
                 name = "newList"
                 options = {{
                     presentation: 'modal',

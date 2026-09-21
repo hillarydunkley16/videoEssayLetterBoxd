@@ -23,6 +23,8 @@ type SearchBarComponentProps = Record<string, never>;
 // grid drops another column — keeps thumbnails a legible 16:9 box instead
 // of stretching a single full-width card (the old bug on wide web viewports).
 const MIN_TILE_WIDTH = 220;
+const PAGE_PADDING = 16;
+const ROW_GAP = 16;
 
 // How long to wait after the last keystroke before filtering the DB, so
 // typing doesn't fire a request per character.
@@ -47,6 +49,11 @@ const {getToken} = useAuth();
 const { width } = useWindowDimensions();
 const theme = Colors[useColorScheme() ?? 'light'];
 const numColumns = Math.max(1, Math.floor(width / MIN_TILE_WIDTH));
+// Fixed per-column width (instead of flex: 1) so a lone result in the last row
+// keeps normal tile size rather than stretching across the whole page.
+const tileWidth = numColumns > 1
+    ? (width - PAGE_PADDING * 2 - ROW_GAP * (numColumns - 1)) / numColumns
+    : undefined;
 
 // Guards against a slow request from an earlier keystroke/submit clobbering
 // the result of a newer one that finished first.
@@ -176,12 +183,12 @@ return (
           }
           ListEmptyComponent={() => (
             <Text style={[styles.emptyText, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-              {search.trim() ? 'No results found' : 'Search for video essays by title'}
+              {search.trim() ? 'No results found' : 'Search for video essays by title. Press enter to search YouTube.'}
             </Text>
           )}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, tileWidth ? { width: tileWidth } : styles.tileSingleColumn]}
               onPress={async () => {
                 if (item.source === "database") {
                   router.push({
@@ -256,12 +263,15 @@ listContent: {
   paddingTop: 4,
 },
 row: {
-  gap: 16,
+  gap: ROW_GAP,
 },
 tile: {
-  flex: 1,
   marginBottom: 22,
   maxWidth: '100%',
+},
+tileSingleColumn: {
+  width: '100%',
+  maxWidth: 480,
 },
 thumbWrap: {
   width: '100%',

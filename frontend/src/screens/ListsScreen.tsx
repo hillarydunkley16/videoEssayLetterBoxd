@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from "react-native";
 import { useAuth } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
@@ -13,12 +13,20 @@ import { Collection, PaginatedCollections } from "@/src/types/collection";
 // Fetches its own collections rather than depending on ProfileScreen's
 // profile load. The watchlist is auto-provisioned on the profile response
 // (see ProfileSerializer.get_watchList) rather than on `/collections/user/`,
-// so it's fetched from there and always pinned above the user-created lists
-// — including for a brand-new user who hasn't made any lists yet.
+// so it's fetched from there and always shown as the first tile — including
+// for a brand-new user who hasn't made any lists yet.
+const MAX_CONTENT_WIDTH = 1000;
+const MIN_CARD_WIDTH = 200;
+const GUTTER = 20;
+const GAP = 12;
+
 export default function ListsScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const contentWidth = Math.min(windowWidth, MAX_CONTENT_WIDTH);
+  const numColumns = Math.max(2, Math.floor((contentWidth - GUTTER * 2 + GAP) / (MIN_CARD_WIDTH + GAP)));
+  const cardWidth = Math.floor((contentWidth - GUTTER * 2 - GAP * (numColumns - 1)) / numColumns);
   const theme = Colors[useColorScheme() ?? "light"];
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [watchlist, setWatchlist] = useState<Collection | null>(null);
   const [lists, setLists] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,8 +38,12 @@ export default function ListsScreen() {
         fetchProfile(token),
         fetchUsersCollections(token) as Promise<PaginatedCollections>,
       ]);
-      setWatchlist({ ...profileData.watchList, description: "", is_watchlist: true });
-      setLists(collectionsPage.results.filter((c: Collection) => c.public_id !== profileData.watchList.public_id));
+      const watchlist: Collection = { ...profileData.watchList, description: "", is_watchlist: true };
+      // Watchlist is the first tile in the grid, so "New list" stays above all lists.
+      setLists([
+        watchlist,
+        ...collectionsPage.results.filter((c: Collection) => c.public_id !== watchlist.public_id),
+      ]);
     } catch (error) {
       console.error("Failed to load lists:", error);
     } finally {
@@ -67,22 +79,18 @@ export default function ListsScreen() {
       <FlatList
         data={lists}
         keyExtractor={(item) => item.public_id}
-        numColumns={2}
+        key={`lists-${numColumns}`}
+        numColumns={numColumns}
         columnWrapperStyle={lists.length > 0 ? listsGridStyles.row : undefined}
         ListHeaderComponent={
           <View>
             {header}
-            {watchlist ? (
-              <View style={[listsGridStyles.row, styles.watchlistRow]}>
-                <ListCard list={watchlist} theme={theme} />
-              </View>
-            ) : null}
             <NewListButton theme={theme} style={styles.newListSpacing} />
           </View>
         }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={<ListsEmptyState theme={theme} />}
-        renderItem={({ item }) => <ListCard list={item} theme={theme} />}
+        renderItem={({ item }) => <ListCard list={item} theme={theme} width={cardWidth} />}
       />
     </ThemedView>
   );
@@ -98,6 +106,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 32,
+    width: "100%",
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
   header: {
     paddingHorizontal: 20,
@@ -124,8 +135,5 @@ const styles = StyleSheet.create({
   },
   newListSpacing: {
     marginTop: 16,
-  },
-  watchlistRow: {
-    marginTop: 4,
   },
 });
