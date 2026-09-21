@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from movie_csv.models import Collection
+from movie_csv.models import Collection, VideoEssay
 from movie_csv.serializers import ProfileSerializer
 from movie_csv.views.api import CollectionDetail, CollectionList, RemoveCollection
 
@@ -65,10 +65,53 @@ class WatchlistTests(TestCase):
         self.assertEqual(data["public_id"], str(legacy.public_id))
         self.assertEqual(Collection.objects.filter(owner=self.me).count(), 1)
 
-    def test_an_ordinary_list_with_the_old_name_is_not_mistaken_for_the_watchlist(self):
-        ordinary = Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me)
+    # --- adopting a legacy row (no dependence on migration timing) -------------
+
+    def test_adopts_an_unflagged_legacy_row_with_its_essays_instead_of_creating_a_new_one(self):
+        essay = VideoEssay.objects.create(title="E", owner=self.me)
+        legacy = Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me)
+        legacy.essays.add(essay)
         data = self._profile_watchlist(self.me)
-        self.assertNotEqual(data["public_id"], str(ordinary.public_id))
+        self.assertEqual(data["public_id"], str(legacy.public_id))
+        self.assertEqual(len(data["essays"]), 1)
+        legacy.refresh_from_db()
+        self.assertTrue(legacy.is_watchlist)
+        self.assertEqual(Collection.objects.filter(owner=self.me).count(), 1)
+
+    def test_adopts_the_lowest_id_when_there_are_several_legacy_rows(self):
+        first = Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me)
+        second = Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me)
+        data = self._profile_watchlist(self.me)
+        self.assertEqual(data["public_id"], str(first.public_id))
+        second.refresh_from_db()
+        self.assertFalse(second.is_watchlist)
+
+    def test_does_not_adopt_lists_that_only_look_similar(self):
+        Collection.objects.create(name="My Watchlist favorites", owner=self.me)
+        Collection.objects.create(name="Watchlist", owner=self.me)  # right idea, but not the legacy name
+        Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.friend)  # someone else's
+        data = self._profile_watchlist(self.me)
+        created = Collection.objects.get(public_id=data["public_id"])
+        self.assertTrue(created.is_watchlist)
+        self.assertEqual(created.owner, self.me)
+        self.assertEqual(Collection.objects.filter(owner=self.me).count(), 3)
+        self.assertEqual(Collection.objects.filter(owner=self.me, is_watchlist=True).count(), 1)
+        self.assertFalse(Collection.objects.get(owner=self.friend).is_watchlist)
+
+    def test_an_existing_flagged_watchlist_wins_over_a_legacy_row(self):
+        flagged = Collection.objects.create(name="Watchlist", owner=self.me, is_watchlist=True)
+        legacy = Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me)
+        data = self._profile_watchlist(self.me)
+        self.assertEqual(data["public_id"], str(flagged.public_id))
+        legacy.refresh_from_db()
+        self.assertFalse(legacy.is_watchlist)
+
+    def test_adoption_is_idempotent(self):
+        Collection.objects.create(name="user_2meClerkId's Watchlist", owner=self.me)
+        first = self._profile_watchlist(self.me)
+        second = self._profile_watchlist(self.me)
+        self.assertEqual(first["public_id"], second["public_id"])
+        self.assertEqual(Collection.objects.filter(owner=self.me).count(), 1)
 
     # --- title ----------------------------------------------------------------
 

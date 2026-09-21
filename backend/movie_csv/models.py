@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
 import uuid
@@ -79,4 +79,30 @@ class Collection(models.Model):
                 name="one_watchlist_per_owner",
             ),
         ]
+
+    @classmethod
+    def watchlist_for(cls, user):
+        """The user's watchlist: the flagged row, else their legacy "<clerk id>'s Watchlist"
+        row (flagged now, keeping its essays), else a new one. Adopting the legacy row here
+        means it doesn't matter whether this code or migration 0011 reaches an owner first."""
+        watchlist = cls.objects.filter(owner=user, is_watchlist=True).first()
+        if watchlist is not None:
+            return watchlist
+        legacy = (
+            cls.objects.filter(owner=user, is_watchlist=False, name=f"{user.username}'s Watchlist")
+            .order_by("id")
+            .first()
+        )
+        if legacy is not None:
+            try:
+                with transaction.atomic():
+                    cls.objects.filter(pk=legacy.pk).update(is_watchlist=True)
+                legacy.is_watchlist = True
+                return legacy
+            except IntegrityError:
+                pass  # another request flagged or created the watchlist first
+        watchlist, _ = cls.objects.get_or_create(
+            owner=user, is_watchlist=True, defaults={"name": "Watchlist"}
+        )
+        return watchlist
 

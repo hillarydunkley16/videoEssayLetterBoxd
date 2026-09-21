@@ -53,6 +53,14 @@ Every task is tests-first (RED, then GREEN) and one commit each.
 - Files: `movie_csv/serializers.py`, `movie_csv/views/api.py`, `movie_csv/test_watchlist.py` (new) · Scope: S
 - Depends on: F3a (same release)
 
+### F3c: Adopt a legacy watchlist row instead of creating a second one
+Found when running the app locally: `runserver` reloaded onto the new code before `migrate` ran, so `get_watchList` created an empty flagged row and migration 0011 then skipped that owner, orphaning their real watchlist (3 essays). Production runs `migrate` before serving, so it can't happen there, but the code shouldn't depend on ordering.
+- [x] RED: adopts an unflagged `"<clerk id>'s Watchlist"` row (keeping its essays); lowest id wins; lists that merely look similar are not adopted; an existing flagged row wins; idempotent
+- [x] `Collection.watchlist_for(user)`: flagged row, else adopt the legacy row (atomic, falls back on `IntegrityError`), else create; `get_watchList` uses it
+- [x] Removed `test_an_ordinary_list_with_the_old_name_is_not_mistaken_for_the_watchlist`: it asserted the opposite of the intended adoption behavior
+- [x] Repaired the local dev DB (flagged row 3, deleted the empty row 4)
+- Files: `movie_csv/models.py`, `movie_csv/serializers.py`, `movie_csv/test_watchlist.py`
+
 ### Checkpoint: Complete
 - [x] Full suite green; no raw Clerk id in any API response for other users (serializer sweep: all names go through display_username)
 - [ ] Ready for review / PR

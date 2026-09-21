@@ -149,9 +149,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     watchList = serializers.SerializerMethodField()
     def get_watchList(self, obj): 
         # Found by flag, not by name: the name used to embed the Clerk id (see migration 0011).
-        watchList, created = Collection.objects.get_or_create(
-            owner=obj.user, is_watchlist=True, defaults={"name": "Watchlist"}
-        )
+        watchList = Collection.watchlist_for(obj.user)
         return CollectionSerializer(watchList, context=self.context).data
     def get_user(self, obj):
         # The frontend's Profile type expects the user as an object, not a bare pk.
