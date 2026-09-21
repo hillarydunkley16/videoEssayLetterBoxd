@@ -38,8 +38,8 @@ Every task is tests-first (RED, then GREEN) and one commit each.
 
 ### F3a: Flag watchlists + one-watchlist-per-owner constraint
 - [x] Read-only prod check for owners with more than one `"<username>'s Watchlist"` row: none (2 users, 2 watchlists, 0 duplicates, 0 flagged)
-- [ ] RED: migration-function tests — flags the lowest-id `"<owner.username>'s Watchlist"` per owner (`is_watchlist=True`); leaves other lists and duplicates unflagged; reverse unflags; nothing renamed or deleted
-- [ ] `RunPython` migration (reversible) then a partial `UniqueConstraint(fields=["owner"], condition=Q(is_watchlist=True))`
+- [x] RED: migration-function tests — flags the lowest-id `"<owner.username>'s Watchlist"` per owner (`is_watchlist=True`); leaves other lists and duplicates unflagged; reverse unflags; nothing renamed or deleted
+- [x] `RunPython` migration (reversible) then a partial `UniqueConstraint(fields=["owner"], condition=Q(is_watchlist=True))`
 - Acceptance: each owner has at most one `is_watchlist=True` row; no data deleted or renamed
 - Verify: `python manage.py test movie_csv.test_watchlist_migration` · `makemigrations --check` · migrate forward and backward on a copy of dev data
 - Files: `movie_csv/models.py`, `movie_csv/migrations/0011_*.py`, `movie_csv/migrations/0012_*.py`, `movie_csv/test_watchlist_migration.py` (new) · Scope: M

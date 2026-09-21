@@ -55,7 +55,7 @@ F3a watchlist data migration + unique constraint  ──> F3b switch code to is_
 - [x] F2: `UserSerializer` shows display username
 
 ### Phase 2: Watchlist
-- [ ] F3a: Flag watchlists + one-watchlist-per-owner constraint
+- [x] F3a: Flag watchlists + one-watchlist-per-owner constraint
 - [ ] F3b: Look up and protect watchlists by `is_watchlist`; title from the display username
 
 ### Checkpoint: Complete

@@ -70,3 +70,13 @@ class Collection(models.Model):
     essays = models.ManyToManyField("VideoEssay", related_name="lists")
     is_watchlist = models.BooleanField(default = False)
 
+    class Meta:
+        constraints = [
+            # At most one watchlist per owner; ordinary lists are unrestricted.
+            models.UniqueConstraint(
+                fields=["owner"],
+                condition=models.Q(is_watchlist=True),
+                name="one_watchlist_per_owner",
+            ),
+        ]
+
