@@ -20,9 +20,9 @@ Every task is tests-first (RED, then GREEN) and one commit each.
 ## Phase 1: Small correctness fixes
 
 ### F1: `is_liked` on logs
-- [ ] RED: `is_liked` true only when the viewer liked the log; false with no request/anonymous; no extra queries (uses prefetched `likes`)
-- [ ] `LogSerializer.is_liked` (viewer-relative, computed from `obj.likes.all()` in Python)
-- [ ] `logInfo.tsx`: `setLiked(data.is_liked)`; `types/log.ts` add `is_liked`; fix `types/like.ts` (`user: number`, `post: number`)
+- [x] RED: `is_liked` true only when the viewer liked the log; false with no request/anonymous; no extra queries (uses prefetched `likes`)
+- [x] `LogSerializer.is_liked` (viewer-relative, computed from `obj.likes.all()` in Python)
+- [x] `logInfo.tsx`: `setLiked(data.is_liked)`; `types/log.ts` add `is_liked`; fix `types/like.ts` (`user: number`, `post: number`)
 - Acceptance: reopening a liked log shows the filled heart
 - Verify: `python manage.py test movie_csv.test_log_is_liked movie_csv.test_log_owner_username` · `npx tsc --noEmit` (no new errors vs 37 baseline) · `npx jest`
 - Files: `movie_csv/serializers.py`, `movie_csv/test_log_is_liked.py` (new), `frontend/src/screens/logInfo.tsx`, `frontend/src/types/log.ts`, `frontend/src/types/like.ts` · Scope: M (5 files)

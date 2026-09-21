@@ -16,6 +16,7 @@ export interface Log {
     owner: string;        // just a username string
     owner_id: number;     // the numeric Django ID
     is_mine: boolean;     // whether the signed-in viewer owns this log (computed by the backend)
+    is_liked: boolean;    // whether the signed-in viewer has liked this log (computed by the backend)
     owner_image: string | null;  // the profile image URL
     likes: Like[];
     comments: Comment[]

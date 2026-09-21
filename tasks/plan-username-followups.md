@@ -51,7 +51,7 @@ F3a watchlist data migration + unique constraint  ──> F3b switch code to is_
 - [ ] Other users get 403 on PATCH/DELETE; owners unaffected; full suite green; human sign-off
 
 ### Phase 1: Small correctness fixes
-- [ ] F1: `is_liked` on logs (fixes liked-by-me)
+- [x] F1: `is_liked` on logs (fixes liked-by-me)
 - [ ] F2: `UserSerializer` shows display username
 
 ### Phase 2: Watchlist

@@ -59,11 +59,7 @@ export default function LogInfo({ id, onTitleLoaded }: Props) {
         setLog(data);
         onTitleLoaded?.(data.essay_details.title);
         setLikesCount(data.likes.length);
-        setLiked(
-          data.likes.some(
-            (item) => item.user.id === Number(user?.id)
-          )
-        );
+        setLiked(data.is_liked);
         setWatchlistId(profile.watchList.public_id);
         setInWatchlist(
           profile.watchList.essays.some((e) => e.public_id === data.essay_details.public_id)

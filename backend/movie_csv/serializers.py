@@ -64,6 +64,15 @@ class LogSerializer(serializers.HyperlinkedModelSerializer):
     owner = serializers.SerializerMethodField()
     owner_id = serializers.ReadOnlyField(source = "owner.id")
     is_mine = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    def get_is_liked(self, obj):
+        # Relative to whoever is viewing. Scans `likes` in Python so a prefetch (see
+        # with_log_relations) covers it; False when no request is in the context.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        if viewer is None or not viewer.is_authenticated:
+            return False
+        return any(like.user_id == viewer.id for like in obj.likes.all())
     def get_owner(self, obj):
         return display_username(obj.owner)
     def get_is_mine(self, obj):
@@ -103,6 +112,7 @@ class LogSerializer(serializers.HyperlinkedModelSerializer):
             "owner",
             "owner_id",
             "is_mine",
+            "is_liked",
             "owner_image",
             "likes",
             "comments"
