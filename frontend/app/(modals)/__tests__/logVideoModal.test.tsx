@@ -11,6 +11,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 
+let mockParams: Record<string, string> = { essayId: 'essay-123' };
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
@@ -20,7 +21,7 @@ jest.mock('expo-router', () => ({
     replace: (...args: unknown[]) => mockReplace(...args),
     canGoBack: () => true,
   },
-  useLocalSearchParams: () => ({ essayId: 'essay-123' }),
+  useLocalSearchParams: () => mockParams,
 }));
 
 const mockCreateLog = jest.fn();
@@ -50,6 +51,18 @@ jest.setTimeout(20000);
 describe('logVideoModal Save button', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockParams = { essayId: 'essay-123' };
+  });
+
+  it('starts from the rating handed over from the quick-log sheet', async () => {
+    mockParams = { essayId: 'essay-123', rating: '4' };
+    mockCreateLog.mockResolvedValue(undefined);
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    await waitFor(() => expect(mockCreateLog).toHaveBeenCalledTimes(1));
+    expect(mockCreateLog.mock.calls[0][1]).toMatchObject({ essay: 'essay-123', rating: 4 });
   });
 
   it('creates the log only once when Save is double-tapped, then dismisses', async () => {

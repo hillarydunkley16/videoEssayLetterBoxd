@@ -54,6 +54,15 @@ export default function QuickLog() {
         console.log("rating value: ", ratingValue)
         setSheetIndex(index);
     }, []);
+    // Add Review replaces the sheet with the full review modal, which creates the log
+    // itself — so closing must not also auto-save a quick log for the same watch.
+    const handleAddReview = useCallback(() => {
+        closeHandledRef.current = true;
+        router.replace({
+            pathname: '/logVideoModal',
+            params: { essayId: essayId as string, rating: String(ratingValue) },
+        });
+    }, [essayId, ratingValue]);
     const handleRatingChange = useCallback((value: number) => {
     setRatingValue(value);
     }, []);
@@ -135,6 +144,7 @@ export default function QuickLog() {
                   onRatingChange={handleRatingChange}
                   onRatingSetChange={handleRatingSetChange}
                   onDone={() => bottomSheetRef.current?.close()}
+                  onAddReview={handleAddReview}
                   style={styles.container}
                 />
               )}

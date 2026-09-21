@@ -10,11 +10,12 @@ import React from 'react';
 import { act, render } from '@testing-library/react-native';
 
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   Link: 'Link',
   router: {
     back: (...args: unknown[]) => mockBack(...args),
-    replace: jest.fn(),
+    replace: (...args: unknown[]) => mockReplace(...args),
     canGoBack: () => true,
   },
   useLocalSearchParams: () => ({ essayId: 'essay-123' }),
@@ -43,6 +44,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
 type QuickLogProps = {
   onRatingChange: (v: number) => void;
   onRatingSetChange: (b: boolean) => void;
+  onAddReview: () => void;
 };
 let quickLogProps: QuickLogProps | undefined;
 jest.mock('@/src/screens/QuickLogScreen', () => (props: QuickLogProps) => {
@@ -117,5 +119,21 @@ describe('quickLog sheet close', () => {
 
     await act(async () => { resolveCreate(); });
     expect(mockCreateLog).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands off to the full review modal without also auto-saving a quick log', async () => {
+    render(<QuickLog />);
+    rate(4);
+    act(() => {
+      quickLogProps!.onAddReview();
+    });
+    closeSheet();
+
+    await act(async () => {});
+    expect(mockCreateLog).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/logVideoModal',
+      params: { essayId: 'essay-123', rating: '4' },
+    });
   });
 });

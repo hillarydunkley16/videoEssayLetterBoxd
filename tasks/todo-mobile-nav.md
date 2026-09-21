@@ -84,8 +84,8 @@ to `logVideoModal`, and the return to Home. Debugging task; fix only what blocks
 ---
 
 **Found while reading, NOT fixed (need a decision):**
-1. **Add Review can create two logs.** Rating in the sheet is saved when the sheet closes; "Add Review" pushes `logVideoModal`, which creates its own log. Rate then Add Review → two logs for one viewing.
-2. **Heart button is broken.** `QuickLogScreen.handleLike` calls `likeLog(essayId)`, but the endpoint is `/api/logList/<log id>/like/` and no log exists yet.
+1. ✅ FIXED (per approval, option: skip auto-save) — **Add Review can create two logs.** Rating in the sheet is saved when the sheet closes; "Add Review" pushes `logVideoModal`, which creates its own log. Rate then Add Review → two logs for one viewing. Now: Add Review `router.replace`s to `/logVideoModal?essayId&rating`, sets `closeHandledRef` so nothing auto-saves, and the modal starts from the passed rating. Tests in `quickLog.test.tsx` and `logVideoModal.test.tsx`.
+2. ✅ FIXED (removed from the quick-log sheet) — **Heart button is broken.** `QuickLogScreen.handleLike` calls `likeLog(essayId)`, but the endpoint is `/api/logList/<log id>/like/` and no log exists yet.
 3. Watch / Watchlist toggles are local-only; `rewatch` never reaches the parent payload (`onWatchedChange` is never called).
 
 **Still needs a human (simulator + Clerk sign-in + backend):**

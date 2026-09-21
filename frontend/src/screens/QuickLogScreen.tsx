@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, Pressable, StyleSheet, useColorScheme } f
 import { useRouter } from 'expo-router';
 import { ThemedText } from "@/components/themed-text";
 import { useAuthPost} from '../api/authPost';
-import { likeLog } from '../api/logs';
 import { TappableRatingDots } from '@/components/ui/RatingDots';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from '@/constants/theme';
@@ -19,18 +18,18 @@ type Props = {
     onLikedChange?: (liked: boolean) => void;
     onWatchListChange?: (inWatchList: boolean) => void;
     onDone?: () => void;
+    onAddReview?: () => void;
     initialRating?: number;
 }
 // date is automatically set to today's date
 // review text will be blank
 //
-export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange, style, initialRating, onDone}: Props){
+export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange, style, initialRating, onDone, onAddReview}: Props){
     const theme = Colors[useColorScheme() ?? 'light'];
     const authFetch = useAuthPost();
     const [rating, setRating] = useState<number>(initialRating ?? 0);
     const [rewatch, setRewatch] = useState(false);
     const [error, setError] = useState("");
-    const [liked, setLiked] = useState(false);
     const [ratingIsSet,  setRatingIsSet] = useState(false);
     const [watchList, setWatchList] = useState(false);
     const handleWatchList = async () => {
@@ -39,12 +38,6 @@ export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange,
 
         setWatchList((prev) => !prev);
     }
-    const handleLike = async () => {
-            if (!id) return;
-            const result = await likeLog(id.toString(), authFetch);
-            // setLikesCount(result.data.likes_count);
-            setLiked(result.data.liked ?? ((prev) => !prev));
-        }
     const handleWatched = async () => {
         // similar to handle like but for watched status
         if (!id) return;
@@ -69,10 +62,6 @@ export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange,
                     <MaterialCommunityIcons name={rewatch ? "eye" : "eye-outline"} size={ICON_SIZE} color={rewatch ? theme.accent : theme.muted} />
                     <ThemedText style={[styles.iconButtonText, { color: theme.muted, fontFamily: Fonts?.sans }]}>{rewatch ? "Watched" : "Watch"}</ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleLike} style={styles.iconButton}>
-                    <MaterialCommunityIcons name={liked ? "heart" : "heart-outline"} size={ICON_SIZE} color={liked ? theme.accent : theme.muted} />
-                    <ThemedText style={[styles.iconButtonText, { color: theme.muted, fontFamily: Fonts?.sans }]}>{liked ? 'Liked' : 'Like'}</ThemedText>
-                </TouchableOpacity>
                 <TouchableOpacity onPress = {handleWatchList} style={styles.iconButton}>
                     <MaterialCommunityIcons name={watchList ? "clock-minus" : "clock-plus-outline"} size={ICON_SIZE} color={watchList ? theme.accent : theme.muted} />
                     <ThemedText style={[styles.iconButtonText, { color: theme.muted, fontFamily: Fonts?.sans }]}>Watchlist</ThemedText>
@@ -95,7 +84,7 @@ export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange,
                 <Pressable style={styles.linkButton}>
                     <Text style={[styles.linkButtonText, { color: theme.text, fontFamily: Fonts?.sansMedium }]}>Share</Text>
                 </Pressable>
-                <Pressable style={styles.linkButton} onPress={() => router.push(`/logVideoModal?essayId=${id}`)}>
+                <Pressable style={styles.linkButton} onPress={() => (onAddReview ? onAddReview() : router.push(`/logVideoModal?essayId=${id}&rating=${rating}`))}>
                     <Text style={[styles.linkButtonText, { color: theme.text, fontFamily: Fonts?.sansMedium }]}>Add Review</Text>
                 </Pressable>
                 <Pressable style={styles.linkButton} onPress={() => router.push(`/(modals)/listVideoEssay?essayId=${id}`)}>

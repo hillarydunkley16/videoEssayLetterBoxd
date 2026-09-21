@@ -12,13 +12,14 @@ export default function LogVideoModal() {
   const authFetch = useAuthPost();  // ← use this instead of imported authFetch
     const [loading, setLoading] = useState(false);
     const submittingRef = useRef(false);
-    const [ratingValue, setRatingValue] = useState(0);
+    const params = useLocalSearchParams<{essayId?: string | string[]; rating?: string}>();
+    // A rating already given in the quick-log sheet arrives as a param.
+    const [ratingValue, setRatingValue] = useState(Number(params.rating) || 0);
     const [rewatch, setRewatch] = useState(false);
     const [reviewText, setReviewText] = useState("");
     const [date, setDate] = useState(new Date());
     const [error, setError] = useState("");
     const theme = Colors[useColorScheme() ?? 'light'];
-    const params = useLocalSearchParams<{essayId?: string | string[]}>();
     const essayId =
       typeof params.essayId === "string" ?
       params.essayId
