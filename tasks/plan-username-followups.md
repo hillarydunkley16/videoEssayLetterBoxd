@@ -52,7 +52,7 @@ F3a watchlist data migration + unique constraint  ──> F3b switch code to is_
 
 ### Phase 1: Small correctness fixes
 - [x] F1: `is_liked` on logs (fixes liked-by-me)
-- [ ] F2: `UserSerializer` shows display username
+- [x] F2: `UserSerializer` shows display username
 
 ### Phase 2: Watchlist
 - [ ] F3a: Flag watchlists + one-watchlist-per-owner constraint

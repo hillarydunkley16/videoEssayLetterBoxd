@@ -125,6 +125,10 @@ class UserSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True
     )
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        return display_username(obj)
 
     class Meta:
         model = User

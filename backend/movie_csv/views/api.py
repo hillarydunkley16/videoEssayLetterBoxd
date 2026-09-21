@@ -204,7 +204,7 @@ class logFormView():
 class UserList(generics.ListAPIView): 
     permission_classes = [IsAuthenticated]
     # authentication_classes = [JWTAuthentication]
-    queryset = User.objects.all()
+    queryset = User.objects.select_related("profile").prefetch_related("logs").order_by("id")
     serializer_class = UserSerializer
 #combine user detail with profile so you just get the user info once, comes with user model class, user logs, profile details (imageurl etc)
 class UserDetail(generics.RetrieveAPIView): 

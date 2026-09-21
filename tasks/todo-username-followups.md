@@ -28,8 +28,8 @@ Every task is tests-first (RED, then GREEN) and one commit each.
 - Files: `movie_csv/serializers.py`, `movie_csv/test_log_is_liked.py` (new), `frontend/src/screens/logInfo.tsx`, `frontend/src/types/log.ts`, `frontend/src/types/like.ts` · Scope: M (5 files)
 
 ### F2: `UserSerializer` shows the display username
-- [ ] RED: `GET /api/users/` rows show `display_username` / "Anonymous", never the Clerk id; constant query count
-- [ ] `UserSerializer.username` uses `display_username`; `UserList` queryset `select_related("profile")`
+- [x] RED: `GET /api/users/` rows show `display_username` / "Anonymous", never the Clerk id; constant query count
+- [x] `UserSerializer.username` uses `display_username`; `UserList` queryset `select_related("profile")`
 - Acceptance: no Clerk id in `/api/users/` responses
 - Verify: `python manage.py test movie_csv.test_user_list`
 - Files: `movie_csv/serializers.py`, `movie_csv/views/api.py`, `movie_csv/test_user_list.py` (new) · Scope: S
