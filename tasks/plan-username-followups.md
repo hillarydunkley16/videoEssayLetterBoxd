@@ -56,7 +56,7 @@ F3a watchlist data migration + unique constraint  ──> F3b switch code to is_
 
 ### Phase 2: Watchlist
 - [x] F3a: Flag watchlists + one-watchlist-per-owner constraint
-- [ ] F3b: Look up and protect watchlists by `is_watchlist`; title from the display username
+- [x] F3b: Look up and protect watchlists by `is_watchlist`; title from the display username
 
 ### Checkpoint: Complete
 - [ ] Watchlist page shows "<username>'s Watchlist" with no delete/edit controls; no raw Clerk ids in any API response for other users

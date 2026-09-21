@@ -564,7 +564,7 @@ class RemoveCollection(APIView):
             collection = Collection.objects.get(owner = self.request.user, public_id = collection_public_id)
         except: 
             return Response({"message": "Collection not found"}, status = 404)
-        if "Watchlist" in collection.name:
+        if collection.is_watchlist:
             return Response({"message": "Watchlist Collection cannot be Deleted"}, status = 403)
         else:
             collection.delete()

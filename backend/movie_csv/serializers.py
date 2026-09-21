@@ -148,9 +148,9 @@ class ProfileSerializer(serializers.ModelSerializer):
     is_following = serializers.SerializerMethodField()
     watchList = serializers.SerializerMethodField()
     def get_watchList(self, obj): 
+        # Found by flag, not by name: the name used to embed the Clerk id (see migration 0011).
         watchList, created = Collection.objects.get_or_create(
-        name=f"{obj.user.username}'s Watchlist", 
-        owner=obj.user
+            owner=obj.user, is_watchlist=True, defaults={"name": "Watchlist"}
         )
         return CollectionSerializer(watchList, context=self.context).data
     def get_user(self, obj):
@@ -202,6 +202,16 @@ class CollectionSerializer(serializers.ModelSerializer):
         viewer = getattr(request, "user", None)
         return bool(viewer is not None and viewer.is_authenticated and viewer.id == obj.owner_id)
     essays = VideoEssaySerializer(many=True, read_only=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.is_watchlist:
+            # Stored names may be the legacy "<clerk id>'s Watchlist"; never show them.
+            profile = getattr(instance.owner, "profile", None)
+            username = profile.display_username if profile else None
+            data["name"] = f"{username}'s Watchlist" if username else "Watchlist"
+        return data
+
     class Meta:
         model = Collection
         fields = (

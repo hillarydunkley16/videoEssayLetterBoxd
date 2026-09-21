@@ -45,16 +45,16 @@ Every task is tests-first (RED, then GREEN) and one commit each.
 - Files: `movie_csv/models.py`, `movie_csv/migrations/0011_*.py`, `movie_csv/migrations/0012_*.py`, `movie_csv/test_watchlist_migration.py` (new) · Scope: M
 
 ### F3b: Look up and protect watchlists by `is_watchlist`; title from the display username
-- [ ] RED: profile watchlist is found/created by `owner + is_watchlist=True` (no duplicates across repeated calls); `RemoveCollection` returns 403 only for `is_watchlist` and allows deleting a user list named "My Watchlist favorites"; watchlist `name` is `"<display username>'s Watchlist"` (plain "Watchlist" when the owner has none) and never contains the Clerk id; `is_watchlist: true` in responses
-- [ ] `get_watchList`: `get_or_create(owner=..., is_watchlist=True, defaults={"name": "Watchlist"})`; `CollectionSerializer.name` derived for `is_watchlist` rows; `RemoveCollection` checks the flag
-- [ ] `collectionInfo.tsx`: confirm delete/edit controls are hidden on the watchlist (already gated on `is_watchlist`)
+- [x] RED: profile watchlist is found/created by `owner + is_watchlist=True` (no duplicates across repeated calls); `RemoveCollection` returns 403 only for `is_watchlist` and allows deleting a user list named "My Watchlist favorites"; watchlist `name` is `"<display username>'s Watchlist"` (plain "Watchlist" when the owner has none) and never contains the Clerk id; `is_watchlist: true` in responses
+- [x] `get_watchList`: `get_or_create(owner=..., is_watchlist=True, defaults={"name": "Watchlist"})`; `CollectionSerializer.name` derived for `is_watchlist` rows; `RemoveCollection` checks the flag
+- [x] `collectionInfo.tsx`: confirm delete/edit controls are hidden on the watchlist (already gated on `is_watchlist`)
 - Acceptance: watchlist page title reads "<username>'s Watchlist" with no raw Clerk id and no delete/edit controls
 - Verify: `python manage.py test movie_csv` · manual: open own watchlist and another user's list
 - Files: `movie_csv/serializers.py`, `movie_csv/views/api.py`, `movie_csv/test_watchlist.py` (new) · Scope: S
 - Depends on: F3a (same release)
 
 ### Checkpoint: Complete
-- [ ] Full suite green; no raw Clerk id in any API response for other users
+- [x] Full suite green; no raw Clerk id in any API response for other users (serializer sweep: all names go through display_username)
 - [ ] Ready for review / PR
 
 ## For your review (no changes planned)

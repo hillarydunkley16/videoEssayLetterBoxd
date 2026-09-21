@@ -82,7 +82,7 @@ class CollectionOwnerTests(TestCase):
         row = self._rows(self._call(CollectionList.as_view(), self.friend))[0]
         self.assertNotIn("user_2", str(row))
 
-    # --- watchlist: naming is deliberately untouched ------------------------
+    # --- watchlist (lookup and naming are covered in test_watchlist.py) -----
 
     def _profile_data(self, profile_user, viewer):
         request = self.factory.get("/api/anything/")
@@ -97,11 +97,11 @@ class CollectionOwnerTests(TestCase):
         self.assertFalse(seen_by_other["is_owner"])
         self.assertEqual(own["owner"], "me_handle")
 
-    def test_watchlist_name_and_lookup_are_unchanged_so_no_duplicates(self):
+    def test_repeated_profile_views_never_duplicate_the_watchlist(self):
+        # Found by is_watchlist (see test_watchlist.py), so the stored name no longer matters.
         self._profile_data(self.me, self.me)
         self._profile_data(self.me, self.friend)
-        watchlists = Collection.objects.filter(owner=self.me, name="user_2meClerkId's Watchlist")
-        self.assertEqual(watchlists.count(), 1)
+        self.assertEqual(Collection.objects.filter(owner=self.me, is_watchlist=True).count(), 1)
 
     # --- query counts -----------------------------------------------------
 
