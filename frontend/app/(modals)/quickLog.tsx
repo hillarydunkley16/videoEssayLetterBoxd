@@ -27,6 +27,9 @@ export default function QuickLog() {
     const [date, setDate] = useState(new Date());
     const [watchList, setWatchList] = useState(false);
     const [error, setError] = useState("");
+    // useAuthPost returns a fresh function each render, so the close effect below re-runs
+    // on every re-render; this makes sure closing the sheet logs at most once.
+    const closeHandledRef = useRef(false);
     const isPresented = router.canGoBack();
     const params = useLocalSearchParams<{essayId?: string | string[]}>();
     const essayId = 
@@ -79,7 +82,8 @@ export default function QuickLog() {
     // Close modal when BottomSheet is fully closed
     useEffect(() => {
         const handleSheetClose = async () => {
-            if (sheetIndex === -1) {
+            if (sheetIndex === -1 && !closeHandledRef.current) {
+                closeHandledRef.current = true;
                 if (ratingIsSet && typeof essayId === "string") {
                   console.log('RATING IS SET');
                   const payload = {

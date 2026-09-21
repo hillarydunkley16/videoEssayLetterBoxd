@@ -43,7 +43,7 @@ pushes `/quickLog?essayId=<public_id>`. Without `mode=log`, tap still goes to
 **Verification:**
 - [x] `npx jest src/screens/__tests__/SearchScreen.logMode.test.tsx` passes
 - [x] `npx tsc --noEmit` shows no new errors (baseline has pre-existing ones; compare)
-- [x] Manual: type in the top bar in log mode, confirm `mode` survives (`router.setParams` merge check)
+- [ ] Manual: type in the top bar in log mode, confirm `mode` survives (`router.setParams` merge check) — NOT yet run; needs simulator (fold into T2/T5 manual pass)
 
 **Dependencies:** T0
 **Files likely touched:**
@@ -56,7 +56,7 @@ pushes `/quickLog?essayId=<public_id>`. Without `mode=log`, tap still goes to
 
 ---
 
-## Task 2: Make quickLog work end-to-end
+## Task 2: Make quickLog work end-to-end  ⚠️ CODE DONE, MANUAL VERIFY + 2 DECISIONS PENDING
 
 **Description:** `quickLog` has never had a caller. Drive it from T1's entry point and fix
 whatever breaks: sheet opening above the tab bar, rating → `createLog`, the swipe-up handoff
@@ -64,14 +64,14 @@ to `logVideoModal`, and the return to Home. Debugging task; fix only what blocks
 
 **Acceptance criteria:**
 - [ ] From log mode, selecting an essay opens the `quickLog` sheet with that essay
-- [ ] Setting a rating and dismissing/confirming creates exactly one log (no duplicates)
+- [x] Setting a rating and dismissing/confirming creates exactly one log (no duplicates) — fixed a real duplicate: close effect re-ran on every render because `useAuthPost()` returns a new fn each render; guarded with `closeHandledRef`. Covered by `app/(modals)/__tests__/quickLog.test.tsx` (RED was 3 calls, now 1)
 - [ ] The new log appears under "recently logged" on Home
-- [ ] Swiping/expanding opens `logVideoModal` with the same `essayId`
+- [ ] ~~Swiping/expanding opens `logVideoModal`~~ — **spec was wrong**: `snapPoints` is only `['90%']`, so there is no expanded state. The real handoff is the sheet's "Add Review" button (`QuickLogScreen` → `/logVideoModal?essayId=`). See decisions below.
 
 **Verification:**
 - [ ] Manual on iOS simulator (and Android emulator if available), full flow
-- [ ] Existing `app/(modals)/__tests__/logVideoModal.test.tsx` still passes (`npx jest app/\(modals\)`)
-- [ ] `npx tsc --noEmit` / `npm run lint`: no new errors
+- [x] Existing `logVideoModal` test still passes (full suite: 8 suites / 47 tests)
+- [x] `npx tsc --noEmit` (38 = baseline) / lint (0 errors)
 
 **Dependencies:** T1
 **Files likely touched:**
@@ -80,6 +80,20 @@ to `logVideoModal`, and the return to Home. Debugging task; fix only what blocks
 - `app/(modals)/_layout.tsx` (only if presentation options need changing)
 
 **Estimated scope:** Medium (unknown until run; stop and re-plan if it exceeds ~5 files)
+
+---
+
+**Found while reading, NOT fixed (need a decision):**
+1. **Add Review can create two logs.** Rating in the sheet is saved when the sheet closes; "Add Review" pushes `logVideoModal`, which creates its own log. Rate then Add Review → two logs for one viewing.
+2. **Heart button is broken.** `QuickLogScreen.handleLike` calls `likeLog(essayId)`, but the endpoint is `/api/logList/<log id>/like/` and no log exists yet.
+3. Watch / Watchlist toggles are local-only; `rewatch` never reaches the parent payload (`onWatchedChange` is never called).
+
+**Still needs a human (simulator + Clerk sign-in + backend):**
+- [ ] From log mode, selecting an essay opens the sheet with that essay
+- [ ] Rating + Done creates one log and it shows in Home "recently logged"
+- [ ] Sheet sits correctly above the tab bar
+- [ ] Typing in the top bar in log mode keeps `mode=log` (T1 `setParams` merge check)
+
 
 ---
 
