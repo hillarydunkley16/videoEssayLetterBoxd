@@ -16,6 +16,7 @@ import { Colors, Fonts } from "@/constants/theme";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { RatingDots } from "@/components/ui/RatingDots";
 import { fetchProfile } from "@/src/api/users";
+import UsernameGateBanner from "@/src/components/UsernameGateBanner";
 import { fetchUsersCollections } from "@/src/api/collection";
 import { deleteLog } from "@/src/api/logs";
 import { useChangeProfilePhoto } from "@/src/hooks/useChangeProfilePhoto";
@@ -105,6 +106,8 @@ export default function ProfileScreen() {
           <IconSymbol name="gearshape" size={20} color={theme.muted} />
         </TouchableOpacity>
       </View>
+
+      <UsernameGateBanner />
 
       <View style={[styles.identityRow, { paddingBottom: 22, borderColor: theme.border }]}>
         <View style={styles.idRow}>

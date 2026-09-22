@@ -14,6 +14,7 @@ import SignedOutHomeScreen from '@/src/screens/SignedOutHomeScreen'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import '../../global.css';
 import SwitchComponent from '@/src/screens/SearchScreen';
+import UsernameGateBanner from '@/src/components/UsernameGateBanner';
 export default function Page() {
   const [feed, setFeed] = useState<'everyone' | 'following'>('everyone')
   const theme = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark']
@@ -37,6 +38,7 @@ export default function Page() {
         </SignedOut>
         <SignedIn>
           {/* <ThemedText>Hello {user?.username}</ThemedText> */}
+           <UsernameGateBanner />
            <View style={[styles.feedTabs, { borderColor: theme.border }]}>
              {(['everyone', 'following'] as const).map((f) => (
                <TouchableOpacity key={f} testID={`home-tab-${f}`} style={styles.feedTab} onPress={() => setFeed(f)}>

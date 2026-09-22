@@ -43,6 +43,11 @@ jest.mock('@/src/screens/FollowingFeedScreen', () => {
   const FollowingFeed = () => <Text>FOLLOWING FEED</Text>;
   return FollowingFeed;
 });
+jest.mock('@/src/components/UsernameGateBanner', () => {
+  const { Text } = require('react-native');
+  const UsernameGateBanner = () => <Text>USERNAME BANNER</Text>;
+  return UsernameGateBanner;
+});
 
 import Page from '../index';
 
@@ -50,6 +55,11 @@ import Page from '../index';
 jest.setTimeout(20000);
 
 describe('home feed switch', () => {
+  it('mounts the username gate banner inside the signed-in feed', () => {
+    render(<Page />);
+    expect(screen.getByText('USERNAME BANNER')).toBeTruthy();
+  });
+
   it('shows the everyone feed by default', () => {
     render(<Page />);
 
