@@ -35,8 +35,9 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
 
 ### Checkpoint A — backend slice verified
 - [x] `python manage.py test` full suite green (298 tests)
-- [ ] Manual curl against a real youtube_id (dev server) confirms real oEmbed shape
-      matches what T1 assumed — fix now if it doesn't, before frontend depends on it
+- [x] Manual curl against a real youtube_id confirms real oEmbed shape matches what
+      T1 assumed — `title`/`author_name`/`thumbnail_url` all present as expected,
+      no mapping fix needed
 
 ### T3: frontend API client function
 - [ ] `src/api/videos.ts`: `getOrCreateVideoEssayByYoutubeId(youtubeId, token)` calling
