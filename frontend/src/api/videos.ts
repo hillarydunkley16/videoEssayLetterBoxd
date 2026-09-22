@@ -37,9 +37,20 @@ export async function fetchPopularVideoEssaysPublic(): Promise<PaginatedResponse
 }
 
 export async function getAVideoEssay(publicId: string, token: string): Promise<VideoEssayData> {
-    console.log("id received: ", publicId); 
+    console.log("id received: ", publicId);
     console.log("get a video essay function called!");
     return authFetch(`/VideoEssays/${publicId}/`, {}, token)
+}
+
+// Get-or-create a VideoEssay by youtube_id — backs the share-to-app flow
+// (a shared YouTube URL resolves to an essay without going through search).
+// Calls: POST /api/VideoEssays/from-youtube-id/
+export async function getOrCreateVideoEssayByYoutubeId(youtubeId: string, token: string): Promise<VideoEssay> {
+    return authFetch(
+        "/VideoEssays/from-youtube-id/",
+        { method: "POST", body: JSON.stringify({ youtube_id: youtubeId }) },
+        token
+    );
 }
 
 // export async function getLogData(publicId: string, token: string): Promise<VideoEssayData> {
