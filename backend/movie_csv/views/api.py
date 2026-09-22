@@ -13,6 +13,7 @@ from rest_framework import generics, permissions, filters
 from ..permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
 from ..services.youtube_search import youtube_search
+from ..services.youtube_oembed import fetch_oembed_metadata, OEmbedLookupError
 from django.contrib.auth import authenticate, login
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
@@ -476,7 +477,38 @@ class VideoEssayCreateView(generics.CreateAPIView):
         # Verify it's in the database
         exists = VideoEssay.objects.filter(public_id=instance.public_id).exists()
         print("EXISTS IN DATABASE:", exists)
-class VideoEssaySearch(APIView): 
+class VideoEssayFromYoutubeId(generics.GenericAPIView):
+    """Get-or-create a VideoEssay by youtube_id, fetching metadata via oEmbed on a miss.
+
+    Backs the share-to-app flow: a shared YouTube URL is resolved to a
+    VideoEssay's public_id without going through the SerpAPI search flow.
+    """
+    serializer_class = VideoEssaySerializer
+
+    def post(self, request, *args, **kwargs):
+        youtube_id = request.data.get("youtube_id")
+        if not youtube_id:
+            return Response({"error": "youtube_id is required"}, status=400)
+
+        existing = VideoEssay.objects.filter(youtube_id=youtube_id).first()
+        if existing:
+            return Response(VideoEssaySerializer(existing).data, status=200)
+
+        try:
+            metadata = fetch_oembed_metadata(youtube_id)
+        except OEmbedLookupError:
+            return Response({"error": "could not resolve youtube_id"}, status=422)
+
+        essay = VideoEssay.objects.create(
+            youtube_id=youtube_id,
+            youtube_url=f"https://www.youtube.com/watch?v={youtube_id}",
+            owner=request.user,
+            **metadata,
+        )
+        return Response(VideoEssaySerializer(essay).data, status=201)
+
+
+class VideoEssaySearch(APIView):
     serializer_class = VideoEssaySerializer
     def get_queryset(self, request, query):
         VideoEssay.objects.filter(title__icontains = query)
