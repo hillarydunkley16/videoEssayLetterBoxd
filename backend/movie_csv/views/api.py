@@ -1,3 +1,4 @@
+import re
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -772,6 +773,71 @@ class UserSearch(generics.ListAPIView):
             .select_related("profile")
             .order_by("match_rank", "-follower_total", "id")
         )
+
+
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
+USERNAME_MIN_LENGTH = 3
+USERNAME_MAX_LENGTH = 30
+# Tried in order against a single set of already-taken names (one query), so this never
+# issues a query per candidate. Mixes numeric and underscore suffixes per SPEC-username-onboarding.md.
+USERNAME_SUFFIXES = ["1", "2", "3", "4", "5", "_", "01", "02", "99", "_1", "_2"]
+
+
+def suggest_usernames(base, count=3):
+    """Up to `count` available usernames derived from `base`, each independently free.
+
+    Fetches every display_username starting with `base` in one query, then tries a fixed
+    suffix list against that in-memory set until `count` free ones are found.
+    """
+    taken = {
+        name.lower()
+        for name in Profile.objects.filter(display_username__istartswith=base).values_list(
+            "display_username", flat=True
+        )
+        if name
+    }
+    suggestions = []
+    for suffix in USERNAME_SUFFIXES:
+        candidate = f"{base}{suffix}"
+        if len(candidate) > USERNAME_MAX_LENGTH:
+            continue
+        if candidate.lower() in taken:
+            continue
+        suggestions.append(candidate)
+        taken.add(candidate.lower())
+        if len(suggestions) >= count:
+            break
+    return suggestions
+
+
+class UsernameAvailability(APIView):
+    """GET /api/users/username-available/?u=<candidate>
+
+    Public: there's no Clerk session yet at this point in sign-up. Checks
+    Profile.display_username only — a UX layer in front of Clerk, which remains the final
+    authority on uniqueness/format at signUp.create() time (SPEC-username-onboarding.md)."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        candidate = request.query_params.get("u", "").strip()
+        if not candidate or not USERNAME_PATTERN.match(candidate) or not (
+            USERNAME_MIN_LENGTH <= len(candidate) <= USERNAME_MAX_LENGTH
+        ):
+            return Response(
+                {
+                    "error": (
+                        f"Usernames must be {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} "
+                        "characters: letters, numbers, and underscores only."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        taken = Profile.objects.filter(display_username__iexact=candidate).exists()
+        if not taken:
+            return Response({"available": True, "suggestions": []})
+        return Response({"available": False, "suggestions": suggest_usernames(candidate)})
 
 
 class DeleteAccount(APIView):

@@ -40,6 +40,7 @@ urlpatterns = [
     path("VideoEssays/popular/", PopularVideoEssays.as_view(), name="popular-video-essays"),
     path("users/suggestions/", SuggestedUsers.as_view(), name="suggested-users"),
     path("users/search/", UserSearch.as_view(), name="user-search"),
+    path("users/username-available/", UsernameAvailability.as_view(), name="username-available"),
     path("users/<int:user_id>/follow/", FollowUser.as_view(), name="follow-user"),
     path("users/<int:user_id>/followers/", FollowersList.as_view(), name="followers-list"),
     path("users/<int:user_id>/following/", FollowingList.as_view(), name="following-list"),
