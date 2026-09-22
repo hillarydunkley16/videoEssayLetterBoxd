@@ -96,19 +96,33 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
       (see T5's acceptance note above for detail)
 - [x] `npx expo export --platform web` still succeeds (plugin doesn't break web build)
 
-### T6: signed-out share → sign-in → resume flow
-- [ ] Spike first: confirm whether Clerk's sign-in web view on Android kills the JS
-      runtime (determines in-memory vs. `expo-secure-store` for the pending youtube_id —
-      per spec's open question 2)
-- [ ] Hold the pending youtube_id across the redirect using whichever mechanism the
-      spike confirms is needed
-- [ ] After successful sign-in, resume into `quickLog` for the held video instead of
-      the default post-sign-in destination
-- Acceptance: sharing while signed out → sign-in/up flow → lands on `quickLog` for the
-  originally-shared video, not the home screen
-- Verify: manual, on the same Android dev-client build
-- Files: `frontend/app/(auth)/_layout.tsx` or `sign-in.tsx`/`sign-up.tsx`,
-  `frontend/src/lib/shareIntent.ts` (extend) · Scope: S
+### T6: signed-out share → sign-in → resume flow — done (54df062), verified on-device
+- [x] Spike done: this app's sign-in/sign-up is native RN screens (Clerk `useSignIn`/
+      `useSignUp` hooks, in-app forms) — no WebView, no system-browser redirect, JS
+      runtime never dies. **But** live testing found a *different* survival hazard the
+      spike question didn't anticipate: Clerk's session activation remounts the subtree
+      that owns this hook, which resets plain `useState`/`useRef` to their initial
+      values before `isSignedIn` ever flips true. In-memory state is still sufficient —
+      it just has to be module-level (survives a remount within the same JS process),
+      not component state. No `expo-secure-store` needed.
+- [x] Hold the pending youtube_id in a module-level variable in
+      `useShareIntentRouter.ts` (`pendingYoutubeId`, with a `__resetPendingShareForTests`
+      export for test isolation)
+- [x] Once signed in, resumes into `quickLog` for the held video automatically — no
+      re-share needed, confirmed live
+- [x] Second bug found and fixed along the way: the effect depended on the `shareIntent`
+      object itself, which `expo-share-intent` returns as a new reference every call;
+      the burst of re-renders sign-in produces was restarting (and cancelling) the
+      in-flight resolve before it could finish. Effects now depend only on primitives
+      (`sharedText`, `isSignedIn`).
+- Acceptance: sharing while signed out → sign-in → lands on `quickLog` for the
+  originally-shared video, not the home screen — **verified live on the Android
+  emulator**, backend confirmed a real `VideoEssay` row created
+  (`youtube_id=y6120QOlsfU`, "Darude - Sandstorm")
+- Verify: `npx jest --forceExit` (7/7 new tests, including 2 regression tests for the
+  bugs above — the object-identity-churn one and the remount one), `npx tsc --noEmit`
+  clean, `npx expo export --platform web` succeeds, full suite 186/186 passed
+- Files: `frontend/src/hooks/useShareIntentRouter.ts`, its test file · Scope: S
 
 ### T7: full verification pass
 - [ ] All Success Criteria in `tasks/spec-share-to-app.md` checked off
