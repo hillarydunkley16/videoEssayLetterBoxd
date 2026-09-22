@@ -4,7 +4,8 @@
 // export function updateUser(id, data)
 // export function getAUser()
 
-import { authFetch } from "./client";
+import axios from "axios";
+import { authFetch, API_BASE_URL } from "./client";
 import {User} from "../types/user";
 import { PaginatedResponse } from "../types/api";
 import { useAuthUpdate } from "./authUpdate";
@@ -77,4 +78,18 @@ export async function fetchSuggestedUsers(token: string): Promise<FollowListUser
 // People whose username contains q, never the viewer. q under 2 characters returns an empty page.
 export async function searchUsers(q: string, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
     return authFetch(`/users/search/?q=${encodeURIComponent(q)}&page=${page}`, {}, token);
+}
+
+export type UsernameAvailability = {
+    available: boolean;
+    suggestions: string[];
+}
+
+// Public — no token, since sign-up has no Clerk session yet (mirrors fetchPopularVideoEssaysPublic's
+// plain-axios pattern rather than authFetch). Clerk itself remains the final authority on submit.
+export async function checkUsernameAvailability(candidate: string): Promise<UsernameAvailability> {
+    const response = await axios.get<UsernameAvailability>(
+        `${API_BASE_URL}/users/username-available/?u=${encodeURIComponent(candidate)}`
+    );
+    return response.data;
 }
