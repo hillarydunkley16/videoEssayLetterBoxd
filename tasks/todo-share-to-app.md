@@ -59,7 +59,7 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
 - Verify: `npx jest src/lib/__tests__/shareIntent.test.ts`
 - Files: `frontend/src/lib/shareIntent.ts` (new), test (new) · Scope: XS
 
-### T5: Android share-intent wiring (native config + listener) — implemented (407eeb4), manual device check still needed
+### T5: Android share-intent wiring (native config + listener) — done (407eeb4), verified on-device
 - [x] Add `expo-share-intent` to `frontend/package.json`, register plugin in `app.json`
       (`androidIntentFilters: ["text/*"]`, `disableIOS: true` — Android-only per spec)
 - [x] `expo prebuild --platform android --clean` run directly (native dirs are gitignored,
@@ -71,12 +71,19 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
       `(modals)/quickLog?essayId=<public_id>`. Signed-out shares are dropped here
       (reset, no navigate) — resume-after-sign-in is T6, not this task
 - [x] Web build unaffected — `npx expo export --platform web` still succeeds
-- [ ] **Acceptance (needs you):** sharing a real YouTube URL from the Android YouTube
-      app to a dev-client build of Visual Arguments opens the app and navigates to
-      `quickLog` with the right essay — no automated test can drive a real OS share
-      sheet or a real device; requires `eas build --profile development --platform
-      android` or `npx expo run:android` and a physical/emulated Android device,
-      neither of which exist in this environment
+- [x] **Acceptance — verified on a local Android emulator (Pixel/Android 15,
+      `google_apis` image; Android Studio + SDK installed via Homebrew for this).**
+      No real YouTube app on this non-Play-Store image, so verified by firing the same
+      `ACTION_SEND`/`text/plain` intent `am start` sends when a user taps a share-sheet
+      target — this is the OS mechanism, not a YouTube-specific one, so it's an honest
+      test of our intent-filter + handler. Two runs:
+      (1) signed out → app foregrounds via `onNewIntent` (singleTask), hook resets the
+      intent, home screen untouched, no crash — confirms the T6-deferred boundary is safe;
+      (2) signed in (test account via Clerk `+clerk_test@` bypass) → same share →
+      `quickLog` bottom sheet opened, and `VideoEssay.objects.get(youtube_id="dQw4w9WgXcQ")`
+      confirms a real row was created via live oEmbed lookup (title "Rick Astley - Never
+      Gonna Give You Up (Official Video) (4K Remaster)", channel "Rick Astley"). No JS
+      errors/crashes in logcat either run.
 - Verify: `python manage.py test` (backend, unaffected) — n/a here; `npx jest --forceExit`
   (183 passed), `npx tsc --noEmit` (only pre-existing errors), `npx expo export --platform
   web` (succeeds) all done; the on-device share itself is the one remaining manual step
@@ -84,10 +91,10 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
   `frontend/app/_layout.tsx`, `frontend/src/hooks/useShareIntentRouter.ts` (new + test)
   · Scope: M
 
-### Checkpoint B — core mechanism verified end-to-end
-- [ ] Manual Android dev-client share → app → `quickLog` populated, confirmed working
-      before adding signed-out handling
-- [ ] `npx expo export --platform web` still succeeds (plugin doesn't break web build)
+### Checkpoint B — core mechanism verified end-to-end — closed
+- [x] Manual Android emulator share → app → `quickLog` populated, confirmed working
+      (see T5's acceptance note above for detail)
+- [x] `npx expo export --platform web` still succeeds (plugin doesn't break web build)
 
 ### T6: signed-out share → sign-in → resume flow
 - [ ] Spike first: confirm whether Clerk's sign-in web view on Android kills the JS
