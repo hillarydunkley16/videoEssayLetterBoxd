@@ -5,6 +5,13 @@ import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
+import { checkUsernameAvailability } from '@/src/api/users'
+
+// Matches the backend's USERNAME_MIN_LENGTH (movie_csv/views/api.py) — under this, there's
+// nothing meaningful to check yet, so we don't fire a request.
+const USERNAME_MIN_LENGTH = 3
+// Wait this long after the last keystroke so typing doesn't fire a request per character.
+const DEBOUNCE_MS = 250
 
 export default function Page() {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -18,6 +25,47 @@ export default function Page() {
   const [username, setUsername] = React.useState('')
   const [pendingVerification, setPendingVerification] = React.useState(false)
   const [code, setCode] = React.useState('')
+
+  // Live username availability. `null` means "unknown" (too short, not checked yet, or the
+  // check errored) — submit is only blocked when we positively know the name is taken, never
+  // just because we're unsure; Clerk is still the final authority on submit either way.
+  const [checkingUsername, setCheckingUsername] = React.useState(false)
+  const [usernameAvailable, setUsernameAvailable] = React.useState<boolean | null>(null)
+  const [usernameSuggestions, setUsernameSuggestions] = React.useState<string[]>([])
+  // Bumped on every keystroke, so a slow answer to an earlier candidate can't overwrite a
+  // newer one's result.
+  const usernameCheckId = React.useRef(0)
+
+  React.useEffect(() => {
+    const candidate = username.trim()
+    const mine = ++usernameCheckId.current
+
+    if (candidate.length < USERNAME_MIN_LENGTH) {
+      setCheckingUsername(false)
+      setUsernameAvailable(null)
+      setUsernameSuggestions([])
+      return
+    }
+
+    setCheckingUsername(true)
+    const handle = setTimeout(async () => {
+      try {
+        const result = await checkUsernameAvailability(candidate)
+        if (mine !== usernameCheckId.current) return
+        setUsernameAvailable(result.available)
+        setUsernameSuggestions(result.available ? [] : result.suggestions)
+      } catch (err) {
+        if (mine !== usernameCheckId.current) return
+        // Fail open: a network hiccup shouldn't block sign-up. Clerk checks again on submit.
+        setUsernameAvailable(null)
+        setUsernameSuggestions([])
+      } finally {
+        if (mine === usernameCheckId.current) setCheckingUsername(false)
+      }
+    }, DEBOUNCE_MS)
+
+    return () => clearTimeout(handle)
+  }, [username])
 
   // Handle submission of sign-up form
   const onSignUpPress = async () => {
@@ -84,6 +132,11 @@ export default function Page() {
       setErrors(getClerkErrorMessage(err))
     }
   }
+
+  // Blocked on empty/still-checking/known-taken only — never on `usernameAvailable === null`
+  // (unchecked, too short, or the check errored), since Clerk still validates on submit.
+  const submitDisabled =
+    !emailAddress || !password || !username || checkingUsername || usernameAvailable === false
 
   if (pendingVerification) {
     return (
@@ -161,6 +214,24 @@ export default function Page() {
         placeholderTextColor="#666666"
         onChangeText={(username) => setUsername(username)}
       />
+      {checkingUsername ? (
+        <ThemedText style={styles.usernameHint}>Checking…</ThemedText>
+      ) : usernameAvailable === true ? (
+        <ThemedText style={[styles.usernameHint, styles.usernameAvailable]}>✓ Available</ThemedText>
+      ) : usernameAvailable === false ? (
+        <View>
+          <ThemedText style={[styles.usernameHint, styles.usernameTaken]}>
+            That username is taken. Try:
+          </ThemedText>
+          <View style={styles.suggestions}>
+            {usernameSuggestions.map((suggestion) => (
+              <Pressable key={suggestion} onPress={() => setUsername(suggestion)}>
+                <ThemedText type="link">{suggestion}</ThemedText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <ThemedText style={styles.label}>Email address</ThemedText>
       <TextInput
         style={styles.input}
@@ -181,13 +252,14 @@ export default function Page() {
         onChangeText={(password) => setPassword(password)}
       />
       <Pressable
+        testID="signup-submit"
         style={({ pressed }) => [
           styles.button,
-          (!emailAddress || !password) && styles.buttonDisabled,
+          submitDisabled && styles.buttonDisabled,
           pressed && styles.buttonPressed,
         ]}
         onPress={onSignUpPress}
-        disabled={!emailAddress || !password}
+        disabled={submitDisabled}
       >
         <ThemedText style={styles.buttonText}>Continue</ThemedText>
       </Pressable>
@@ -235,6 +307,21 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#fff',
+  },
+  usernameHint: {
+    fontSize: 13,
+    marginTop: -6,
+  },
+  usernameAvailable: {
+    color: '#16a34a',
+  },
+  usernameTaken: {
+    color: '#dc2626',
+  },
+  suggestions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   button: {
     backgroundColor: '#0a7ea4',
