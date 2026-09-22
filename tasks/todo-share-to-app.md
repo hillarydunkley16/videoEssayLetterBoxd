@@ -39,20 +39,22 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
       T1 assumed — `title`/`author_name`/`thumbnail_url` all present as expected,
       no mapping fix needed
 
-### T3: frontend API client function
-- [ ] `src/api/videos.ts`: `getOrCreateVideoEssayByYoutubeId(youtubeId, token)` calling
+### T3: frontend API client function — done (438e38d)
+- [x] `src/api/videos.ts`: `getOrCreateVideoEssayByYoutubeId(youtubeId, token)` calling
       T2's endpoint via `authFetch`/`useAuthPost` pattern (matches `getAVideoEssay`)
-- [ ] Surfaces the backend's 4xx (invalid video) as a typed error the caller can show
+- [x] Surfaces the backend's 4xx (invalid video) as a typed error the caller can show
+      (authFetch already throws `API error: <status> — <body>` on a non-2xx; propagated as-is)
 - Acceptance: function shape matches existing `videos.ts` conventions (async, typed
   return using `VideoEssayData`)
 - Verify: `npx tsc --noEmit`
 - Files: `frontend/src/api/videos.ts` · Scope: XS
 
-### T4: shared-URL → youtube_id parser (frontend, parallel to T1-T3)
-- [ ] `src/lib/shareIntent.ts`: `extractYoutubeId(sharedText: string): string | null`
-      handling `youtu.be/<id>`, `youtube.com/watch?v=<id>`, and share text with extra
+### T4: shared-URL → youtube_id parser (frontend, parallel to T1-T3) — done (438e38d)
+- [x] `src/lib/shareIntent.ts`: `extractYoutubeId(sharedText: string): string | null`
+      handling `youtu.be/<id>`, `youtube.com/watch?v=<id>` (v= anywhere in the query
+      string, not just first), `youtube.com/shorts/<id>`, and share text with extra
       surrounding words/title before the URL
-- [ ] Unit tests for all three input shapes plus an unrelated/non-YouTube share (returns null)
+- [x] Unit tests for all input shapes plus non-YouTube/empty text (returns null) — 10 cases
 - Acceptance: all test cases pass; no false-positive match on a non-YouTube URL
 - Verify: `npx jest src/lib/__tests__/shareIntent.test.ts`
 - Files: `frontend/src/lib/shareIntent.ts` (new), test (new) · Scope: XS
