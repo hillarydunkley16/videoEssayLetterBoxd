@@ -59,19 +59,30 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
 - Verify: `npx jest src/lib/__tests__/shareIntent.test.ts`
 - Files: `frontend/src/lib/shareIntent.ts` (new), test (new) · Scope: XS
 
-### T5: Android share-intent wiring (native config + listener)
-- [ ] Add `expo-share-intent` to `frontend/package.json`, register plugin in `app.json`
-- [ ] `expo prebuild --clean` in a scratch checkout first; diff `AndroidManifest.xml`
-      against current for plugin conflicts (per plan risk) before committing config
-- [ ] `_layout.tsx` (or a small hook used there): on share-intent received, run T4's
-      parser, call T3's function, `router.push` to `(modals)/quickLog?essayId=<public_id>`
-- [ ] Web build unaffected — hook is a no-op on `Platform.OS === 'web'`
-- Acceptance: sharing a real YouTube URL from the Android YouTube app to a dev-client
-  build of Visual Arguments opens the app and navigates to `quickLog` with the right essay
-- Verify: manual, on an Android dev-client build (`eas build --profile development
-  --platform android` or `npx expo run:android`) — not automatable
-- Files: `frontend/app.json`, `frontend/package.json`, `frontend/app/_layout.tsx`,
-  new hook file (naming TBD at implementation) · Scope: M
+### T5: Android share-intent wiring (native config + listener) — implemented (407eeb4), manual device check still needed
+- [x] Add `expo-share-intent` to `frontend/package.json`, register plugin in `app.json`
+      (`androidIntentFilters: ["text/*"]`, `disableIOS: true` — Android-only per spec)
+- [x] `expo prebuild --platform android --clean` run directly (native dirs are gitignored,
+      confirmed disposable) — verified `AndroidManifest.xml` gets the expected
+      `ACTION_SEND` / `text/*` intent-filter with no conflicts against the existing
+      plugins; `android.package` auto-set to `com.hillarydunkley.frontend`
+- [x] `src/hooks/useShareIntentRouter.ts`, wired into `_layout.tsx`: on share-intent
+      received, runs T4's parser, calls T3's function, `router.push` to
+      `(modals)/quickLog?essayId=<public_id>`. Signed-out shares are dropped here
+      (reset, no navigate) — resume-after-sign-in is T6, not this task
+- [x] Web build unaffected — `npx expo export --platform web` still succeeds
+- [ ] **Acceptance (needs you):** sharing a real YouTube URL from the Android YouTube
+      app to a dev-client build of Visual Arguments opens the app and navigates to
+      `quickLog` with the right essay — no automated test can drive a real OS share
+      sheet or a real device; requires `eas build --profile development --platform
+      android` or `npx expo run:android` and a physical/emulated Android device,
+      neither of which exist in this environment
+- Verify: `python manage.py test` (backend, unaffected) — n/a here; `npx jest --forceExit`
+  (183 passed), `npx tsc --noEmit` (only pre-existing errors), `npx expo export --platform
+  web` (succeeds) all done; the on-device share itself is the one remaining manual step
+- Files: `frontend/app.json`, `frontend/package.json`, `frontend/package-lock.json`,
+  `frontend/app/_layout.tsx`, `frontend/src/hooks/useShareIntentRouter.ts` (new + test)
+  · Scope: M
 
 ### Checkpoint B — core mechanism verified end-to-end
 - [ ] Manual Android dev-client share → app → `quickLog` populated, confirmed working
