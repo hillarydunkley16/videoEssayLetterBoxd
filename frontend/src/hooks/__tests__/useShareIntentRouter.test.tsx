@@ -1,20 +1,25 @@
 /**
  * Wires a received share intent to the quickLog flow: parses a youtube_id out of the
  * shared text, resolves it to a VideoEssay via the backend, and navigates to quickLog.
- * Signed-out handling is deferred to T6 — for now a signed-out share is just dropped
- * (resetShareIntent, no navigation), per tasks/plan-share-to-app.md's task ordering.
+ * A signed-out share is held (not dropped) and resumed once isSignedIn flips true —
+ * this app's sign-in is native RN screens (Clerk useSignIn/useSignUp), no WebView/
+ * system-browser redirect, so in-memory state survives the sign-in flow (T6 spike).
  */
 import { renderHook, waitFor } from '@testing-library/react-native';
+import { act } from 'react-test-renderer';
 
 const mockResetShareIntent = jest.fn();
 let mockShareIntentState: { hasShareIntent: boolean; shareIntent: { text?: string; webUrl?: string } } = {
   hasShareIntent: false,
   shareIntent: {},
 };
+// Real expo-share-intent returns a new shareIntent object reference on every call —
+// this mock does too, on purpose, so a test can catch a hook that (re-)depends on
+// object identity instead of primitives (see the "unrelated re-renders" test below).
 jest.mock('expo-share-intent', () => ({
   useShareIntentContext: () => ({
     hasShareIntent: mockShareIntentState.hasShareIntent,
-    shareIntent: mockShareIntentState.shareIntent,
+    shareIntent: { ...mockShareIntentState.shareIntent },
     resetShareIntent: mockResetShareIntent,
   }),
 }));
@@ -33,13 +38,16 @@ jest.mock('@/src/api/videos', () => ({
   getOrCreateVideoEssayByYoutubeId: (...a: unknown[]) => mockGetOrCreate(...a),
 }));
 
-import { useShareIntentRouter } from '../useShareIntentRouter';
+import { useShareIntentRouter, __resetPendingShareForTests } from '../useShareIntentRouter';
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockShareIntentState = { hasShareIntent: false, shareIntent: {} };
   mockIsSignedIn = true;
   mockGetToken.mockResolvedValue('tok');
+  // pendingYoutubeId is module-level by design (see the hook's own comment on why) —
+  // reset it between tests so one test's pending share can't leak into the next.
+  __resetPendingShareForTests();
 });
 
 it('does nothing when there is no share intent', () => {
@@ -70,14 +78,82 @@ it('resolves the essay and navigates to quickLog when signed in', async () => {
   expect(mockResetShareIntent).toHaveBeenCalled();
 });
 
-it('resets without navigating when signed out (resume-after-sign-in is T6)', async () => {
+it('holds the share (no reset, no navigate) when signed out, waiting to resume', async () => {
   mockIsSignedIn = false;
   mockShareIntentState = {
     hasShareIntent: true,
     shareIntent: { webUrl: 'https://youtu.be/dQw4w9WgXcQ' },
   };
   renderHook(() => useShareIntentRouter());
-  await waitFor(() => expect(mockResetShareIntent).toHaveBeenCalled());
+  await act(async () => {});
   expect(mockGetOrCreate).not.toHaveBeenCalled();
   expect(mockPush).not.toHaveBeenCalled();
+  expect(mockResetShareIntent).not.toHaveBeenCalled();
+});
+
+it('resumes a held signed-out share once isSignedIn flips true', async () => {
+  mockIsSignedIn = false;
+  mockShareIntentState = {
+    hasShareIntent: true,
+    shareIntent: { webUrl: 'https://youtu.be/dQw4w9WgXcQ' },
+  };
+  mockGetOrCreate.mockResolvedValue({ public_id: 'abc-123' });
+  const { rerender } = renderHook(() => useShareIntentRouter());
+  await act(async () => {});
+  expect(mockPush).not.toHaveBeenCalled();
+
+  mockIsSignedIn = true;
+  rerender(undefined);
+  await waitFor(() => expect(mockPush).toHaveBeenCalled());
+  expect(mockGetOrCreate).toHaveBeenCalledWith('dQw4w9WgXcQ', 'tok');
+  expect(mockPush).toHaveBeenCalledWith('/(modals)/quickLog?essayId=abc-123');
+  expect(mockResetShareIntent).toHaveBeenCalled();
+});
+
+it('completes the resolve even through a burst of unrelated re-renders (regression: effect must not key off shareIntent object identity, which changes every call)', async () => {
+  mockShareIntentState = {
+    hasShareIntent: true,
+    shareIntent: { webUrl: 'https://youtu.be/dQw4w9WgXcQ' },
+  };
+  let resolveGetOrCreate: (v: { public_id: string }) => void;
+  mockGetOrCreate.mockReturnValue(new Promise((resolve) => { resolveGetOrCreate = resolve; }));
+
+  const { rerender } = renderHook(() => useShareIntentRouter());
+  // Several re-renders while the fetch is still in flight, exactly as sign-in's
+  // navigation/auth-state cascade produces in the real app. Each call above already
+  // hands back a fresh shareIntent object, so this exercises real identity churn.
+  for (let i = 0; i < 5; i++) {
+    await act(async () => {});
+    rerender(undefined);
+  }
+  resolveGetOrCreate!({ public_id: 'abc-123' });
+  await waitFor(() => expect(mockPush).toHaveBeenCalled());
+
+  expect(mockGetOrCreate).toHaveBeenCalledTimes(1);
+  expect(mockPush).toHaveBeenCalledTimes(1);
+  expect(mockPush).toHaveBeenCalledWith('/(modals)/quickLog?essayId=abc-123');
+});
+
+it('resumes a held signed-out share even if the owning component remounts before sign-in completes (regression: observed live — Clerk session activation remounts the subtree, wiping useState/useRef)', async () => {
+  mockIsSignedIn = false;
+  mockShareIntentState = {
+    hasShareIntent: true,
+    shareIntent: { webUrl: 'https://youtu.be/dQw4w9WgXcQ' },
+  };
+  mockGetOrCreate.mockResolvedValue({ public_id: 'abc-123' });
+
+  const first = renderHook(() => useShareIntentRouter());
+  await act(async () => {});
+  first.unmount();
+
+  // Simulate the subtree remount: a brand-new component instance, any React-local
+  // state (useState/useRef) from `first` is gone — only module-level state survives.
+  mockIsSignedIn = true;
+  mockShareIntentState = { hasShareIntent: false, shareIntent: {} };
+  renderHook(() => useShareIntentRouter());
+
+  await waitFor(() => expect(mockPush).toHaveBeenCalled());
+  expect(mockGetOrCreate).toHaveBeenCalledWith('dQw4w9WgXcQ', 'tok');
+  expect(mockPush).toHaveBeenCalledWith('/(modals)/quickLog?essayId=abc-123');
+  expect(mockResetShareIntent).toHaveBeenCalled();
 });
