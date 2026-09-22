@@ -91,21 +91,29 @@ Frontend commands from `frontend/`. Gates: `manage.py test`, `npx jest`, `npx ts
 
 ## Phase D — Operational + wrap-up
 
-### T7: Confirm/schedule `backfill_display_usernames` prod run
-- [ ] Check whether it's already been run in prod (per the open checkpoint in `tasks/todo-display-username.md`); if not, schedule it — **needs `CLERK_SECRET_KEY` in the Render shell for the one run, same as originally approved 2026-09-21**
-- [ ] On completion, close the checkpoint in `tasks/todo-display-username.md` and its "Every user must have a display_username" follow-up line
+### T7: Confirm/schedule `backfill_display_usernames` prod run  ✅ DONE
+- [x] Check whether it's already been run in prod (per the open checkpoint in `tasks/todo-display-username.md`); if not, schedule it — **needs `CLERK_SECRET_KEY` in the Render shell for the one run, same as originally approved 2026-09-21**
+- [x] On completion, close the checkpoint in `tasks/todo-display-username.md` and its "Every user must have a display_username" follow-up line
 - Acceptance: command has been run (or a concrete date is scheduled) against prod data
 - Verify: re-run with `--dry-run` afterward — no changes reported
 - Files: none (operational) · Scope: XS (operator) · Depends on: none, do any time
+- Done (2026-09-22): Render's dashboard Shell is paywalled, so this ran locally against prod via the external `DATABASE_URL` instead (`config/settings.py`'s `dj-database-url` wiring makes this work with no code change). Mid-task, the DB password was accidentally pasted into chat; rotated immediately via Render (new `databaseUser`), then the backend service was manually redeployed so its `fromDatabase`-sourced `DATABASE_URL` picked up the new credentials (confirmed via `list_deploys` — new deploy `live`, after the rotation timestamp). Dry-run against the new credentials reproduced the original prod numbers exactly (`1 updated, 0 unchanged, 1 without a Clerk username, 1 not in this database`), confirming connectivity. Real run: `1 updated`. Re-run `--dry-run`: `0 updated, 1 unchanged, ...` — confirmed idempotent.
 
-### T8: Full gates sweep + close spec success criteria
-- [ ] All gates, fresh, recorded here: `manage.py test`, `makemigrations --check`, `npx jest`, `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web`
-- [ ] Walk every bullet in `SPEC-username-onboarding.md`'s Success Criteria and confirm each is met
+### T8: Full gates sweep + close spec success criteria  ✅ DONE
+- [x] All gates, fresh, recorded here: `manage.py test`, `makemigrations --check`, `npx jest`, `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web`
+- [x] Walk every bullet in `SPEC-username-onboarding.md`'s Success Criteria and confirm each is met
 - Acceptance: no regression vs T0 baseline; every success criterion checked off
 - Files: this file · Scope: S · Depends on: T4, T6, T7
+- Done (2026-09-22). Gates: backend 298 tests OK (T0 baseline 278; our own work added 13 through T1/T2 → 291; +7 more from unrelated concurrent "Share-to-app" commits layered on top after — not a regression, just other work sharing the branch), `makemigrations --check` clean; frontend jest 27 suites/179 tests (our own total at T6 was 25/166; +2 suites/+13 tests from the same concurrent work); `tsc --noEmit` 38 errors (= T0 baseline); `npm run lint` 3 errors (= T0 baseline), 210 warnings; `npx expo export --platform web` succeeds. One transient jest run mid-sweep showed 5 failed suites/15 failed tests with a "worker process failed to exit gracefully" warning — re-ran clean (27/27, 179/179); attributed to resource contention from the concurrent session, not a real regression (all username-onboarding-specific suites — sign-up, UsernameGateBanner, ProfileScreen.usernameGate, home index — passed in every run).
+- Spec success criteria (`SPEC-username-onboarding.md`), all met:
+  - [x] Live availability + suggestions on the existing sign-up field, other fields/flow unchanged (T4)
+  - [x] Submit gated on empty/checking/taken only; Clerk race surfaces via existing error path (T4)
+  - [x] Dismissible nudge on home feed + profile tab for `display_username IS NULL`; non-blocking; reappears next app open (T5, T6)
+  - [x] `backfill_display_usernames` run against prod; `tasks/todo-display-username.md` checkpoint closed (T7)
+  - [x] No regression across all five gates (this task)
 
 ### Checkpoint D / Final
-- [ ] Spec success criteria all met
+- [x] Spec success criteria all met
 - [ ] Human review, then PR using the org PR template
 
 ---

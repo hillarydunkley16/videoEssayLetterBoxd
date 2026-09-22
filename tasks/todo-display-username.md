@@ -96,10 +96,10 @@ Backend tests run from `backend/`; frontend gates from `frontend/`.
 
 ### Checkpoint: Complete
 - [ ] All `SPEC-display-username.md` success criteria met
-- [ ] Backfill run in prod; People to follow shows no unexpected "Anonymous"
+- [x] Backfill run in prod (2026-09-22): `1 updated, 0 unchanged, 1 without a Clerk username, 1 not in this database` → re-run confirmed idempotent (`0 updated, 1 unchanged, ...`). See `tasks/todo-username-onboarding.md` T7.
 
 ## Follow-up ticket (out of scope)
 - [ ] Watchlist cleanup: data migration setting `is_watchlist=True` on `*'s Watchlist` rows + rename to "Watchlist"; `get_watchList` looks up by flag; `RemoveCollection` checks flag instead of `"Watchlist" in name`
 - [ ] Clerk claim live in prod before deploy; expect "Anonymous" until users re-auth
-- [ ] **Every user must have a `display_username`** — users without one are invisible to People search (`SPEC-find-people.md` decision 4). Enforce at sign-up / finish backfill, then remove the caveat
+- [x] **Every user must have a `display_username`** — partially closed. Backfill (above) synced everyone who has a Clerk username but hadn't re-authed. Clerk still requires `username` at sign-up (confirmed in its dashboard), so every *new* signup already gets one — `SPEC-username-onboarding.md` added live availability-checking on top of that, not a new requirement. One caveat remains: `1 without a Clerk username` in the backfill output is a pre-existing account with no Clerk username at all (can't be backfilled since there's nothing to copy); harmless going forward since new signups can't reach that state.
 - [ ] Ready for review / PR
