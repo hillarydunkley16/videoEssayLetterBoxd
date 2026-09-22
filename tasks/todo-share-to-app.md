@@ -1,0 +1,105 @@
+# Todo: Share-to-App (YouTube Share Sheet → Start a Log)
+
+Plan: `tasks/plan-share-to-app.md`. Spec: `tasks/spec-share-to-app.md`. Branch `v2`.
+Backend tests from `backend/`: `python manage.py test`. Frontend gates from `frontend/`:
+`npx jest`, `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web`.
+
+## Tasks
+
+### T1: oEmbed metadata service (backend)
+- [ ] `movie_csv/services/youtube_oembed.py`: `fetch_oembed_metadata(youtube_id) -> dict`
+      hitting `https://www.youtube.com/oembed?url=...&format=json`, mapping
+      `title`→title, `author_name`→channel_name, `thumbnail_url`→thumbnail
+- [ ] Raises/returns a clean error signal (not an unhandled exception) on a 404/invalid id
+- [ ] Test with the real oEmbed HTTP call mocked (`unittest.mock` / `responses`) —
+      covers success shape and the 404 case
+- Acceptance: function returns the three fields for a real-shaped mocked response;
+  raises a typed exception (not a bare `requests.HTTPError`) on 404
+- Verify: `python manage.py test movie_csv.test_youtube_oembed`
+- Files: `backend/movie_csv/services/youtube_oembed.py` (new),
+  `backend/movie_csv/test_youtube_oembed.py` (new) · Scope: XS
+
+### T2: get-or-create VideoEssay-by-youtube_id endpoint (backend)
+- [ ] New view (e.g. `VideoEssayFromYoutubeId`) — `POST /api/VideoEssays/from-youtube-id/`
+      (route TBD to fit existing `urls/api.py` registration style), `IsAuthenticated`
+- [ ] Look up by `youtube_id` first (`filter().first()`); only call `fetch_oembed_metadata`
+      on an actual miss — avoid the double-fetch flagged in the plan's risks
+- [ ] Returns `VideoEssaySerializer` output (has `public_id`) with 200 on reuse, 201 on create
+- [ ] Invalid/unresolvable youtube_id → clean 4xx (using T1's typed exception), not a 500
+- [ ] Anonymous POST → 401 (matches every other write-side view)
+- Acceptance: repeat POST with same youtube_id returns the same `public_id`, no duplicate
+  row, no second oEmbed call (assert via mock call count)
+- Verify: `python manage.py test movie_csv.test_video_essay_from_share`
+- Files: `backend/movie_csv/views/api.py`, `backend/movie_csv/urls/api.py`,
+  `backend/movie_csv/test_video_essay_from_share.py` (new) · Scope: S
+
+### Checkpoint A — backend slice verified
+- [ ] `python manage.py test` full suite green
+- [ ] Manual curl against a real youtube_id (dev server) confirms real oEmbed shape
+      matches what T1 assumed — fix now if it doesn't, before frontend depends on it
+
+### T3: frontend API client function
+- [ ] `src/api/videos.ts`: `getOrCreateVideoEssayByYoutubeId(youtubeId, token)` calling
+      T2's endpoint via `authFetch`/`useAuthPost` pattern (matches `getAVideoEssay`)
+- [ ] Surfaces the backend's 4xx (invalid video) as a typed error the caller can show
+- Acceptance: function shape matches existing `videos.ts` conventions (async, typed
+  return using `VideoEssayData`)
+- Verify: `npx tsc --noEmit`
+- Files: `frontend/src/api/videos.ts` · Scope: XS
+
+### T4: shared-URL → youtube_id parser (frontend, parallel to T1-T3)
+- [ ] `src/lib/shareIntent.ts`: `extractYoutubeId(sharedText: string): string | null`
+      handling `youtu.be/<id>`, `youtube.com/watch?v=<id>`, and share text with extra
+      surrounding words/title before the URL
+- [ ] Unit tests for all three input shapes plus an unrelated/non-YouTube share (returns null)
+- Acceptance: all test cases pass; no false-positive match on a non-YouTube URL
+- Verify: `npx jest src/lib/__tests__/shareIntent.test.ts`
+- Files: `frontend/src/lib/shareIntent.ts` (new), test (new) · Scope: XS
+
+### T5: Android share-intent wiring (native config + listener)
+- [ ] Add `expo-share-intent` to `frontend/package.json`, register plugin in `app.json`
+- [ ] `expo prebuild --clean` in a scratch checkout first; diff `AndroidManifest.xml`
+      against current for plugin conflicts (per plan risk) before committing config
+- [ ] `_layout.tsx` (or a small hook used there): on share-intent received, run T4's
+      parser, call T3's function, `router.push` to `(modals)/quickLog?essayId=<public_id>`
+- [ ] Web build unaffected — hook is a no-op on `Platform.OS === 'web'`
+- Acceptance: sharing a real YouTube URL from the Android YouTube app to a dev-client
+  build of Visual Arguments opens the app and navigates to `quickLog` with the right essay
+- Verify: manual, on an Android dev-client build (`eas build --profile development
+  --platform android` or `npx expo run:android`) — not automatable
+- Files: `frontend/app.json`, `frontend/package.json`, `frontend/app/_layout.tsx`,
+  new hook file (naming TBD at implementation) · Scope: M
+
+### Checkpoint B — core mechanism verified end-to-end
+- [ ] Manual Android dev-client share → app → `quickLog` populated, confirmed working
+      before adding signed-out handling
+- [ ] `npx expo export --platform web` still succeeds (plugin doesn't break web build)
+
+### T6: signed-out share → sign-in → resume flow
+- [ ] Spike first: confirm whether Clerk's sign-in web view on Android kills the JS
+      runtime (determines in-memory vs. `expo-secure-store` for the pending youtube_id —
+      per spec's open question 2)
+- [ ] Hold the pending youtube_id across the redirect using whichever mechanism the
+      spike confirms is needed
+- [ ] After successful sign-in, resume into `quickLog` for the held video instead of
+      the default post-sign-in destination
+- Acceptance: sharing while signed out → sign-in/up flow → lands on `quickLog` for the
+  originally-shared video, not the home screen
+- Verify: manual, on the same Android dev-client build
+- Files: `frontend/app/(auth)/_layout.tsx` or `sign-in.tsx`/`sign-up.tsx`,
+  `frontend/src/lib/shareIntent.ts` (extend) · Scope: S
+
+### T7: full verification pass
+- [ ] All Success Criteria in `tasks/spec-share-to-app.md` checked off
+- [ ] `python manage.py test`, `npx jest`, `npx tsc --noEmit`, `npm run lint`,
+      `npx expo export --platform web` all green
+- [ ] Manual re-check: existing (non-share) log flow (search → quickLog) unaffected
+- Verify: run every command above; report results
+- Files: none (verification only) · Scope: XS
+
+## Deferred — explicitly out of scope here
+
+- [ ] **iOS Share Extension.** Needs its own spec (native extension target, App Group
+      entitlement, Info.plist config, App Store review implications) — not started here.
+- [ ] **YouTube Data API integration** for `duration`/`views`/`channel_url` at share-time.
+      Only revisit if oEmbed's fields prove insufficient in practice (per spec decision 2).
