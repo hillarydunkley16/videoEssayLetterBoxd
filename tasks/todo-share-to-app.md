@@ -19,14 +19,14 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
 - Files: `backend/movie_csv/services/youtube_oembed.py` (new),
   `backend/movie_csv/test_youtube_oembed.py` (new) · Scope: XS
 
-### T2: get-or-create VideoEssay-by-youtube_id endpoint (backend)
-- [ ] New view (e.g. `VideoEssayFromYoutubeId`) — `POST /api/VideoEssays/from-youtube-id/`
-      (route TBD to fit existing `urls/api.py` registration style), `IsAuthenticated`
-- [ ] Look up by `youtube_id` first (`filter().first()`); only call `fetch_oembed_metadata`
-      on an actual miss — avoid the double-fetch flagged in the plan's risks
-- [ ] Returns `VideoEssaySerializer` output (has `public_id`) with 200 on reuse, 201 on create
-- [ ] Invalid/unresolvable youtube_id → clean 4xx (using T1's typed exception), not a 500
-- [ ] Anonymous POST → 401 (matches every other write-side view)
+### T2: get-or-create VideoEssay-by-youtube_id endpoint (backend) — done (fe42eaf)
+- [x] New view (`VideoEssayFromYoutubeId`) — `POST /api/VideoEssays/from-youtube-id/`,
+      `IsAuthenticated` via DRF's project-wide default
+- [x] Look up by `youtube_id` first (`filter().first()`); only call `fetch_oembed_metadata`
+      on an actual miss — avoids the double-fetch flagged in the plan's risks
+- [x] Returns `VideoEssaySerializer` output (has `public_id`) with 200 on reuse, 201 on create
+- [x] Invalid/unresolvable youtube_id → clean 422 (using T1's typed exception), not a 500
+- [x] Anonymous POST → 401/403 (matches every other write-side view)
 - Acceptance: repeat POST with same youtube_id returns the same `public_id`, no duplicate
   row, no second oEmbed call (assert via mock call count)
 - Verify: `python manage.py test movie_csv.test_video_essay_from_share`
@@ -34,7 +34,7 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
   `backend/movie_csv/test_video_essay_from_share.py` (new) · Scope: S
 
 ### Checkpoint A — backend slice verified
-- [ ] `python manage.py test` full suite green
+- [x] `python manage.py test` full suite green (298 tests)
 - [ ] Manual curl against a real youtube_id (dev server) confirms real oEmbed shape
       matches what T1 assumed — fix now if it doesn't, before frontend depends on it
 
