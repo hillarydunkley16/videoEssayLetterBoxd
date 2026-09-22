@@ -6,12 +6,12 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
 
 ## Tasks
 
-### T1: oEmbed metadata service (backend)
-- [ ] `movie_csv/services/youtube_oembed.py`: `fetch_oembed_metadata(youtube_id) -> dict`
+### T1: oEmbed metadata service (backend) — done (5ee2e49)
+- [x] `movie_csv/services/youtube_oembed.py`: `fetch_oembed_metadata(youtube_id) -> dict`
       hitting `https://www.youtube.com/oembed?url=...&format=json`, mapping
       `title`→title, `author_name`→channel_name, `thumbnail_url`→thumbnail
-- [ ] Raises/returns a clean error signal (not an unhandled exception) on a 404/invalid id
-- [ ] Test with the real oEmbed HTTP call mocked (`unittest.mock` / `responses`) —
+- [x] Raises/returns a clean error signal (not an unhandled exception) on a 404/invalid id
+- [x] Test with the real oEmbed HTTP call mocked (`unittest.mock` / `responses`) —
       covers success shape and the 404 case
 - Acceptance: function returns the three fields for a real-shaped mocked response;
   raises a typed exception (not a bare `requests.HTTPError`) on 404
