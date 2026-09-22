@@ -20,3 +20,22 @@ class ProfileUserShapeTests(TestCase):
         user = User.objects.create_user("user_2abcClerkId")
         data = ProfileSerializer(user.profile).data
         self.assertEqual(data["user"]["username"], "Anonymous")
+
+    def test_has_username_true_when_display_username_is_set(self):
+        user = User.objects.create_user("user_2abcClerkId")
+        user.profile.display_username = "someone"
+        user.profile.save()
+        data = ProfileSerializer(user.profile).data
+        self.assertTrue(data["has_username"])
+
+    def test_has_username_false_when_display_username_is_null(self):
+        user = User.objects.create_user("user_2abcClerkId")
+        data = ProfileSerializer(user.profile).data
+        self.assertFalse(data["has_username"])
+
+    def test_has_username_false_when_display_username_is_blank(self):
+        user = User.objects.create_user("user_2abcClerkId")
+        user.profile.display_username = ""
+        user.profile.save()
+        data = ProfileSerializer(user.profile).data
+        self.assertFalse(data["has_username"])

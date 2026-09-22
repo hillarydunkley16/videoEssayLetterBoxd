@@ -147,13 +147,19 @@ class ProfileSerializer(serializers.ModelSerializer):
     following_count = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
     watchList = serializers.SerializerMethodField()
-    def get_watchList(self, obj): 
+    has_username = serializers.SerializerMethodField()
+    def get_watchList(self, obj):
         # Found by flag, not by name: the name used to embed the Clerk id (see migration 0011).
         watchList = Collection.watchlist_for(obj.user)
         return CollectionSerializer(watchList, context=self.context).data
     def get_user(self, obj):
         # The frontend's Profile type expects the user as an object, not a bare pk.
         return {"id": obj.user_id, "username": obj.display_username or ANONYMOUS, "imageUrl": obj.imageUrl}
+    def get_has_username(self, obj):
+        # `user.username` above already collapses a missing display_username into
+        # "Anonymous", so callers need this separately to tell "no username set" apart
+        # from an actual user named Anonymous (see SPEC-username-onboarding.md).
+        return bool(obj.display_username)
     def get_user_logs(self, obj): 
        
         logs = Log.objects.filter(owner = obj.user)
@@ -172,7 +178,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     
     class Meta: 
         model = Profile
-        fields = ("user", "imageUrl", "user_logs", "followers_count", "following_count", "is_following", "watchList")
+        fields = ("user", "imageUrl", "user_logs", "followers_count", "following_count", "is_following", "watchList", "has_username")
 
 class FollowListUserSerializer(serializers.ModelSerializer):
     """Row for followers/following lists. `is_following` is an annotation set by the view."""
