@@ -134,7 +134,7 @@ export default function CreateLogScreen(
             <View style={styles.field}>
                 <View style={styles.reviewLabelRow}>
                     <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                        review <Text style={{ opacity: 0.7 }}>optional</Text>
+                        review
                     </Text>
                     {reviewFocused && (
                         <TouchableOpacity onPress={() => reviewInputRef.current?.blur()}>
