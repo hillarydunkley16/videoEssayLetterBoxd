@@ -28,10 +28,10 @@ Backend: essay immutable on PATCH (T1)
 ```
 
 ## Task List
-- [ ] T1: Backend — owner PATCH works, essay ignored, non-owner 403
-- [ ] T2: Frontend — `updateLog` + `logVideoModal` edit mode (prefill, PATCH, no double submit)
+- [x] T1: Backend — owner PATCH works, essay ignored, non-owner 403
+- [x] T2: Frontend — `updateLog` + `logVideoModal` edit mode (prefill, PATCH, no double submit)
 ### Checkpoint: Edit path works end-to-end via a manual deep link `/logVideoModal?logId=…`
-- [ ] T3: Frontend — three-dots menu on log page (owner-only), Edit + Delete w/ confirm, refresh on focus
+- [x] T3: Frontend — three-dots menu on log page (owner-only), Edit + Delete w/ confirm, refresh on focus
 - [ ] T4: Gates + manual verification on web, iOS sim, Android
 ### Checkpoint: Complete — all spec acceptance criteria met
 
