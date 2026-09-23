@@ -1,10 +1,10 @@
 import { View, Image, StyleSheet, Pressable, Linking, ActivityIndicator, ScrollView, Platform, TextInput, TouchableOpacity, useColorScheme } from "react-native"
-import { fetchALog, likeLog, commentOnLog } from "../api/logs";
+import { fetchALog, likeLog, commentOnLog, deleteLog } from "../api/logs";
 import { addToWatchlist, removeFromWatchlist } from "../api/collection";
 import { fetchProfile } from "../api/users";
 import { VideoEssay } from "../types/videoEssay";
 import { Log } from "../types/log";
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Text } from "react-native";
 import { ThemedView } from "@/components/themed-view";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -12,10 +12,11 @@ import { useUser, useAuth } from "@clerk/clerk-expo";
 import { useAuthPost } from "../api/authPost";
 import { useAuthDelete } from "../api/authDelete";
 import dayjs from 'dayjs';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from "@/constants/theme";
 import { RatingDots } from "@/components/ui/RatingDots";
+import { OverflowMenu } from "@/components/ui/OverflowMenu";
 import { logRoute } from "@/src/helpers/logRoute";
 
 type Props = {
@@ -47,8 +48,12 @@ export default function LogInfo({ id, onTitleLoaded }: Props) {
   const [watchlistId, setWatchlistId] = useState<string | null>(null);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [watchlistBusy, setWatchlistBusy] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const deletingRef = useRef(false);
 
-  useEffect(() => {
+  // Runs on every focus, so returning from the edit modal shows the saved values.
+  useFocusEffect(useCallback(() => {
     async function loadLog() {
       try {
         const token = await getToken();
@@ -71,7 +76,30 @@ export default function LogInfo({ id, onTitleLoaded }: Props) {
       }
     }
     loadLog()
-  }, [id]);
+    // getToken's identity changes on every Clerk render; excluding it keeps this
+    // from refetching each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]));
+
+  async function handleDelete() {
+    // Guard against a double-tap firing two delete requests.
+    if (!log || deletingRef.current) return;
+    deletingRef.current = true;
+    setDeleteError("");
+    try {
+      const token = await getToken();
+      await deleteLog(log.public_id, token!, authDelete);
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
+    } catch (err) {
+      console.error("Failed to delete log:", err);
+      setDeleteError("Couldn't delete this log — try again.");
+      deletingRef.current = false;
+    }
+  }
 
   const handleLike = async () => {
     if (!log) return;
@@ -135,6 +163,41 @@ export default function LogInfo({ id, onTitleLoaded }: Props) {
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.page}>
+            {isMine ? (
+              <View style={styles.topBar}>
+                <OverflowMenu
+                  accessibilityLabel="Log options"
+                  items={[
+                    { label: "Edit", onPress: () => router.push(`/logVideoModal?logId=${log.public_id}`) },
+                    { label: "Delete", destructive: true, onPress: () => setConfirmingDelete(true) },
+                  ]}
+                />
+              </View>
+            ) : null}
+            {confirmingDelete ? (
+              <View style={[styles.deleteConfirm, { borderColor: theme.border }]}>
+                <Text style={[styles.deleteConfirmText, { color: theme.text, fontFamily: Fonts?.sans }]}>
+                  Delete this log?
+                </Text>
+                <View style={styles.deleteConfirmActions}>
+                  <TouchableOpacity onPress={() => setConfirmingDelete(false)} accessibilityLabel="Cancel delete log">
+                    <Text style={[styles.deleteConfirmCancel, { color: theme.muted, fontFamily: Fonts?.sansMedium }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleDelete} accessibilityLabel="Confirm delete log">
+                    <Text style={[styles.deleteConfirmDelete, { color: theme.accent, fontFamily: Fonts?.sansMedium }]}>
+                      Delete
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
+            {deleteError ? (
+              <Text style={[styles.errorText, styles.deleteError, { color: theme.accent, fontFamily: Fonts?.sans }]}>
+                {deleteError}
+              </Text>
+            ) : null}
             <View style={styles.logHeader}>
               <TouchableOpacity onPress={() => router.push(`/otherProfile/${log.owner_id}`)}>
                 {log.owner_image ? (
@@ -314,6 +377,36 @@ const styles = StyleSheet.create({
         maxWidth: 480,
       },
     }),
+  },
+  topBar: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  deleteConfirm: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  deleteConfirmText: {
+    fontSize: 13.5,
+  },
+  deleteConfirmActions: {
+    flexDirection: 'row',
+    gap: 18,
+  },
+  deleteConfirmCancel: {
+    fontSize: 13.5,
+  },
+  deleteConfirmDelete: {
+    fontSize: 13.5,
+  },
+  deleteError: {
+    paddingHorizontal: 20,
   },
   logHeader: {
     flexDirection: 'row',
