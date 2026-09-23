@@ -47,7 +47,9 @@
       [
         "expo-share-intent",
         {
-          "androidIntentFilters": ["text/*"],
+          "androidIntentFilters": [
+            "text/*"
+          ],
           "iosAppGroupIdentifier": "group.com.hillarydunkley.frontend.shareintent"
         }
       ]
@@ -55,6 +57,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9f28faf6-dd98-4e34-9662-4e8c30bf7e84"
+      }
+    },
+    "owner": "hillarydunkley"
   }
 }

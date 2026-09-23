@@ -81,24 +81,41 @@ verification.
   builds specifically — Apple Developer Program enrollment). See the revised T3 task
   below, which replaces this one going forward.
 
-### T3 (revised): EAS project setup + cloud Simulator build
-- [ ] `npx eas-cli login` — free Expo account
-- [ ] `npx eas-cli build:configure` — generates `frontend/eas.json`, adds
-      `extra.eas.projectId` to `frontend/app.json`
-- [ ] Inspect `app.json` afterward for an auto-injected
-      `build.experimental.ios.appExtensions` block (known issue in
-      achorein/expo-share-intent-demo#1) — remove it if present; only
-      `extra.eas.projectId` should remain from EAS's auto-config
-- [ ] Set the `development` build profile's iOS config to `"simulator": true` in
-      `eas.json`
-- [ ] `npx eas-cli build --profile development --platform ios` (or
-      `eas-cli build:run -p ios` to build + auto-install in one step) succeeds and
-      produces a Simulator-installable artifact
+### T3 (revised): EAS project setup + cloud Simulator build — done
+- [x] `npx eas-cli whoami` confirmed already logged in (`hillarydunkley` /
+      `hvgdunkley@gmail.com`) — no interactive login needed
+- [x] `npx eas-cli build:configure -p ios` couldn't run non-interactively (its "create
+      an EAS project?" prompt needs a real TTY); used `npx eas-cli project:init
+      --account hillarydunkley --non-interactive` instead — created
+      `@hillarydunkley/frontend` (project ID `9f28faf6-dd98-4e34-9662-4e8c30bf7e84`),
+      linked it into `app.json`
+- [x] Confirmed the exact predicted conflict: `project:init` auto-injected
+      `extra.eas.build.experimental.ios.appExtensions` for `ShareExtension` (matching
+      achorein/expo-share-intent-demo#1) — removed it, keeping only
+      `extra.eas.projectId`
+- [x] Wrote `frontend/eas.json` by hand (`build:configure`'s other job) since the
+      interactive command never got that far
+- [x] `development` profile needs `developmentClient: true`, which EAS refused to
+      build without `expo-dev-client` installed (a new dependency we don't need just
+      for manual native verification) — used the `preview` profile instead
+      (`ios.simulator: true`, no dev-client requirement) rather than add that
+      dependency
+- [x] `npx eas-cli build --profile preview --platform ios --non-interactive` — cloud
+      build succeeded on the first attempt (build
+      `70102b80-62e4-4567-82ca-bf0a7907be1a`), confirming the incompatibility is local
+      to this machine's Xcode, not the project/config
+- [x] `npx eas-cli build:run -p ios --latest --profile preview` downloaded, installed,
+      and launched the app on the booted Simulator; `xcrun simctl listapps booted`
+      confirms `com.hillarydunkley.frontend` installed with its
+      `group.com.hillarydunkley.frontend.shareintent` App Group container already
+      provisioned
 - Acceptance: cloud build succeeds; artifact installs and launches in the iOS
-  Simulator with no signing errors (none needed for Simulator)
-- Verify: EAS build dashboard/CLI shows a successful build; app opens in Simulator
-- Files: `frontend/eas.json` (new), `frontend/app.json` (`extra.eas.projectId`
-  added) · Scope: S
+  Simulator with no signing errors — confirmed
+- Verify: EAS build dashboard shows the successful build; app installed + launched on
+  Simulator per `simctl`; `git diff frontend/app.json` shows only the expected
+  `extra.eas.projectId`/`owner` addition; full jest suite unaffected (187/187)
+- Files: `frontend/eas.json` (new), `frontend/app.json` (`extra.eas.projectId` +
+  `owner` added) · Scope: S
 
 ### T4: Simulator verification (Safari/Notes share, via EAS-built artifact)
 - [ ] Share a YouTube URL from Safari (or paste one into Notes and share from there) to
