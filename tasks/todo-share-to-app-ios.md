@@ -205,11 +205,11 @@ verification.
 - Acceptance: app installs and launches on the physical device with no signing errors
 - Verify: `npx expo run:ios --device` exits 0, app opens on device
 - Files: none · Scope: S
-- **Parked** — blocked on the same local-toolchain issue as the original T3 (local
-  `run:ios` fails regardless of target). Per spec Open Question 3, resume only once
-  you decide on: waiting for an Expo patch, a macOS/Xcode upgrade, or Apple Developer
-  Program enrollment (which would let this go through EAS instead of local `run:ios
-  --device`). Not attempted until then.
+- **Parked, decision made**: waiting for Expo's upstream fix
+  (github.com/expo/expo#50470). Apple Developer Program enrollment ruled out (not
+  affordable); macOS/Xcode upgrade also ruled out for now (only 8.9GB free, well
+  short of what a macOS Tahoe + Xcode 26.4 upgrade needs). No further action here
+  until the upstream issue is resolved — check back periodically.
 
 ### T6: physical-device verification (real YouTube app) — PARKED
 - [ ] From the real YouTube iOS app, share a video to Visual Arguments, **signed in**:

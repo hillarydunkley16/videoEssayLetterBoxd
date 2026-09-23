@@ -228,20 +228,26 @@ already the plugin's default.)
       `python manage.py test` all stay green. (T7: backend 298/298, frontend jest
       189/189 across 29 suites, tsc/lint show only pre-existing issues unrelated to
       this feature, web export succeeds)
-- [ ] No new iOS-specific branches introduced in `useShareIntentRouter` or the API
-      layer — confirms the "write it once for both platforms" assumption from the
-      original spec held.
+- [x] No new iOS-specific branches introduced in `useShareIntentRouter` or the API
+      layer — confirmed: the hook and API client are byte-identical to Android's
+      version; only `app.json` config and the unrelated `+native-intent.ts` fix
+      changed.
 
 ## Open Questions
 
 1. **7-day profile expiry cadence**: during implementation, plan to re-run
    `npx expo run:ios` to the physical device periodically if verification spans more
    than a week. Not a blocker, just a scheduling note. (Applies once T5/T6 unblock.)
-2. **`iosHideView` transparent hand-off**: confirm during Simulator testing that this
-   doesn't produce a visible flash/flicker on this iOS version (26.x) before accepting
-   the plugin's default — if it does, revisit decision 4 above.
-3. **How T5/T6 (physical device) eventually get unblocked** — three paths, none
-   decided yet:
+2. **`iosHideView` transparent hand-off**: resolved — confirmed live during T4 across
+   five separate shares, no visible flash/flicker. Plugin default accepted as-is.
+3. **How T5/T6 (physical device) eventually get unblocked** — **decided**: wait for
+   Expo's upstream fix. The Apple Developer Program enrollment path is ruled out
+   (not affordable), and the macOS/Xcode upgrade path is currently ruled out too —
+   only 8.9GB free on this machine, well short of what a macOS Tahoe upgrade plus
+   Xcode 26.4 would need. T5/T6 stay parked indefinitely; check
+   github.com/expo/expo#50470 periodically for a fix. Simulator coverage (T4,
+   complete) stands as the feature's functional proof in the meantime. Original
+   three paths, for reference:
    a. **Wait** for Expo to ship an official Expo SDK 57 fix for the Xcode 26.3/Swift
       6.2 incompatibility (tracked upstream: github.com/expo/expo#50067 — fixed —
       and github.com/expo/expo#50470 — open, unresolved as of this writing).
