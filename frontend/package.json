@@ -46,6 +46,7 @@
     "expo-constants": "~57.0.19",
     "expo-crypto": "~57.0.3",
     "expo-datepicker": "^1.0.23",
+    "expo-dev-client": "~57.0.19",
     "expo-device": "~57.0.2",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
