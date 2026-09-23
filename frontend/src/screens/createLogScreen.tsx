@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, TextInput, Platform, StyleSheet, TouchableOpacity, Text, useColorScheme } from 'react-native'
+import { useState, useEffect, useRef } from 'react';
+import { View, TextInput, Platform, StyleSheet, TouchableOpacity, Text, useColorScheme, Keyboard} from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TappableRatingDots } from '@/components/ui/RatingDots';
 import { Toggle } from '@/components/ui/Toggle';
@@ -46,6 +46,8 @@ export default function CreateLogScreen(
     const [watchList, setWatchList] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
     const [ratingIsSet, setRatingIsSet] = useState(initialRating != null && initialRating > 0);
+    const [reviewFocused, setReviewFocused] = useState(false);
+    const reviewInputRef = useRef<TextInput>(null);
 
     useEffect(() => {
         if (initialRating !== undefined) {
@@ -130,15 +132,29 @@ export default function CreateLogScreen(
             </View>
 
             <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                    review <Text style={{ opacity: 0.7 }}>optional</Text>
-                </Text>
+                <View style={styles.reviewLabelRow}>
+                    <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                        review <Text style={{ opacity: 0.7 }}>optional</Text>
+                    </Text>
+                    {reviewFocused && (
+                        <TouchableOpacity onPress={() => reviewInputRef.current?.blur()}>
+                            <Text style={[styles.doneLabel, { color: theme.accent, fontFamily: Fonts?.sansSemiBold }]}>
+                                Done
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <TextInput
+                    ref={reviewInputRef}
                     value={reviewText}
                     placeholder="What stood out about this one?"
                     placeholderTextColor={theme.muted}
                     onChangeText={onReviewTextChange}
+                    onFocus={() => setReviewFocused(true)}
+                    onBlur={() => setReviewFocused(false)}
                     multiline
+                    returnKeyType="none"
+                    onSubmitEditing={Keyboard.dismiss}
                     style={[
                         styles.reviewBox,
                         { borderColor: theme.border, backgroundColor: theme.surface, color: theme.text, fontFamily: Fonts?.sans },
@@ -189,6 +205,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   fieldLabel: {
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  reviewLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  doneLabel: {
     fontSize: 13,
     marginBottom: 10,
   },

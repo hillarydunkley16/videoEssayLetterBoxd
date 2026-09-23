@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams} from 'expo-router';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import CreateLogScreen from '@/src/screens/createLogScreen';
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen';
 import { useRef, useState} from 'react';
@@ -72,7 +72,10 @@ export default function LogVideoModal() {
     }
     return(
         <ThemedView style={[styles.page, { backgroundColor: theme.surface }]}>
-        <ThemedView style={[styles.largeContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
+        <KeyboardAvoidingView
+          style={[styles.largeContainer, { borderColor: theme.border, backgroundColor: theme.background }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={[styles.header, { borderColor: theme.border }]}>
             <TouchableOpacity onPress={handleClose} style={styles.headerSide} accessibilityLabel="Close">
               <Text style={[styles.closeIcon, { color: theme.muted }]}>{"✕"}</Text>
@@ -95,7 +98,12 @@ export default function LogVideoModal() {
             <Text style={[styles.errorText, { color: theme.accent }]}>{error}</Text>
           ) : null}
 
-          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={Keyboard.dismiss}
+          >
             <GetVideoEssayScreen id={essayId} compact />
             <CreateLogScreen
               id={essayId}
@@ -110,7 +118,7 @@ export default function LogVideoModal() {
               onWatchedChange={setRewatch}
             />
           </ScrollView>
-        </ThemedView>
+        </KeyboardAvoidingView>
         </ThemedView>
     )
 }

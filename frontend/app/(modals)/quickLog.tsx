@@ -1,5 +1,5 @@
 import { Link,  router , useLocalSearchParams} from 'expo-router';
-import { StyleSheet, Text, Button, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, Button, View } from 'react-native';
 import CreateLogScreen from '@/src/screens/createLogScreen';
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen';
 import { useEffect, useRef, useCallback, useState } from 'react';

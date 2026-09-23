@@ -5,7 +5,7 @@ function getLocalHost() {
   if (Platform.OS === "web") return "127.0.0.1";
 
   const debuggerHost =
-    Constants.manifest?.debuggerHost ||
+    Constants.expoConfig?.hostUri ||
     Constants.expoConfig?.extra?.DEBUGGER_HOST;
 
   if (debuggerHost) {

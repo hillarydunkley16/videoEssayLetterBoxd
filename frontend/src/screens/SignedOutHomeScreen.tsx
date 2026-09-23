@@ -160,7 +160,6 @@ export default function SignedOutHomeScreen() {
         <Text style={[styles.closingTitle, { fontFamily: Fonts?.display }]}>
           Your next favorite essay is one log away.
         </Text>
-        <Text style={styles.closingSub}>Free during the beta — no credit card, just an account.</Text>
         <Pressable
           style={[styles.btn, styles.btnPrimary, styles.closingBtn, { backgroundColor: theme.accent, borderColor: theme.accent }]}
           onPress={() => router.push("/sign-up")}
