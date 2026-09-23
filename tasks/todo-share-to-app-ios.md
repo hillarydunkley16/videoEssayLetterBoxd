@@ -177,22 +177,24 @@ verification.
       then) — verified this wasn't a stale/reused screen by checking the DB directly,
       since a mid-test code edit (adding debug logging) triggered a Fast Refresh
       that made an *earlier* still-open sheet ambiguous at first glance.
-- [ ] Watch for a visible flash/flicker from the extension's transparent hand-off view
-      (`iosHideView` default) — not explicitly observed either way across the shares
-      done so far, no flash noticed in any screenshot sequence
-- [ ] Share a non-YouTube URL: no crash, no navigation, share intent reset cleanly —
-      not yet tested
-- Acceptance: signed-in and signed-out cases both confirmed; flash/flicker and
-  non-YouTube-URL cases remain
+- [x] Watch for a visible flash/flicker from the extension's transparent hand-off view
+      (`iosHideView` default) — confirmed clean by you across all shares done this
+      session (Rick Astley, Robin Williams, Darude x2, example.com): felt seamless,
+      no flash noticed. Accepting the plugin's default as-is per spec Decision 4.
+- [x] Share a non-YouTube URL (`https://example.com`): app foregrounded to the
+      normal signed-in home feed, no crash, no navigation attempt, no errors in
+      Metro logs — share intent reset silently as designed
+- Acceptance: all four T4 cases confirmed — signed-in, signed-out-then-resume,
+  no-flash, non-YouTube-URL-safe
 - Verify: manual, on Simulator (via the dev-client + local Metro loop above); full
   jest suite 189/189 after debug-logging cleanup (one unrelated flaky failure on
   first run, clean on retry)
 - Files: `frontend/app/+native-intent.ts`, `frontend/app/__tests__/native-intent.test.ts`,
   `frontend/package.json` (`expo-dev-client` added, `expo-sharing` removed) · Scope: M
 
-### Checkpoint A — core mechanism confirmed on Simulator
-- [ ] All four T4 cases pass
-- [ ] `npx expo export --platform web` still succeeds (extension doesn't regress web)
+### Checkpoint A — core mechanism confirmed on Simulator — closed
+- [x] All four T4 cases pass
+- [x] `npx expo export --platform web` still succeeds (extension doesn't regress web)
 
 ### T5: physical-device signing + build — PARKED
 - [ ] Connect a physical iPhone via cable, trust the machine
