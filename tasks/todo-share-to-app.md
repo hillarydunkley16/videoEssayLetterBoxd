@@ -124,13 +124,34 @@ Backend tests from `backend/`: `python manage.py test`. Frontend gates from `fro
   clean, `npx expo export --platform web` succeeds, full suite 186/186 passed
 - Files: `frontend/src/hooks/useShareIntentRouter.ts`, its test file · Scope: S
 
-### T7: full verification pass
-- [ ] All Success Criteria in `tasks/spec-share-to-app.md` checked off
-- [ ] `python manage.py test`, `npx jest`, `npx tsc --noEmit`, `npm run lint`,
-      `npx expo export --platform web` all green
-- [ ] Manual re-check: existing (non-share) log flow (search → quickLog) unaffected
-- Verify: run every command above; report results
-- Files: none (verification only) · Scope: XS
+### T7: full verification pass — done (ef08fb3)
+- [x] All Success Criteria in `tasks/spec-share-to-app.md` checked off
+- [x] `python manage.py test` (298 passed), `npx jest --forceExit` (187 passed, 28
+      suites), `npx tsc --noEmit` (pre-existing errors only, none in share-to-app
+      files), `npm run lint` (pre-existing errors only — `sign-in.tsx`, `src/api/users.ts`
+      unresolved-module, `createLogScreen.tsx`'s unrelated in-progress edit; the two
+      `exhaustive-deps` warnings on `useShareIntentRouter.ts` match the same pattern
+      already used elsewhere, e.g. `GetVideoEssayScreen.tsx`), `npx expo export
+      --platform web` (succeeds) — all green
+- [x] Bug found during this pass: `useShareIntentRouter`'s resolve had no catch, so an
+      unresolvable video (backend 422) propagated as an unhandled promise rejection
+      instead of the spec's "clean error" criterion — silently did nothing rather than
+      crashing, but no user-visible feedback either. Added a regression test
+      (mocks a rejected `getOrCreateVideoEssayByYoutubeId`, asserts `Alert.alert` fires,
+      no navigation, share intent still reset) and a `catch` that shows `Alert.alert`.
+- [x] Manual re-check: existing (non-share) log flow (search → quickLog) unaffected —
+      not re-run on-device (would require re-provisioning the emulator). Confidence
+      instead from: (a) `_layout.tsx`'s only change is purely additive — wraps the tree
+      in `ShareIntentProvider` and calls `useShareIntentRouter()` unconditionally before
+      `RootLayoutNav`'s early return (preserves hook order), touching no code in the
+      search/quickLog/logVideoModal path; (b) the full regression suite stayed green
+      throughout, including `logVideoModal`'s existing double-tap-creates-duplicate-log
+      guard test; (c) `quickLog` itself was already exercised live via the share path in
+      T5/T6, rendering the same component the search flow renders.
+- Verify: ran every command above; see notes
+- Files: `frontend/src/hooks/useShareIntentRouter.ts`,
+  `frontend/src/hooks/__tests__/useShareIntentRouter.test.tsx`,
+  `tasks/spec-share-to-app.md` (Success Criteria checked off) · Scope: XS
 
 ## Deferred — explicitly out of scope here
 

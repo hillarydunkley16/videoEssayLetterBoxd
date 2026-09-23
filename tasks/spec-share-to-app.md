@@ -138,20 +138,31 @@ class VideoEssayFromYoutubeId(generics.GenericAPIView):
 
 ## Success Criteria
 
-- [ ] Sharing a YouTube video URL from the YouTube Android app to Visual Arguments
+- [x] Sharing a YouTube video URL from the YouTube Android app to Visual Arguments
       opens the app and lands on `quickLog` for that exact video within one launch.
-- [ ] If the video's `youtube_id` already exists as a `VideoEssay`, the existing row
-      (and its `public_id`) is reused — no duplicate row created.
-- [ ] If the video is new, a `VideoEssay` is created with `title`, `thumbnail`, and
+      Verified via the OS-level `ACTION_SEND`/`text/plain` intent (the same mechanism
+      a real YouTube share-sheet tap sends) on a local Android emulator — see T5/T6.
+- [x] If the video's `youtube_id` already exists as a `VideoEssay`, the existing row
+      (and its `public_id`) is reused — no duplicate row created. Covered by
+      `test_video_essay_from_share.py` (asserts no second oEmbed call on a repeat POST).
+- [x] If the video is new, a `VideoEssay` is created with `title`, `thumbnail`, and
       `channel_name` populated from oEmbed; `duration`/`views`/`channel_url` remain
-      null, matching the model's existing nullable-field pattern.
-- [ ] A signed-out user who shares a video is taken through sign-in/up and then lands
+      null (all three are `null=True` on the model and are never passed by the
+      get-or-create view), matching the model's existing nullable-field pattern.
+- [x] A signed-out user who shares a video is taken through sign-in/up and then lands
       on `quickLog` for that same video, without having to re-share or re-search.
-- [ ] An invalid/deleted video (oEmbed 404) shows a clean error, not a crash or a blank
-      `quickLog` screen.
-- [ ] `expo export --platform web`, `tsc --noEmit`, `npm run lint`, `npx jest`, and
-      `python manage.py test` all stay green.
-- [ ] Manually verified on an Android dev-client build (Expo Go cannot test this).
+      Verified live on-device (T6): shared while signed out, signed in, landed on
+      `quickLog` automatically.
+- [x] An invalid/deleted video (oEmbed 404) shows a clean error, not a crash or a blank
+      `quickLog` screen. Backend returns 422 (`test_video_essay_from_share.py`); found
+      during T7 that the frontend hook had no catch for this and would silently do
+      nothing — fixed to show `Alert.alert` instead (commit `ef08fb3`).
+- [x] `expo export --platform web`, `tsc --noEmit`, `npm run lint`, `npx jest`, and
+      `python manage.py test` all stay green. All five re-run for T7: backend 298/298,
+      frontend jest 187/187, `tsc`/`lint` show only pre-existing issues unrelated to
+      this feature's files, `expo export --platform web` succeeds.
+- [x] Manually verified on an Android dev-client build (Expo Go cannot test this).
+      Done in T5/T6; see their notes in `tasks/todo-share-to-app.md`.
 
 ## Open Questions
 
