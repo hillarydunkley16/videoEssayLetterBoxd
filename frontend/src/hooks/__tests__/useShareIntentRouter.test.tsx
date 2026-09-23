@@ -33,6 +33,9 @@ jest.mock('@clerk/clerk-expo', () => ({
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ router: { push: (...a: unknown[]) => mockPush(...a) } }));
 
+const mockAlert = jest.fn();
+jest.mock('react-native', () => ({ Alert: { alert: (...a: unknown[]) => mockAlert(...a) } }));
+
 const mockGetOrCreate = jest.fn();
 jest.mock('@/src/api/videos', () => ({
   getOrCreateVideoEssayByYoutubeId: (...a: unknown[]) => mockGetOrCreate(...a),
@@ -107,6 +110,18 @@ it('resumes a held signed-out share once isSignedIn flips true', async () => {
   await waitFor(() => expect(mockPush).toHaveBeenCalled());
   expect(mockGetOrCreate).toHaveBeenCalledWith('dQw4w9WgXcQ', 'tok');
   expect(mockPush).toHaveBeenCalledWith('/(modals)/quickLog?essayId=abc-123');
+  expect(mockResetShareIntent).toHaveBeenCalled();
+});
+
+it('shows a clean alert and does not navigate when the video cannot be resolved (e.g. backend 422 on a deleted/invalid youtube_id)', async () => {
+  mockShareIntentState = {
+    hasShareIntent: true,
+    shareIntent: { webUrl: 'https://youtu.be/dQw4w9WgXcQ' },
+  };
+  mockGetOrCreate.mockRejectedValue(new Error('API error: 422 — could not resolve youtube_id'));
+  renderHook(() => useShareIntentRouter());
+  await waitFor(() => expect(mockAlert).toHaveBeenCalled());
+  expect(mockPush).not.toHaveBeenCalled();
   expect(mockResetShareIntent).toHaveBeenCalled();
 });
 

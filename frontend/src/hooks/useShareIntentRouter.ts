@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useShareIntentContext } from "expo-share-intent";
 import { useAuth } from "@clerk/clerk-expo";
@@ -49,6 +50,13 @@ export function useShareIntentRouter() {
         if (!token || cancelled) return;
         const essay = await getOrCreateVideoEssayByYoutubeId(youtubeId, token);
         if (!cancelled) router.push(`/(modals)/quickLog?essayId=${essay.public_id}`);
+      } catch {
+        // Covers an oEmbed-unresolvable youtube_id (backend 422) and any other fetch
+        // failure — surface a clean alert rather than silently doing nothing or
+        // navigating to a broken quickLog screen.
+        if (!cancelled) {
+          Alert.alert("Couldn't open that video", "This YouTube video couldn't be found or is unavailable.");
+        }
       } finally {
         if (!cancelled) resetShareIntent();
       }
