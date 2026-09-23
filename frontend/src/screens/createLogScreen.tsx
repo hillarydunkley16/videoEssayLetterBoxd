@@ -159,11 +159,11 @@ export default function CreateLogScreen(
                     onSubmitEditing={Keyboard.dismiss}
                     style={[
                         styles.reviewBox,
-                        { borderColor: theme.border, backgroundColor: theme.surface, color: theme.text, fontFamily: Fonts?.sans },
+                        { borderColor: reviewError ? theme.error : theme.border, backgroundColor: theme.surface, color: theme.text, fontFamily: Fonts?.sans },
                     ]}
                 />
                 <View style={styles.reviewFooter}>
-                    <Text style={[styles.reviewError, { color: theme.accent, fontFamily: Fonts?.sans }]}>
+                    <Text style={[styles.reviewError, { color: theme.error, fontFamily: Fonts?.sans }]}>
                         {reviewError ?? ''}
                     </Text>
                     <Text style={[styles.charCount, { color: theme.muted, fontFamily: Fonts?.sans }]}>
