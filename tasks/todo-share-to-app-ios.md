@@ -118,6 +118,24 @@ verification.
   `owner` added) · Scope: S
 
 ### T4: Simulator verification (Safari/Notes share, via EAS-built artifact)
+- [x] **Tooling limitation found**: no way to script Simulator taps from here —
+      `xcrun simctl` has no tap-injection command (unlike `adb input tap` for
+      Android), and `osascript`/System Events has no Accessibility permission granted
+      to this process to click the Simulator window via AppleScript. Manual taps in
+      the Simulator are done by you; I open pages, take screenshots, and check
+      logs/DB after each step.
+- [x] **First crash found and fixed**: opened `youtu.be/dQw4w9WgXcQ` in Safari, tapped
+      YouTube's in-page share icon, selected "frontend - Share Extension" → app
+      foregrounded then immediately crashed ("frontend quit unexpectedly"). Crash log
+      (`~/Library/Logs/DiagnosticReports/frontend-*.ips`) showed the real cause was
+      unrelated to sharing: `RCTFatalException: Missing
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` — the EAS cloud build has no access to the
+      local `.env` file, so `ClerkProvider` failed on every launch, not just via
+      share. Fixed with `npx eas-cli env:push preview --path .env --force` (uploads
+      to EAS's own environment-variable store, not a repo file — nothing to commit
+      here), then rebuilt (`4df7ab1b-7bd0-47f5-9e6b-27c6c03ebea4`) and reinstalled.
+      Confirmed fixed: app now launches straight to the signed-out home screen with
+      real backend data loading.
 - [ ] Share a YouTube URL from Safari (or paste one into Notes and share from there) to
       Visual Arguments in the Simulator, **signed in**: app foregrounds and lands on
       `quickLog` with the correct title/thumbnail populated
