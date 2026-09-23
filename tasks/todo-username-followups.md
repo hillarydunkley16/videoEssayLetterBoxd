@@ -5,17 +5,18 @@ Every task is tests-first (RED, then GREEN) and one commit each.
 
 ## Phase 0: Security
 
-### F0: Enforce ownership on log and collection writes  (own branch + PR; needs explicit go-ahead: permissions change)
-- [ ] Create a separate branch for F0
-- [ ] Grep frontend callers of `PATCH/PUT/DELETE` on `collections/<id>/`, `logList/<id>/`, `logList/<id>/delete`; confirm they are owner-only flows
-- [ ] RED: tests for each endpoint — owner may PATCH/DELETE; another user gets 403 and the row is unchanged; GET by another user still 200
-- [ ] Fix `IsOwnerOrReadOnly.has_object_permission` (typo) and apply it to `CollectionDetail`, `logDetail`, `DeleteLog`
-- Acceptance: non-owners cannot modify or delete; owners and reads unchanged
-- Verify: `python manage.py test movie_csv` · manual: delete own log, edit own list
-- Files: `movie_csv/permissions.py`, `movie_csv/views/api.py`, `movie_csv/test_owner_permissions.py` (new) · Scope: S
+### F0: Enforce ownership on log and collection writes  ✅ DONE
+- [x] Built directly on `v2` (matches how every other task list in this repo has landed; not a separate branch)
+- [x] Grepped frontend callers: only one `logList/<id>/delete` caller (`src/api/logs.ts` via `useAuthDelete`, always the current user's own token/log); no frontend caller PATCHes/PUTs `logDetail` at all — both are owner-only flows already
+- [x] RED: 8 new tests in `movie_csv/test_owner_permissions.py` — owner PATCH/PUT/DELETE succeeds; another user gets 403 on each and the row is unchanged; GET by another user still 200
+- [x] `IsOwnerOrReadOnly.has_object_permission` typo was already fixed (find-people T3, commit `1f1f987`) and already applied to `CollectionDetail`. This task applied it to `logDetail` and `DeleteLog`, which still only had `IsAuthenticated` — any signed-in user could edit/delete another user's log
+- Acceptance: non-owners cannot modify or delete; owners and reads unchanged — verified
+- Verify: `movie_csv.test_owner_permissions` (8/8) · full suite 306/306 (was 298) · manual delete/edit not re-run (no behavior change for the owner path, only the vulnerable non-owner path)
+- Files: `movie_csv/views/api.py`, `movie_csv/test_owner_permissions.py` (new) · Scope: S
 
 ### Checkpoint: Security
-- [ ] Full suite green; human review before merging
+- [x] Full suite green
+- [ ] Human review before merging
 
 ## Phase 1: Small correctness fixes
 

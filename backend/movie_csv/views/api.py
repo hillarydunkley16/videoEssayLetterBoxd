@@ -175,8 +175,7 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
     profile_queryset = Profile.objects.all()
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
-    permission_classes = [IsAuthenticated]
-    # permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = "public_id"
     def get(self, request, public_id):
         # print("Headers:", request.headers)
@@ -328,11 +327,11 @@ class UnLikePost(DestroyAPIView):
         except Log.DoesNotExist: 
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-class DeleteLog(DestroyAPIView): 
-    queryset = Log.objects.all(); 
+class DeleteLog(DestroyAPIView):
+    queryset = Log.objects.all();
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = 'public_id'
 
 class CommentOnPost(generics.CreateAPIView):
