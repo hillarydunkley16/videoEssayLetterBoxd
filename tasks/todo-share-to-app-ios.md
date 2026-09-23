@@ -20,21 +20,29 @@ verification.
   (187/187)
 - Files: `frontend/app.json` · Scope: XS
 
-### T2: prebuild and inspect the generated iOS project
-- [ ] `npx expo prebuild --platform ios --clean`
-- [ ] Confirm a Share Extension target exists in `ios/` with an `NSExtension` entry in
-      its `Info.plist` matching the default activation rules
-      (`NSExtensionActivationSupportsWebURLWithMaxCount: 1`,
-      `NSExtensionActivationSupportsWebPageWithMaxCount: 1`)
-- [ ] Confirm the App Group entitlement
-      (`com.apple.security.application-groups: group.com.hillarydunkley.frontend.shareintent`)
-      is present on **both** the main app target's and the extension target's
-      `.entitlements` files
-- [ ] Confirm no conflicts/warnings from the other registered plugins (expo-router,
-      expo-splash-screen, expo-secure-store, `@react-native-community/datetimepicker`)
+### T2: prebuild and inspect the generated iOS project — done
+- [x] `npx expo prebuild --platform ios --clean` — exit 0, CocoaPods installed clean
+- [x] Confirmed the `ShareExtension` target's `Info.plist`
+      (`ios/ShareExtension/ShareExtension-Info.plist`) has the expected `NSExtension`
+      entry with `NSExtensionActivationSupportsWebURLWithMaxCount: 1` and
+      `NSExtensionActivationSupportsWebPageWithMaxCount: 1`, plus
+      `AppGroupIdentifier: group.com.hillarydunkley.frontend.shareintent`
+- [x] Confirmed the App Group entitlement is present and identical on both
+      `ios/frontend/frontend.entitlements` and
+      `ios/ShareExtension/ShareExtension.entitlements`
+      (`com.apple.security.application-groups: [group.com.hillarydunkley.frontend.shareintent]`)
+- [x] No conflicts from the other registered plugins — prebuild log shows only the
+      expected `[expo-share-intent]` lines, no errors from expo-router,
+      expo-splash-screen, expo-secure-store, or datetimepicker; CocoaPods install
+      succeeded (exit 0)
+- [x] One informational note from the prebuild log, expected at this stage and not a
+      problem: `No DEVELOPMENT_TEAM found in main app build settings. Developer will
+      need to manually add Dev Team.` — this is exactly what T3 (Xcode Personal Team
+      signing) does next
 - Acceptance: both generated files inspected directly and match the above; prebuild
-  exits clean (no "Config sync failed" error)
-- Verify: read the generated `Info.plist` and `.entitlements` files under `ios/`
+  exits clean (no "Config sync failed" error) — confirmed
+- Verify: read the generated `Info.plist` and `.entitlements` files under `ios/`; full
+  jest suite unaffected (187/187, unrelated to native project regen)
 - Files: none tracked (native project is gitignored/disposable) · Scope: S
 
 ### T3: Xcode Personal Team signing + first Simulator build
