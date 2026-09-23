@@ -3,6 +3,10 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
+  Platform,
+  Pressable,
+  useWindowDimensions,
   StyleSheet,
   Text,
  TouchableOpacity, 
@@ -39,6 +43,9 @@ export default function ProfileScreen() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { changePhoto } = useChangeProfilePhoto();
   const authDelete = useAuthDelete();
+  const { width } = useWindowDimensions();
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const isMobile = Platform.OS !== "web";
 
   const [profile, setProfile] = useState<Profile>();
   const [lists, setLists] = useState<Collection[]>([]);
@@ -111,7 +118,10 @@ export default function ProfileScreen() {
 
       <View style={[styles.identityRow, { paddingBottom: 22, borderColor: theme.border }]}>
         <View style={styles.idRow}>
-          <TouchableOpacity onPress={changePhoto} accessibilityLabel="Change profile photo">
+          <TouchableOpacity
+            onPress={isMobile ? () => user?.imageUrl && setPhotoOpen(true) : changePhoto}
+            accessibilityLabel={isMobile ? "View profile photo" : "Change profile photo"}
+          >
             {user?.imageUrl ? (
               <Image source={{ uri: user.imageUrl }} style={[styles.avatar, { borderColor: theme.background }]} />
             ) : (
@@ -120,6 +130,15 @@ export default function ProfileScreen() {
               </View>
             )}
           </TouchableOpacity>
+          {isMobile && (
+            <Modal visible={photoOpen} transparent animationType="fade" onRequestClose={() => setPhotoOpen(false)}>
+              <Pressable style={styles.photoBackdrop} onPress={() => setPhotoOpen(false)} accessibilityLabel="Close photo">
+                {user?.imageUrl ? (
+                  <Image source={{ uri: user.imageUrl }} style={{ width: width, height: width }} resizeMode="contain" />
+                ) : null}
+              </Pressable>
+            </Modal>
+          )}
           <View style={styles.idText}>
             <Text style={[styles.displayName, { color: theme.text, fontFamily: Fonts?.displayMedium }]}>
               {user?.fullName || user?.username || "You"}
@@ -395,6 +414,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 16,
+  },
+  photoBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatar: {
     width: 76,
