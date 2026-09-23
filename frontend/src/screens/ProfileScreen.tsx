@@ -260,6 +260,30 @@ function LogRow({
   theme: (typeof Colors)["light"];
   onDelete: (publicId: string) => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <View style={[styles.row, styles.deleteConfirmRow, { borderColor: theme.border }]}>
+        <Text style={[styles.deleteConfirmText, { color: theme.text, fontFamily: Fonts?.sans }]}>
+          Delete this log?
+        </Text>
+        <View style={styles.deleteConfirmActions}>
+          <TouchableOpacity onPress={() => setConfirming(false)} accessibilityLabel="Cancel delete log">
+            <Text style={[styles.deleteConfirmCancel, { color: theme.muted, fontFamily: Fonts?.sansMedium }]}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onDelete(log.public_id)} accessibilityLabel="Confirm delete log">
+            <Text style={[styles.deleteConfirmDelete, { color: theme.accent, fontFamily: Fonts?.sansMedium }]}>
+              Delete
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.row, { borderColor: theme.border }]}>
       <TouchableOpacity onPress={() => router.push(`/videoInfo?essayId=${log.essay_details.public_id}`)}>
@@ -303,7 +327,7 @@ function LogRow({
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => onDelete(log.public_id)}
+        onPress={() => setConfirming(true)}
         style={styles.deleteButton}
         accessibilityLabel="Delete log"
       >
@@ -503,5 +527,23 @@ const styles = StyleSheet.create({
   deleteButton: {
     paddingHorizontal: 4,
     justifyContent: "center",
+  },
+  deleteConfirmRow: {
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  deleteConfirmText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  deleteConfirmActions: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  deleteConfirmCancel: {
+    fontSize: 14,
+  },
+  deleteConfirmDelete: {
+    fontSize: 14,
   },
 });
