@@ -136,19 +136,46 @@ verification.
       here), then rebuilt (`4df7ab1b-7bd0-47f5-9e6b-27c6c03ebea4`) and reinstalled.
       Confirmed fixed: app now launches straight to the signed-out home screen with
       real backend data loading.
-- [ ] Share a YouTube URL from Safari (or paste one into Notes and share from there) to
-      Visual Arguments in the Simulator, **signed in**: app foregrounds and lands on
-      `quickLog` with the correct title/thumbnail populated
-- [ ] Same share, **signed out**: share is held, user routed to sign-in, and after
-      signing in lands on `quickLog` for that same video without re-sharing
+- [x] **Local dev-client loop added mid-verification** (user request): installed
+      `expo-dev-client`, built via the `development` EAS profile
+      (`c279e8eb-babf-4522-aa9d-ab4df2293ab0`), pushed env vars to the `development`
+      EAS environment too, killed a stale leftover `expo run:android` process that
+      was holding port 8081 from the Android testing days, and connected
+      `npx expo start --dev-client` to the installed build. Gives live
+      `console.log`/Fast Refresh for the rest of this task instead of a full ~5min
+      EAS rebuild per JS change.
+- [x] **Second bug found and fixed**: first real share attempt reached the app (no
+      crash) but landed on expo-router's "Unmatched Route" screen instead of
+      `quickLog`. Root cause: `app/+native-intent.ts` predates this feature (an
+      abandoned earlier prototype using an unrelated, unused library `expo-sharing`)
+      and its `redirectSystemPath` never matched `expo-share-intent`'s actual launch
+      URL shape (`<scheme>://dataUrl=...`), plus its catch-all `try/catch` silently
+      redirected *any* normal relative route to `/` on `new URL()` throwing. Fixed
+      with a real redirect for the `dataUrl=` pattern, RED/GREEN tests added
+      (`app/__tests__/native-intent.test.ts`), unused `expo-sharing` dependency
+      removed. Commit `4729113`.
+- [x] Share a YouTube URL from Safari to Visual Arguments in the Simulator,
+      **signed in**: confirmed working end-to-end after the fix above, verified via
+      temporary debug logging (added, observed, then fully reverted — no net diff)
+      showing the complete chain: `hasShareIntent` → `extractYoutubeId` →
+      `getOrCreateVideoEssayByYoutubeId` (created "Robin Williams at His ABSOLUTE
+      Funniest For 10 Minutes Straight!") → `router.push` to `quickLog` → user rated
+      it → log created successfully (backend `201`) → share intent reset cleanly,
+      no re-fire. Note: discovered mid-session that Clerk's session persists across
+      EAS rebuilds via iOS Keychain (survives reinstall under the same signing
+      identity), so this Simulator was already signed in as the real dev account
+      throughout — not the earlier Android-era `+clerk_test@` bypass account.
+- [ ] Same share, **signed out**: not yet re-verified now that a persisted session
+      exists — needs signing out first, then repeating the share
 - [ ] Watch for a visible flash/flicker from the extension's transparent hand-off view
-      (`iosHideView` default) — note it if present, don't silently accept a bad UX
-- [ ] Share a non-YouTube URL: no crash, no navigation, share intent reset cleanly
-- Acceptance: all four cases behave identically to Android's T5/T6 acceptance notes,
-  with zero platform-specific code differences
-- Verify: manual, on Simulator
-- Files: none (verification only), unless T4 surfaces a real gap in
-  `useShareIntentRouter` — see plan's risk note · Scope: M
+      (`iosHideView` default) — not explicitly observed either way yet
+- [ ] Share a non-YouTube URL: no crash, no navigation, share intent reset cleanly —
+      not yet tested
+- Acceptance: signed-in case confirmed; signed-out, flash/flicker, and non-YouTube
+  cases remain
+- Verify: manual, on Simulator (via the dev-client + local Metro loop above)
+- Files: `frontend/app/+native-intent.ts`, `frontend/app/__tests__/native-intent.test.ts`,
+  `frontend/package.json` (`expo-dev-client` added, `expo-sharing` removed) · Scope: M
 
 ### Checkpoint A — core mechanism confirmed on Simulator
 - [ ] All four T4 cases pass
