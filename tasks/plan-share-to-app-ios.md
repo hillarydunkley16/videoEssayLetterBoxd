@@ -8,22 +8,34 @@ Traces to `tasks/spec-share-to-app-ios.md`. Branch `v2`. Task list:
 ## Dependency Graph
 
 ```
-T1 app.json config (flip disableIOS off, set iosAppGroupIdentifier)
-   └─→ T2 prebuild --platform ios --clean, inspect generated Info.plist/entitlements
-          └─→ T3 Xcode Personal Team signing + first Simulator build
-                 └─→ T4 Simulator verification (Safari/Notes share, signed-in + signed-out)
-                        └─→ Checkpoint A: core mechanism confirmed on Simulator
-                               └─→ T5 physical device signing + build
-                                      └─→ T6 physical-device verification (real YouTube app)
-                                             └─→ Checkpoint B: end-to-end confirmed on device
-                                                    └─→ T7 full gate re-run + sign-off
+T1 app.json config (flip disableIOS off, set iosAppGroupIdentifier) — done
+   └─→ T2 prebuild --platform ios --clean, inspect generated Info.plist/entitlements — done
+          └─→ [BLOCKER] local `run:ios` incompatible with this machine's Xcode/SDK combo
+                 (Xcode 26.3 < Expo SDK 57's documented min of 26.4+; 26.4+ requires a
+                 macOS Sequoia→Tahoe upgrade — see spec Open Question 3). One real bug
+                 found/fixed along the way (expo-modules-jsi RuntimeScheduler patch);
+                 a second, upstream-unresolved Swift 6.2 concurrency issue remains.
+                 └─→ T3 EAS project setup + cloud Simulator build (pivot — see spec
+                        Decision 6; supersedes the original "local signing" T3)
+                        └─→ T4 Simulator verification (Safari/Notes share, signed-in +
+                               signed-out), using the EAS-built artifact
+                               └─→ Checkpoint A: core mechanism confirmed on Simulator
+                                      └─→ [PARKED] T5 physical device signing + build
+                                             — blocked on spec Open Question 3 (local
+                                             fix, macOS upgrade, or Apple Developer
+                                             Program enrollment for EAS device builds);
+                                             no further work here until you decide
+                                             └╌╌→ T6 physical-device verification (parked with T5)
+                                                    └╌╌→ Checkpoint B (parked with T5/T6)
+                                                           └─→ T7 full gate re-run + sign-off
+                                                                 (Simulator-scoped until
+                                                                 T5/T6 unblock)
 ```
 
-Fully sequential — unlike the Android plan, there's no parallel-track task here. Every
-task in this module either changes native config or depends on having already built
-against the previous config change; nothing here is pure application logic that could
-be developed independently (that logic is T1-T7 of the Android module, already done
-and reused unchanged).
+Mostly sequential, with one branch point: T3 onward pivots from local builds to EAS
+for the Simulator path (T3/T4/Checkpoint A/T7), while T5/T6/Checkpoint B are parked
+rather than cancelled — they resume from wherever this dependency chain left off once
+Open Question 3 is resolved, they don't need re-planning.
 
 ## Vertical Slices (why this order)
 
@@ -46,6 +58,14 @@ and reused unchanged).
    working in Simulator — mirrors Android's Checkpoint B gating T6.
 5. **T7 last**: same role as Android's T7 — full gate re-run and Success Criteria
    sign-off once the risky, manual, device-dependent work is done.
+6. **T3 pivots to EAS, T5/T6 park rather than adapt**: once local `run:ios` proved
+   incompatible with this machine's toolchain, the cheapest path forward was routing
+   the Simulator step around the blocker (EAS controls its own build environment) —
+   that step doesn't need local signing at all, so EAS's free tier fully covers it.
+   Physical-device work has no equivalent free workaround (EAS device credentials need
+   a paid Apple Developer Program account), so rather than force a decision on that
+   spend mid-implementation, T5/T6 are parked as their own decision point, not silently
+   reinterpreted or dropped.
 
 ## Risks & Mitigations
 
@@ -69,17 +89,40 @@ and reused unchanged).
   scoped addition to T4 rather than letting it block through to device testing
   undiagnosed — per the spec's Boundaries, it must stay one hook, not branch by
   platform.
+- **Realized risk, not just a mitigation plan (T3)**: local Xcode 26.3 turned out to be
+  below Expo SDK 57's documented minimum (26.4+, which itself needs a macOS Sequoia→
+  Tahoe upgrade). One genuine bug was found and fixed along the way
+  (`expo-modules-jsi`'s `RuntimeScheduler.h`, patched via `patch-package`, matches an
+  upstream-merged fix). A second wave of Swift 6.2 strict-concurrency errors in the
+  same package is open and unresolved upstream — attempting to force the package to
+  Swift language mode 5 as a workaround did *not* converge (traded one set of errors
+  for two different new ones) and was reverted. Mitigation adopted: pivot the
+  Simulator step to EAS Build (its own managed, compatible Xcode image) rather than
+  keep patching an open upstream issue blind.
+- **EAS + multi-target config conflict (T3)**: `expo-share-intent`'s own issue tracker
+  (achorein/expo-share-intent-demo#1) documents EAS's build-configure step sometimes
+  injecting a redundant `build.experimental.ios.appExtensions` block for the
+  `ShareExtension` target, conflicting with the config plugin's own target definition.
+  Mitigation: check `app.json` after `eas build:configure` and remove that block if
+  present, keeping only `extra.eas.projectId`.
+- **Physical-device path has no free EAS equivalent**: unlike the Simulator pivot,
+  EAS device builds require a paid Apple Developer Program account for remote
+  credential management. Mitigation: don't spend that money implicitly — T5/T6 are
+  parked as an explicit decision point (spec Open Question 3), not silently resolved
+  by extending the EAS pivot to cover them too.
 
 ## Checkpoints
 
 - **After T2**: generated `Info.plist`/entitlements inspected and confirmed correct
   before attempting a build — stop and fix config here if anything looks wrong, don't
-  debug it via a failed Xcode build.
+  debug it via a failed Xcode build. (Done — this is what surfaced the T3 blocker.)
 - **Checkpoint A (after T4)**: core mechanism confirmed working end-to-end in
-  Simulator (both signed-in and signed-out cases) before touching physical-device
-  signing at all.
+  Simulator (both signed-in and signed-out cases), now via an EAS-built artifact
+  rather than a local build — before considering physical-device signing at all.
 - **Checkpoint B (after T6)**: real YouTube app, real device, both cases confirmed —
-  the final "is this actually done" gate before T7's paperwork.
+  the final "is this actually done" gate before T7's paperwork. **Parked** along with
+  T5/T6 until spec Open Question 3 is resolved.
 - **After T7**: full gate run (backend `manage.py test`, frontend `npx jest`,
   `tsc --noEmit`, `npm run lint`, `npx expo export --platform web`) — final sign-off,
-  same as Android's.
+  same as Android's, scoped to what T1-T4/Checkpoint A actually verified (Simulator)
+  until T5/T6 unblock and T7 can be revisited for the physical-device criteria too.

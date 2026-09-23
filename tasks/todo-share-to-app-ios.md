@@ -45,15 +45,17 @@ verification.
   jest suite unaffected (187/187, unrelated to native project regen)
 - Files: none tracked (native project is gitignored/disposable) · Scope: S
 
-### T3: Xcode Personal Team signing + first Simulator build — BLOCKED
+### T3: local Simulator build — BLOCKED, pivoting to EAS (see revised T3 below)
 - [x] Apple ID / Personal Team setup was already done on this machine (two Personal
       Teams found registered in Xcode) — no interactive signing step needed for a
       Simulator build (signing isn't required for Simulator at all; only T5's physical
       device needs it)
 - [ ] `npx expo run:ios` builds and launches successfully in the Simulator — **still
       failing**, unrelated to signing or to this module's own config
-- **Blocker found**: Xcode 26.3 (Swift 6.2) is incompatible with Expo SDK 57's
-  `expo-modules-jsi@57.1.0`, independent of anything in this spec:
+- **Blocker found**: Xcode 26.3 is below Expo SDK 57's documented minimum (26.4+,
+  which itself requires a macOS Sequoia → Tahoe 26.2 upgrade — confirmed via Expo's
+  own SDK reference and Apple's Xcode release notes). Independent of anything in this
+  spec's own scope:
   1. `RuntimeScheduler.h` used `SWIFT_RETURNS_RETAINED` on two constructors in a way
      the newer compiler rejects — this one is fixed and committed
      (`3affd9c`, patch-package, matches upstream expo/expo#49740).
@@ -67,18 +69,38 @@ verification.
      converge: it fixed the reported errors but immediately surfaced two *new*,
      different failures (a regex-literal parse error, an actor-isolation error) that
      don't exist in language mode 6 — reverted.
-- Acceptance: not met — build does not succeed
+- Acceptance: not met — local build does not succeed
 - Verify: `npx expo run:ios` still exits 1
 - Files: `frontend/patches/expo-modules-jsi+57.1.0.patch`, `frontend/package.json`
   (postinstall script), `frontend/package-lock.json` (RuntimeScheduler fix only,
   language-mode-5 attempt reverted) · Scope: S (became larger once the blocker
   surfaced)
-- **Next step needs a decision**: wait for Expo to ship an SDK 57 patch for Xcode
-  26.x, or update to Xcode 26.5+ (per the RuntimeScheduler issue thread, unclear if it
-  also resolves the second wave), or downgrade Xcode. Not something to keep patching
-  around blind.
+- **Resolution**: per spec Decision 6, pivot the Simulator step to EAS Build instead
+  of continuing to patch an open upstream issue blind. Local build stays broken until
+  spec Open Question 3 resolves (Expo patch, macOS/Xcode upgrade, or — for device
+  builds specifically — Apple Developer Program enrollment). See the revised T3 task
+  below, which replaces this one going forward.
 
-### T4: Simulator verification (Safari/Notes share)
+### T3 (revised): EAS project setup + cloud Simulator build
+- [ ] `npx eas-cli login` — free Expo account
+- [ ] `npx eas-cli build:configure` — generates `frontend/eas.json`, adds
+      `extra.eas.projectId` to `frontend/app.json`
+- [ ] Inspect `app.json` afterward for an auto-injected
+      `build.experimental.ios.appExtensions` block (known issue in
+      achorein/expo-share-intent-demo#1) — remove it if present; only
+      `extra.eas.projectId` should remain from EAS's auto-config
+- [ ] Set the `development` build profile's iOS config to `"simulator": true` in
+      `eas.json`
+- [ ] `npx eas-cli build --profile development --platform ios` (or
+      `eas-cli build:run -p ios` to build + auto-install in one step) succeeds and
+      produces a Simulator-installable artifact
+- Acceptance: cloud build succeeds; artifact installs and launches in the iOS
+  Simulator with no signing errors (none needed for Simulator)
+- Verify: EAS build dashboard/CLI shows a successful build; app opens in Simulator
+- Files: `frontend/eas.json` (new), `frontend/app.json` (`extra.eas.projectId`
+  added) · Scope: S
+
+### T4: Simulator verification (Safari/Notes share, via EAS-built artifact)
 - [ ] Share a YouTube URL from Safari (or paste one into Notes and share from there) to
       Visual Arguments in the Simulator, **signed in**: app foregrounds and lands on
       `quickLog` with the correct title/thumbnail populated
@@ -97,7 +119,7 @@ verification.
 - [ ] All four T4 cases pass
 - [ ] `npx expo export --platform web` still succeeds (extension doesn't regress web)
 
-### T5: physical-device signing + build
+### T5: physical-device signing + build — PARKED
 - [ ] Connect a physical iPhone via cable, trust the machine
 - [ ] Confirm both targets sign successfully to the device under the same free
       Personal Team (Xcode may need the device added under Settings → Accounts →
@@ -106,8 +128,13 @@ verification.
 - Acceptance: app installs and launches on the physical device with no signing errors
 - Verify: `npx expo run:ios --device` exits 0, app opens on device
 - Files: none · Scope: S
+- **Parked** — blocked on the same local-toolchain issue as the original T3 (local
+  `run:ios` fails regardless of target). Per spec Open Question 3, resume only once
+  you decide on: waiting for an Expo patch, a macOS/Xcode upgrade, or Apple Developer
+  Program enrollment (which would let this go through EAS instead of local `run:ios
+  --device`). Not attempted until then.
 
-### T6: physical-device verification (real YouTube app)
+### T6: physical-device verification (real YouTube app) — PARKED
 - [ ] From the real YouTube iOS app, share a video to Visual Arguments, **signed in**:
       lands on `quickLog` for that exact video, correct title/thumbnail
 - [ ] Same share, **signed out**: held, routed to sign-in, resumes to `quickLog` for
@@ -118,25 +145,32 @@ verification.
   both auth states
 - Verify: manual, on a physical device with the real YouTube app installed
 - Files: none · Scope: S
+- **Parked** along with T5 — depends on it.
 
-### Checkpoint B — end-to-end confirmed on physical device
+### Checkpoint B — end-to-end confirmed on physical device — PARKED
 - [ ] Both T6 cases pass with a confirmed backend row
 - [ ] No iOS-specific branch was introduced anywhere in `useShareIntentRouter` or the
       API layer to make this work
 
-### T7: full verification pass
-- [ ] All Success Criteria in `tasks/spec-share-to-app-ios.md` checked off
+### T7: full verification pass (Simulator-scoped until T5/T6 unblock)
+- [ ] Simulator-scoped Success Criteria in `tasks/spec-share-to-app-ios.md` checked
+      off (physical-device criteria remain open, tracked separately, not blocking this
+      pass)
 - [ ] `python manage.py test`, `npx jest`, `npx tsc --noEmit`, `npm run lint`,
       `npx expo export --platform web` all green
 - [ ] Manual re-check: Android share-to-app flow (already shipped) still works —
       confirms enabling the iOS extension didn't regress the Android config
 - Verify: run every command above; report results
 - Files: none (verification only) · Scope: XS
+- Note: revisit this task once T5/T6 unblock, to check off the remaining
+  physical-device Success Criteria and close the spec out fully.
 
 ## Deferred — explicitly out of scope here
 
-- [ ] **EAS Build / TestFlight distribution** for the iOS extension. Local
-      `run:ios` is sufficient for this spec; revisit only if/when distributing to
-      testers beyond your own device becomes a goal.
-- [ ] **Apple Developer Program enrollment.** Not needed for local build/test per
-      spec decision 1; only relevant if the deferred item above is picked up.
+- [x] ~~**EAS Build / TestFlight distribution** for the iOS extension.~~ **No longer
+      deferred for the Simulator step** — adopted for T3/T4 per spec Decision 6, once
+      local `run:ios` proved incompatible with this machine's Xcode/SDK combo.
+      TestFlight/broader distribution remains genuinely out of scope.
+- [ ] **Apple Developer Program enrollment.** Still not committed to — this is exactly
+      the decision parked at spec Open Question 3 / T5-T6. Only relevant if you choose
+      the EAS-for-device path over waiting for a local fix.
