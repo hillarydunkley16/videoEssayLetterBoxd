@@ -25,13 +25,23 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockCreateLog = jest.fn();
+const mockUpdateLog = jest.fn();
+const mockFetchALog = jest.fn();
 jest.mock('@/src/api/logs', () => ({
   createLog: (...args: unknown[]) => mockCreateLog(...args),
+  updateLog: (...args: unknown[]) => mockUpdateLog(...args),
+  fetchALog: (...args: unknown[]) => mockFetchALog(...args),
 }));
 jest.mock('@/src/api/authPost', () => ({ useAuthPost: () => jest.fn() }));
+jest.mock('@/src/api/authUpdate', () => ({ useAuthUpdate: () => jest.fn() }));
+jest.mock('@clerk/clerk-expo', () => ({ useAuth: () => ({ getToken: async () => 'tok' }) }));
 jest.mock('@/src/api/client', () => ({ authFetch: jest.fn() }));
 
-jest.mock('@/src/screens/createLogScreen', () => () => null);
+const mockFormProps = jest.fn();
+jest.mock('@/src/screens/createLogScreen', () => (props: Record<string, unknown>) => {
+  mockFormProps(props);
+  return null;
+});
 jest.mock('@/src/screens/GetVideoEssayScreen', () => () => null);
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'MaterialCommunityIcons');
 jest.mock('@/components/themed-view', () => {
@@ -105,5 +115,78 @@ describe('logVideoModal Save button', () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
 
     expect(mockCreateLog).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('logVideoModal edit mode (?logId=)', () => {
+  const existingLog = {
+    public_id: 'log-1',
+    essay_details: { public_id: 'essay-9' },
+    rating: 3,
+    review_text: 'pretty good',
+    date: '2026-03-05',
+    rewatch: true,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockParams = { logId: 'log-1' };
+    mockFetchALog.mockResolvedValue(existingLog);
+  });
+
+  it('pre-fills the form from the existing log, keeping the calendar day', async () => {
+    render(<LogVideoModal />);
+
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy());
+    const props = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+    expect(props).toMatchObject({ id: 'essay-9', initialRating: 3, reviewText: 'pretty good', rewatch: true });
+    const d = props.date as Date;
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 2, 5]);
+  });
+
+  it('PATCHes once (no essay) when Save is double-tapped, then goes back', async () => {
+    let resolveUpdate: () => void = () => {};
+    mockUpdateLog.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveUpdate = resolve;
+        }),
+    );
+
+    render(<LogVideoModal />);
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy());
+    const save = screen.getByText('Save changes');
+    fireEvent.press(save);
+    fireEvent.press(save);
+
+    expect(mockUpdateLog).toHaveBeenCalledTimes(1);
+    const [id, payload] = mockUpdateLog.mock.calls[0];
+    expect(id).toBe('log-1');
+    expect(payload).toEqual({ rating: 3, review_text: 'pretty good', rewatch: true, date: '2026-03-05' });
+
+    resolveUpdate();
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(mockCreateLog).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('shows an error and allows retry when the update fails', async () => {
+    mockUpdateLog.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce(undefined);
+
+    render(<LogVideoModal />);
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Save changes'));
+    await waitFor(() => expect(screen.getByText(/Couldn't save/)).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Save changes'));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(mockUpdateLog).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows an error when the log cannot be loaded', async () => {
+    mockFetchALog.mockRejectedValueOnce(new Error('404'));
+    render(<LogVideoModal />);
+    await waitFor(() => expect(screen.getByText(/Couldn't load this log/)).toBeTruthy());
   });
 });

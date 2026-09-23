@@ -10,6 +10,7 @@ import { VideoEssay } from "../types/videoEssay";
 import { useAuthPost } from "./authPost";
 import { authFetch } from "./client";
 import { useAuthDelete } from "./authDelete";
+import { useAuthUpdate } from "./authUpdate";
 
 export async function fetchLogs(token: string): Promise<PaginatedResponse<Log>> {
     console.log("fetch logs functin called!!!");
@@ -64,6 +65,21 @@ export async function deleteLog(id: string, token: string, authFetch: ReturnType
     console.log(`deleting log with this ID: ${id}`); 
     const response = await authFetch(`/api/logList/${id}/delete`);
     return response; 
+}
+// The essay is fixed at creation, so an edit never carries one.
+export type UpdateLogPayload = {
+    date?: string;
+    rating?: number;
+    review_text?: string;
+    rewatch?: boolean;
+}
+export async function updateLog(
+    id: string,
+    payload: UpdateLogPayload,
+    authFetch: ReturnType<typeof useAuthUpdate>,
+): Promise<Log> {
+    const response = await authFetch(`/api/logList/${id}/`, payload);
+    return response.data;
 }
 export type CreateLogPayload = {
     essay: String; 
