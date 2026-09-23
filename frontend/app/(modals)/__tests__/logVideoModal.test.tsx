@@ -24,6 +24,9 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
 }));
 
+const mockShowToast = jest.fn();
+jest.mock('@/src/helpers/toast', () => ({ showToast: (...args: unknown[]) => mockShowToast(...args) }));
+
 const mockCreateLog = jest.fn();
 const mockUpdateLog = jest.fn();
 const mockFetchALog = jest.fn();
@@ -73,6 +76,26 @@ describe('logVideoModal Save button', () => {
 
     await waitFor(() => expect(mockCreateLog).toHaveBeenCalledTimes(1));
     expect(mockCreateLog.mock.calls[0][1]).toMatchObject({ essay: 'essay-123', rating: 4 });
+  });
+
+  it('closes the modal and shows a "Log created" sign after a successful save', async () => {
+    mockCreateLog.mockResolvedValue(undefined);
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(mockShowToast).toHaveBeenCalledWith('Log created');
+  });
+
+  it('does not show the sign when the save fails', async () => {
+    mockCreateLog.mockRejectedValueOnce(new Error('network'));
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    await waitFor(() => expect(screen.getByText(/Couldn't save/)).toBeTruthy());
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('creates the log only once when Save is double-tapped, then dismisses', async () => {

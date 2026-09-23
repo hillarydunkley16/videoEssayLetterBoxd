@@ -13,6 +13,7 @@ import { useAppFonts } from './hooks/use-app-fonts'
 import { useColorScheme } from './hooks/use-color-scheme'
 import { useShareIntentRouter } from '@/src/hooks/useShareIntentRouter'
 import { Colors } from '@/constants/theme'
+import { Toast } from '@/components/ui/Toast'
 // import { GestureDetectorProvider } from 'react-native-gesture-handler'
 
 function RootLayoutNav() {
@@ -31,6 +32,7 @@ function RootLayoutNav() {
             {Platform.OS !== 'web' && <MobileTopNav />}
           <View style={styles.content}>
             <Stack screenOptions={{ headerShown: false }} />
+            <Toast />
           </View>
           {Platform.OS !== 'web' && (
             <SignedIn>

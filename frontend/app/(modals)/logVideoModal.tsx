@@ -9,6 +9,7 @@ import { createLog, fetchALog, updateLog } from '@/src/api/logs';
 import { useAuthPost } from '@/src/api/authPost';
 import { useAuthUpdate } from '@/src/api/authUpdate';
 import { Colors, Fonts } from '@/constants/theme';
+import { showToast } from '@/src/helpers/toast';
 
 export default function LogVideoModal() {
   const authFetch = useAuthPost();  // ← use this instead of imported authFetch
@@ -121,6 +122,7 @@ export default function LogVideoModal() {
             console.log("Log created successfully");
             setLoading(false);
             router.replace('/');
+            showToast('Log created');
         } catch (err) {
             console.error("Error saving log:", err);
             setError("Couldn't save this log — try again.");
