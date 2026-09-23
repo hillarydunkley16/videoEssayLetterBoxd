@@ -193,6 +193,14 @@ export default function ProfileScreen() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={<EmptyState theme={theme} text="Nothing on your watchlist yet." />}
           renderItem={({ item }) => <EssayRow essay={item} theme={theme} />}
+          ListFooterComponent={
+            <TouchableOpacity
+              style={[styles.addEssayBtn, { backgroundColor: theme.accent }]}
+              onPress={() => router.push(`/addEssayToList?publicId=${profile.watchList.public_id}`)}
+            >
+              <Text style={[styles.addEssayText, { fontFamily: Fonts?.sansSemiBold }]}>+ Add essay</Text>
+            </TouchableOpacity>
+          }
         />
       </ThemedView>
     );
@@ -548,6 +556,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 2,
+  },
+  addEssayBtn: {
+    marginTop: 14,
+    marginHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 3,
+    alignItems: "center",
+  },
+  addEssayText: {
+    color: "#fff",
+    fontSize: 13,
   },
   deleteButton: {
     paddingHorizontal: 4,
