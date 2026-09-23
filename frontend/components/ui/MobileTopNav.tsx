@@ -1,5 +1,6 @@
 import { View, StyleSheet, useColorScheme } from 'react-native'
 import { SignedIn } from '@clerk/clerk-expo'
+import { usePathname } from 'expo-router'
 import { Colors } from '@/constants/theme'
 import { SearchField } from './SearchField'
 
@@ -8,6 +9,10 @@ import { SearchField } from './SearchField'
 // stack content. Only shown when signed in, matching MobileNav.
 export function MobileTopNav() {
   const theme = Colors[useColorScheme() ?? 'light']
+  const pathname = usePathname()
+  const hideSearch = pathname === '/profile' || pathname === '/singleLog'
+
+  if (hideSearch) return null
 
   return (
     <SignedIn>

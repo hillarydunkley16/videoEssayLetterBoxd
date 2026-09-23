@@ -45,6 +45,7 @@ export function WebNav() {
   const { signOut } = useClerk(); 
   const theme = Colors[useColorScheme() ?? 'light']
   const pathname = usePathname()
+  const hideSearch = pathname === '/profile' || pathname === '/singleLog'
   async function handleSignOut() {
     try {
       await signOut();
@@ -63,9 +64,11 @@ export function WebNav() {
         </Pressable>
       </Link>
 
-      <SignedIn>
-        <SearchField theme={theme} style={styles.searchContainer} />
-      </SignedIn>
+      {!hideSearch && (
+        <SignedIn>
+          <SearchField theme={theme} style={styles.searchContainer} />
+        </SignedIn>
+      )}
 
       <View style={styles.links}>
         <SignedOut>
