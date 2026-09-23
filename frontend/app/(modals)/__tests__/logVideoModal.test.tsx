@@ -98,6 +98,18 @@ describe('logVideoModal Save button', () => {
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 
+  it('shows the server validation message when the backend rejects the log', async () => {
+    mockCreateLog.mockRejectedValueOnce({
+      response: { status: 400, data: { review_text: ['This field may not be blank.'] } },
+    });
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    expect(await screen.findByText('Review: This field may not be blank.')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
   it('creates the log only once when Save is double-tapped, then dismisses', async () => {
     let resolveCreate: () => void = () => {};
     mockCreateLog.mockImplementation(

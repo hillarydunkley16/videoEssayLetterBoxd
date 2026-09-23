@@ -10,6 +10,7 @@ import { useAuthPost } from '@/src/api/authPost';
 import { useAuthUpdate } from '@/src/api/authUpdate';
 import { Colors, Fonts } from '@/constants/theme';
 import { showToast } from '@/src/helpers/toast';
+import { validationMessage } from '@/src/helpers/validationMessage';
 
 export default function LogVideoModal() {
   const authFetch = useAuthPost();  // ← use this instead of imported authFetch
@@ -125,7 +126,7 @@ export default function LogVideoModal() {
             showToast('Log created');
         } catch (err) {
             console.error("Error saving log:", err);
-            setError("Couldn't save this log — try again.");
+            setError(validationMessage(err) ?? "Couldn't save this log — try again.");
             submittingRef.current = false;
             setLoading(false);
         }
