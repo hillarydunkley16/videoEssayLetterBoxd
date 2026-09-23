@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -11,7 +11,7 @@ import {
   View,
   useColorScheme,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
@@ -76,9 +76,11 @@ export default function VideoInfoScreen({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  useEffect(() => {
+  // Refetch on every focus, not just mount: quick log dismisses with router.back(),
+  // which leaves this screen mounted with a stale log list.
+  useFocusEffect(useCallback(() => {
     load();
-  }, [load]);
+  }, [load]));
 
   // router.back() silently no-ops when this screen has no back-history (e.g.
   // opened via a direct/refreshed URL on web), so fall back to a known route
