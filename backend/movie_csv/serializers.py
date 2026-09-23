@@ -117,6 +117,10 @@ class LogSerializer(serializers.HyperlinkedModelSerializer):
             "likes",
             "comments"
         )
+    def update(self, instance, validated_data):
+        # A log's essay is fixed at creation; edits only touch rating/review/date/rewatch.
+        validated_data.pop("essay", None)
+        return super().update(instance, validated_data)
     def get_likes_count(self, obj):
         return obj.likes.count()
 
