@@ -54,7 +54,11 @@ jest.mock('@/src/screens/QuickLogScreen', () => (props: QuickLogProps) => {
   quickLogProps = props;
   return null;
 });
-jest.mock('@/src/screens/createLogScreen', () => () => null);
+let formProps: { reviewError?: string } | undefined;
+jest.mock('@/src/screens/createLogScreen', () => (props: { reviewError?: string }) => {
+  formProps = props;
+  return null;
+});
 jest.mock('@/src/screens/GetVideoEssayScreen', () => () => null);
 jest.mock('@/components/ui/reviewsTopNav', () => ({ ReviewsTopNav: () => null }));
 jest.mock('react-native-gesture-handler', () => ({
@@ -153,7 +157,7 @@ describe('quickLog expanded "Save Log"', () => {
     });
   }
 
-  it("shows the server's validation message to the user and keeps the sheet open", async () => {
+  it('passes a blank-review rejection to the review field and keeps the sheet open', async () => {
     mockCreateLog.mockRejectedValueOnce({
       response: { status: 400, data: { review_text: ['This field may not be blank.'] } },
     });
@@ -161,8 +165,10 @@ describe('quickLog expanded "Save Log"', () => {
     expandSheet();
 
     fireEvent.press(screen.getByText('Save Log'));
+    await act(async () => {});
 
-    expect(await screen.findByText('Review: This field may not be blank.')).toBeTruthy();
+    expect(formProps!.reviewError).toBe('This field may not be blank.');
+    expect(screen.queryByText(/may not be blank/)).toBeNull();
     expect(mockBack).not.toHaveBeenCalled();
     expect(mockShowToast).not.toHaveBeenCalled();
   });

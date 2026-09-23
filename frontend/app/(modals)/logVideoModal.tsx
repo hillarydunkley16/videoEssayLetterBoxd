@@ -10,7 +10,7 @@ import { useAuthPost } from '@/src/api/authPost';
 import { useAuthUpdate } from '@/src/api/authUpdate';
 import { Colors, Fonts } from '@/constants/theme';
 import { showToast } from '@/src/helpers/toast';
-import { validationMessage } from '@/src/helpers/validationMessage';
+import { validationErrors, validationMessage } from '@/src/helpers/validationMessage';
 
 export default function LogVideoModal() {
   const authFetch = useAuthPost();  // ← use this instead of imported authFetch
@@ -30,6 +30,8 @@ export default function LogVideoModal() {
     const [reviewText, setReviewText] = useState("");
     const [date, setDate] = useState(new Date());
     const [error, setError] = useState("");
+    // Shown under the review box (next to the character count), not in the top banner.
+    const [reviewError, setReviewError] = useState("");
     const theme = Colors[useColorScheme() ?? 'light'];
     const essayId = logId ? loadedEssayId :
       typeof params.essayId === "string" ?
@@ -105,6 +107,7 @@ export default function LogVideoModal() {
         submittingRef.current = true;
         setLoading(true);
         setError("");
+        setReviewError("");
         try{
             const fields = {
                 date: date.toISOString().split('T')[0],
@@ -126,7 +129,9 @@ export default function LogVideoModal() {
             showToast('Log created');
         } catch (err) {
             console.error("Error saving log:", err);
-            setError(validationMessage(err) ?? "Couldn't save this log — try again.");
+            const fieldErrors = validationErrors(err);
+            setReviewError(fieldErrors?.review_text ?? "");
+            setError(fieldErrors ? (validationMessage(err, ['review_text']) ?? "") : "Couldn't save this log — try again.");
             submittingRef.current = false;
             setLoading(false);
         }
@@ -171,10 +176,11 @@ export default function LogVideoModal() {
               style={styles.form}
               initialRating={ratingValue}
               reviewText={reviewText}
+              reviewError={reviewError}
               date={date}
               rewatch={rewatch}
               onRatingChange={setRatingValue}
-              onReviewTextChange={setReviewText}
+              onReviewTextChange={(text) => { setReviewText(text); setReviewError(""); }}
               onDateChange={setDate}
               onWatchedChange={setRewatch}
             />

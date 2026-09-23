@@ -14,7 +14,7 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import { createLog } from '@/src/api/logs';
 import { useAuthPost } from '@/src/api/authPost';
 import { showToast } from '@/src/helpers/toast';
-import { validationMessage } from '@/src/helpers/validationMessage';
+import { validationErrors, validationMessage } from '@/src/helpers/validationMessage';
 
 export default function QuickLog() {
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -29,6 +29,8 @@ export default function QuickLog() {
     const [date, setDate] = useState(new Date());
     const [watchList, setWatchList] = useState(false);
     const [error, setError] = useState("");
+    // Shown under the review box (next to the character count), not in the top banner.
+    const [reviewError, setReviewError] = useState("");
     // useAuthPost returns a fresh function each render, so the close effect below re-runs
     // on every re-render; this makes sure closing the sheet logs at most once.
     const closeHandledRef = useRef(false);
@@ -80,6 +82,7 @@ export default function QuickLog() {
         submittingRef.current = true;
         setLoading(true);
         setError("");
+        setReviewError("");
         try{
             const payload = {
                 essay: essayId,
@@ -96,7 +99,9 @@ export default function QuickLog() {
             router.back();
         } catch (err) {
             console.error("Error creating log:", err);
-            setError(validationMessage(err) ?? "Couldn't save this log — try again.");
+            const fieldErrors = validationErrors(err);
+            setReviewError(fieldErrors?.review_text ?? "");
+            setError(fieldErrors ? (validationMessage(err, ['review_text']) ?? "") : "Couldn't save this log — try again.");
             submittingRef.current = false;
             setLoading(false);
         }
@@ -180,10 +185,11 @@ export default function QuickLog() {
                   initialRating={ratingValue}
                   style={styles.container}
                   reviewText={reviewText}
+                  reviewError={reviewError}
                   date={date}
                   rewatch={rewatch}
                   onRatingChange={setRatingValue}
-                  onReviewTextChange={setReviewText}  // ← pass setter down
+                  onReviewTextChange={(text) => { setReviewText(text); setReviewError(""); }}
                   onDateChange={setDate}              // ← pass setter down
                   onWatchedChange={setRewatch}
                 />

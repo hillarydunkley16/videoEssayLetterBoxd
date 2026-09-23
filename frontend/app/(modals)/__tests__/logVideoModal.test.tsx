@@ -9,7 +9,7 @@
  * handler (no Clerk, no network, no nested screens).
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 
 let mockParams: Record<string, string> = { essayId: 'essay-123' };
 const mockBack = jest.fn();
@@ -98,7 +98,7 @@ describe('logVideoModal Save button', () => {
     expect(mockShowToast).not.toHaveBeenCalled();
   });
 
-  it('shows the server validation message when the backend rejects the log', async () => {
+  it('passes a blank-review rejection to the review field, not the top banner', async () => {
     mockCreateLog.mockRejectedValueOnce({
       response: { status: 400, data: { review_text: ['This field may not be blank.'] } },
     });
@@ -106,8 +106,19 @@ describe('logVideoModal Save button', () => {
     render(<LogVideoModal />);
     fireEvent.press(screen.getByText('Save Log'));
 
-    expect(await screen.findByText('Review: This field may not be blank.')).toBeTruthy();
+    await waitFor(() => {
+      const props = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+      expect(props.reviewError).toBe('This field may not be blank.');
+    });
+    expect(screen.queryByText(/may not be blank/)).toBeNull();
+    expect(screen.queryByText(/Couldn't save/)).toBeNull();
     expect(mockReplace).not.toHaveBeenCalled();
+
+    // Typing clears the error.
+    const props = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+    act(() => props.onReviewTextChange('great'));
+    const after = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+    expect(after.reviewError).toBeFalsy();
   });
 
   it('creates the log only once when Save is double-tapped, then dismisses', async () => {

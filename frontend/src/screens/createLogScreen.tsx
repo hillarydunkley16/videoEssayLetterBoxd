@@ -10,6 +10,7 @@ type Props = {
     initialRating?: number;
     style: object;
     reviewText: string;
+    reviewError?: string;
     date: Date;
     rewatch: boolean;
     onRatingChange?: (value: number) => void;
@@ -38,6 +39,7 @@ export default function CreateLogScreen(
     onWatchedChange,
     onWatchListChange,
     reviewText,
+    reviewError,
     date
     }: Props){
     const theme = Colors[useColorScheme() ?? 'light'];
@@ -160,9 +162,14 @@ export default function CreateLogScreen(
                         { borderColor: theme.border, backgroundColor: theme.surface, color: theme.text, fontFamily: Fonts?.sans },
                     ]}
                 />
-                <Text style={[styles.charCount, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                    {reviewText.length} characters
-                </Text>
+                <View style={styles.reviewFooter}>
+                    <Text style={[styles.reviewError, { color: theme.accent, fontFamily: Fonts?.sans }]}>
+                        {reviewError ?? ''}
+                    </Text>
+                    <Text style={[styles.charCount, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                        {reviewText.length} characters
+                    </Text>
+                </View>
             </View>
 
             <View style={[styles.toggleRow, { borderColor: theme.border }]}>
@@ -242,10 +249,20 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     textAlignVertical: 'top',
   },
+  reviewFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  reviewError: {
+    flex: 1,
+    fontSize: 12,
+    paddingRight: 8,
+  },
   charCount: {
     fontSize: 11,
     textAlign: 'right',
-    marginTop: 6,
   },
   toggleRow: {
     flexDirection: 'row',
