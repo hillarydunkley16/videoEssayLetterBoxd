@@ -45,14 +45,38 @@ verification.
   jest suite unaffected (187/187, unrelated to native project regen)
 - Files: none tracked (native project is gitignored/disposable) · Scope: S
 
-### T3: Xcode Personal Team signing + first Simulator build
-- [ ] In Xcode: Settings → Accounts → add Apple ID (free, no paid Program needed) →
-      select it as the team for both the main app target and the extension target
-- [ ] `npx expo run:ios` builds and launches successfully in the Simulator
-- Acceptance: app launches in Simulator with no signing errors; both targets show a
-  valid (auto-generated) provisioning profile in Xcode
-- Verify: `npx expo run:ios` exits 0, app opens
-- Files: none (signing/build config only) · Scope: S
+### T3: Xcode Personal Team signing + first Simulator build — BLOCKED
+- [x] Apple ID / Personal Team setup was already done on this machine (two Personal
+      Teams found registered in Xcode) — no interactive signing step needed for a
+      Simulator build (signing isn't required for Simulator at all; only T5's physical
+      device needs it)
+- [ ] `npx expo run:ios` builds and launches successfully in the Simulator — **still
+      failing**, unrelated to signing or to this module's own config
+- **Blocker found**: Xcode 26.3 (Swift 6.2) is incompatible with Expo SDK 57's
+  `expo-modules-jsi@57.1.0`, independent of anything in this spec:
+  1. `RuntimeScheduler.h` used `SWIFT_RETURNS_RETAINED` on two constructors in a way
+     the newer compiler rejects — this one is fixed and committed
+     (`3affd9c`, patch-package, matches upstream expo/expo#49740).
+  2. After that fix, a second, different set of Swift 6.2 "strict concurrency /
+     sending risks data races" errors surfaced in the same package
+     (`JavaScriptRuntime.swift`) — this is expo/expo#50470, an **open, unresolved**
+     upstream issue as of this attempt.
+  3. Tried forcing the package to Swift language mode 5 (the only real lever, since
+     this package builds via its own SwiftPM `Package.swift`, not a Podfile-governed
+     Xcode target — a Podfile `post_install` hook has no effect on it). This did not
+     converge: it fixed the reported errors but immediately surfaced two *new*,
+     different failures (a regex-literal parse error, an actor-isolation error) that
+     don't exist in language mode 6 — reverted.
+- Acceptance: not met — build does not succeed
+- Verify: `npx expo run:ios` still exits 1
+- Files: `frontend/patches/expo-modules-jsi+57.1.0.patch`, `frontend/package.json`
+  (postinstall script), `frontend/package-lock.json` (RuntimeScheduler fix only,
+  language-mode-5 attempt reverted) · Scope: S (became larger once the blocker
+  surfaced)
+- **Next step needs a decision**: wait for Expo to ship an SDK 57 patch for Xcode
+  26.x, or update to Xcode 26.5+ (per the RuntimeScheduler issue thread, unclear if it
+  also resolves the second wave), or downgrade Xcode. Not something to keep patching
+  around blind.
 
 ### T4: Simulator verification (Safari/Notes share)
 - [ ] Share a YouTube URL from Safari (or paste one into Notes and share from there) to
