@@ -7,7 +7,7 @@
  * second log. The bottom sheet, rating screen and network are stubbed.
  */
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
@@ -21,6 +21,9 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ essayId: 'essay-123' }),
   useNavigation: () => ({}),
 }));
+
+const mockShowToast = jest.fn();
+jest.mock('@/src/helpers/toast', () => ({ showToast: (...args: unknown[]) => mockShowToast(...args) }));
 
 const mockCreateLog = jest.fn();
 jest.mock('@/src/api/logs', () => ({
@@ -135,5 +138,59 @@ describe('quickLog sheet close', () => {
       pathname: '/logVideoModal',
       params: { essayId: 'essay-123', rating: '4' },
     });
+  });
+});
+
+describe('quickLog expanded "Save Log"', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCreateLog.mockResolvedValue({});
+  });
+
+  function expandSheet() {
+    act(() => {
+      sheetProps!.onChange(1);
+    });
+  }
+
+  it("shows the server's validation message to the user and keeps the sheet open", async () => {
+    mockCreateLog.mockRejectedValueOnce({
+      response: { status: 400, data: { review_text: ['This field may not be blank.'] } },
+    });
+    render(<QuickLog />);
+    expandSheet();
+
+    fireEvent.press(screen.getByText('Save Log'));
+
+    expect(await screen.findByText('Review: This field may not be blank.')).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a generic message for other failures', async () => {
+    mockCreateLog.mockRejectedValueOnce(new Error('Network Error'));
+    render(<QuickLog />);
+    expandSheet();
+
+    fireEvent.press(screen.getByText('Save Log'));
+
+    expect(await screen.findByText(/Couldn't save this log/)).toBeTruthy();
+  });
+
+  it('on success shows the sign, dismisses, and does not auto-save a second log on close', async () => {
+    render(<QuickLog />);
+    rate(4);
+    expandSheet();
+
+    fireEvent.press(screen.getByText('Save Log'));
+    await act(async () => {});
+
+    expect(mockCreateLog).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledWith('Log created');
+    expect(mockBack).toHaveBeenCalledTimes(1);
+
+    closeSheet();
+    await act(async () => {});
+    expect(mockCreateLog).toHaveBeenCalledTimes(1);
   });
 });

@@ -13,6 +13,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
 import { createLog } from '@/src/api/logs';
 import { useAuthPost } from '@/src/api/authPost';
+import { showToast } from '@/src/helpers/toast';
+import { validationMessage } from '@/src/helpers/validationMessage';
 
 export default function QuickLog() {
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -30,6 +32,7 @@ export default function QuickLog() {
     // useAuthPost returns a fresh function each render, so the close effect below re-runs
     // on every re-render; this makes sure closing the sheet logs at most once.
     const closeHandledRef = useRef(false);
+    const submittingRef = useRef(false);
     const isPresented = router.canGoBack();
     const params = useLocalSearchParams<{essayId?: string | string[]}>();
     const essayId = 
@@ -72,6 +75,11 @@ export default function QuickLog() {
     }, []);
     const handleSubmit = async () => {
         if (typeof essayId !== "string") return;
+        // Guard against double-taps creating duplicate logs.
+        if (submittingRef.current) return;
+        submittingRef.current = true;
+        setLoading(true);
+        setError("");
         try{
             const payload = {
                 essay: essayId,
@@ -82,9 +90,15 @@ export default function QuickLog() {
             }
           
             await createLog(authFetch, payload);
-            console.log("Log created successfully");
-        } catch (error) {
-            console.error("Error creating log:", error);
+            // The log is saved: closing the sheet must not also auto-save a quick log.
+            closeHandledRef.current = true;
+            showToast('Log created');
+            router.back();
+        } catch (err) {
+            console.error("Error creating log:", err);
+            setError(validationMessage(err) ?? "Couldn't save this log — try again.");
+            submittingRef.current = false;
+            setLoading(false);
         }
     }
 
@@ -160,6 +174,7 @@ export default function QuickLog() {
                     disabled = {loading}
                     />
                 </View>
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
                   <CreateLogScreen
                   id={essayId}
                   initialRating={ratingValue}
@@ -197,6 +212,12 @@ const styles = StyleSheet.create({
         // paddingHorizontal: 20,
         // paddingTop: 30,
         // paddingBottom: 20,
+    },
+    errorText: {
+        color: 'red',
+        textAlign: 'center',
+        paddingHorizontal: 10,
+        paddingTop: 8,
     },
     buttonRow: {
     flexDirection: 'row',
