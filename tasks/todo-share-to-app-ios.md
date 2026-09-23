@@ -165,15 +165,28 @@ verification.
       EAS rebuilds via iOS Keychain (survives reinstall under the same signing
       identity), so this Simulator was already signed in as the real dev account
       throughout — not the earlier Android-era `+clerk_test@` bypass account.
-- [ ] Same share, **signed out**: not yet re-verified now that a persisted session
-      exists — needs signing out first, then repeating the share
+- [x] **Same share, signed out**: reset the persisted session with
+      `xcrun simctl keychain booted reset` (Clerk's tokenCache survives app
+      reinstall via iOS Keychain, so signing out needed a keychain reset, not just a
+      reinstall) — confirmed signed-out state (`User is undefined: true`), then
+      shared `youtu.be/y6120QOlsfU` (Darude - Sandstorm): app foregrounded to the
+      normal signed-out home screen, share held silently, no crash, no navigation —
+      matching Android's T6 behavior exactly. Then signed in via the UI: resumed to
+      `quickLog` for the same video automatically. Confirmed via a genuinely new
+      backend `Log` row (id 17, `youtube_id=y6120QOlsfU`, rating 5, created just
+      then) — verified this wasn't a stale/reused screen by checking the DB directly,
+      since a mid-test code edit (adding debug logging) triggered a Fast Refresh
+      that made an *earlier* still-open sheet ambiguous at first glance.
 - [ ] Watch for a visible flash/flicker from the extension's transparent hand-off view
-      (`iosHideView` default) — not explicitly observed either way yet
+      (`iosHideView` default) — not explicitly observed either way across the shares
+      done so far, no flash noticed in any screenshot sequence
 - [ ] Share a non-YouTube URL: no crash, no navigation, share intent reset cleanly —
       not yet tested
-- Acceptance: signed-in case confirmed; signed-out, flash/flicker, and non-YouTube
-  cases remain
-- Verify: manual, on Simulator (via the dev-client + local Metro loop above)
+- Acceptance: signed-in and signed-out cases both confirmed; flash/flicker and
+  non-YouTube-URL cases remain
+- Verify: manual, on Simulator (via the dev-client + local Metro loop above); full
+  jest suite 189/189 after debug-logging cleanup (one unrelated flaky failure on
+  first run, clean on retry)
 - Files: `frontend/app/+native-intent.ts`, `frontend/app/__tests__/native-intent.test.ts`,
   `frontend/package.json` (`expo-dev-client` added, `expo-sharing` removed) · Scope: M
 
