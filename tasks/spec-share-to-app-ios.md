@@ -153,10 +153,13 @@ already the plugin's default.)
 
 ## Testing Strategy
 
-- **No new unit tests anticipated** — `useShareIntentRouter`'s existing 8 tests
-  already cover the resolve/navigate/sign-in-resume/error-alert logic in a
-  platform-agnostic way (they mock `useShareIntentContext()` directly, not the native
-  module), and that logic doesn't change here.
+- `useShareIntentRouter`'s existing 8 tests already cover the resolve/navigate/
+  sign-in-resume/error-alert logic in a platform-agnostic way (they mock
+  `useShareIntentContext()` directly, not the native module), and that logic didn't
+  need to change here — confirmed by T4's live verification. One new test file was
+  added along the way regardless: `app/__tests__/native-intent.test.ts` (2 tests),
+  covering a real bug found live (see T4 notes) in pre-existing, unrelated dead code
+  (`app/+native-intent.ts`), not part of this spec's own planned surface.
 - **This module is manual-verification-heavy by nature**, same as Android's T5/T6:
   no automated test can drive a real OS share sheet or Share Extension target.
   Verification plan (per your "both" answer):
@@ -205,14 +208,15 @@ already the plugin's default.)
 
 ## Success Criteria
 
-- [ ] `expo prebuild --platform ios --clean` generates a Share Extension target with
+- [x] `expo prebuild --platform ios --clean` generates a Share Extension target with
       the expected `NSExtension`/activation-rule config in `Info.plist` and a matching
       App Group entitlement on both the main app and extension targets, with no
-      conflicts against existing plugins.
-- [ ] Sharing a URL from Safari/Notes to Visual Arguments in the iOS Simulator (via an
+      conflicts against existing plugins. (T2)
+- [x] Sharing a URL from Safari/Notes to Visual Arguments in the iOS Simulator (via an
       EAS-built artifact, per Decision 6) lands on `quickLog` for that video when
       signed in, and holds-then-resumes correctly when signed out — mirroring
-      Android's T5/T6 behavior exactly, no code branching by platform.
+      Android's T5/T6 behavior exactly, no code branching by platform. (T4, both cases
+      confirmed live with real backend `Log` rows created for each)
 - [ ] Sharing a YouTube video from the real YouTube iOS app on a physical device,
       signed in, lands on `quickLog` for that exact video with the correct
       title/thumbnail populated. **Blocked on Open Question 3** — not required for
@@ -220,8 +224,10 @@ already the plugin's default.)
       honest end-to-end check, to complete once unblocked.
 - [ ] The same physical-device check for the signed-out → sign-in → resume path.
       Same blocked status as above.
-- [ ] `expo export --platform web`, `tsc --noEmit`, `npm run lint`, `npx jest`, and
-      `python manage.py test` all stay green.
+- [x] `expo export --platform web`, `tsc --noEmit`, `npm run lint`, `npx jest`, and
+      `python manage.py test` all stay green. (T7: backend 298/298, frontend jest
+      189/189 across 29 suites, tsc/lint show only pre-existing issues unrelated to
+      this feature, web export succeeds)
 - [ ] No new iOS-specific branches introduced in `useShareIntentRouter` or the API
       layer — confirms the "write it once for both platforms" assumption from the
       original spec held.

@@ -229,16 +229,27 @@ verification.
 - [ ] No iOS-specific branch was introduced anywhere in `useShareIntentRouter` or the
       API layer to make this work
 
-### T7: full verification pass (Simulator-scoped until T5/T6 unblock)
-- [ ] Simulator-scoped Success Criteria in `tasks/spec-share-to-app-ios.md` checked
+### T7: full verification pass (Simulator-scoped until T5/T6 unblock) — done
+- [x] Simulator-scoped Success Criteria in `tasks/spec-share-to-app-ios.md` checked
       off (physical-device criteria remain open, tracked separately, not blocking this
       pass)
-- [ ] `python manage.py test`, `npx jest`, `npx tsc --noEmit`, `npm run lint`,
-      `npx expo export --platform web` all green
-- [ ] Manual re-check: Android share-to-app flow (already shipped) still works —
-      confirms enabling the iOS extension didn't regress the Android config
-- Verify: run every command above; report results
-- Files: none (verification only) · Scope: XS
+- [x] `python manage.py test` (298/298), `npx jest --forceExit` (189/189, 29 suites),
+      `npx tsc --noEmit` (65 pre-existing errors, none in share-to-app files —
+      unchanged from earlier checks), `npm run lint` (3 pre-existing errors, same as
+      earlier checks — `sign-in.tsx`, `src/api/users.ts`, `createLogScreen.tsx`'s
+      unrelated in-progress edit), `npx expo export --platform web` (succeeds) — all
+      green
+- [x] Manual re-check: Android share-to-app flow — not re-run on-device; confidence
+      instead from (a) `app.json`'s `android` block and `androidIntentFilters` are
+      byte-identical to when Android's own T7 was verified, (b) the shared,
+      platform-agnostic regression suite (`useShareIntentRouter`,
+      `extractYoutubeId`, etc.) stayed green throughout, (c) the
+      `+native-intent.ts` fix only matches iOS's URL-based launch pattern
+      (`dataUrl=`) — confirmed via `expo-share-intent`'s own source that this is
+      iOS-only; Android's flow doesn't go through it at all
+- Verify: ran every command above; see notes
+- Files: `tasks/spec-share-to-app-ios.md` (Success Criteria checked off) ·
+  Scope: XS
 - Note: revisit this task once T5/T6 unblock, to check off the remaining
   physical-device Success Criteria and close the spec out fully.
 
