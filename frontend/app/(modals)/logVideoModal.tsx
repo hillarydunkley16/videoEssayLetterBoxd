@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams} from 'expo-router';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CreateLogScreen from '@/src/screens/createLogScreen';
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen';
 import { useEffect, useRef, useState} from 'react';
@@ -9,6 +9,7 @@ import { createLog, fetchALog, updateLog } from '@/src/api/logs';
 import { useAuthPost } from '@/src/api/authPost';
 import { useAuthUpdate } from '@/src/api/authUpdate';
 import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { showToast } from '@/src/helpers/toast';
 import { validationErrors, validationMessage } from '@/src/helpers/validationMessage';
 
@@ -32,7 +33,7 @@ export default function LogVideoModal() {
     const [error, setError] = useState("");
     // Shown under the review box (next to the character count), not in the top banner.
     const [reviewError, setReviewError] = useState("");
-    const theme = Colors[useColorScheme() ?? 'light'];
+    const theme = Colors[useColorScheme()];
     const essayId = logId ? loadedEssayId :
       typeof params.essayId === "string" ?
       params.essayId

@@ -190,7 +190,7 @@ export default function Page() {
           <ThemedText style={styles.buttonText}>Sign in</ThemedText>
         </Pressable>
         <View style={styles.linkContainer}>
-          <ThemedText>Don't have an account? </ThemedText>
+          <ThemedText>Don&apos;t have an account? </ThemedText>
           <Link href="/sign-up">
             <ThemedText type="link">Sign up</ThemedText>
           </Link>

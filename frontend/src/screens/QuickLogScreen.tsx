@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Pressable, StyleSheet, useColorScheme } from 'react-native'
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router';
 import { ThemedText } from "@/components/themed-text";
 import { useAuthPost} from '../api/authPost';
 import { TappableRatingDots } from '@/components/ui/RatingDots';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const ICON_SIZE = 44;
 
@@ -25,7 +26,7 @@ type Props = {
 // review text will be blank
 //
 export default function QuickLogScreen( { id, onRatingChange, onRatingSetChange, style, initialRating, onDone, onAddReview}: Props){
-    const theme = Colors[useColorScheme() ?? 'light'];
+    const theme = Colors[useColorScheme()];
     const authFetch = useAuthPost();
     const [rating, setRating] = useState<number>(initialRating ?? 0);
     const [rewatch, setRewatch] = useState(false);

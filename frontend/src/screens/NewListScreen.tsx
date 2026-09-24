@@ -8,15 +8,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
 import { Colors, Fonts } from "@/constants/theme";
 import { createCollection } from "@/src/api/collection";
 import { useAuthPost } from "@/src/api/authPost";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function NewListScreen() {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const authPost = useAuthPost();
 
   const [name, setName] = useState("");

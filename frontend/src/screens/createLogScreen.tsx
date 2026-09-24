@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, TextInput, Platform, StyleSheet, TouchableOpacity, Text, useColorScheme, Keyboard} from 'react-native'
+import { View, TextInput, Platform, StyleSheet, TouchableOpacity, Text, Keyboard} from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TappableRatingDots } from '@/components/ui/RatingDots';
 import { Toggle } from '@/components/ui/Toggle';
 import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type Props = {
     id: string;
@@ -42,7 +43,7 @@ export default function CreateLogScreen(
     reviewError,
     date
     }: Props){
-    const theme = Colors[useColorScheme() ?? 'light'];
+    const theme = Colors[useColorScheme()];
 
     const [rating, setRating] = useState<number>(initialRating ?? 0);
     const [watchList, setWatchList] = useState(false);
@@ -176,7 +177,7 @@ export default function CreateLogScreen(
                 <View>
                     <Text style={{ color: theme.text, fontFamily: Fonts?.sansMedium }}>Rewatch</Text>
                     <Text style={[styles.toggleSub, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                        You've seen this one before
+                        You&apos;ve seen this one before
                     </Text>
                 </View>
                 <Toggle value={rewatch} onChange={(next) => onWatchedChange?.(next)} />

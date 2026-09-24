@@ -1,8 +1,9 @@
-import { View, Text, Pressable, StyleSheet, useColorScheme } from 'react-native'
+import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { SignedIn } from '@clerk/clerk-expo'
 import { router, usePathname } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Colors, Fonts } from '@/constants/theme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 import { SearchField } from './SearchField'
 
 // Mobile top bar: app name + a circular search button that jumps to the
@@ -12,7 +13,7 @@ import { SearchField } from './SearchField'
 // signed in, matching MobileNav. Hidden on Profile and the single-log page,
 // where a search entry point doesn't make sense.
 export function MobileTopNav() {
-  const theme = Colors[useColorScheme() ?? 'light']
+  const theme = Colors[useColorScheme()]
   const pathname = usePathname()
   const hideSearch = pathname === '/profile' || pathname === '/singleLog'
   const onSearchPage = pathname.includes('search')

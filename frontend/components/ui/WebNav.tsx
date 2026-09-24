@@ -1,8 +1,9 @@
 // components/WebNav.tsx
-import { View, Text, Pressable, StyleSheet, useColorScheme } from 'react-native'
+import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Link, usePathname } from 'expo-router'
 import { SignedIn, SignedOut } from '@clerk/clerk-expo'
 import { Colors, Fonts } from '@/constants/theme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 import { SearchField } from './SearchField'
 import { useAuth, useClerk, useUser } from "@clerk/clerk-expo";
 import { router, useFocusEffect } from "expo-router";
@@ -43,7 +44,7 @@ function NavLink({
 
 export function WebNav() {
   const { signOut } = useClerk(); 
-  const theme = Colors[useColorScheme() ?? 'light']
+  const theme = Colors[useColorScheme()]
   const pathname = usePathname()
   async function handleSignOut() {
     try {

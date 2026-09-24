@@ -60,8 +60,10 @@ export function SearchField({
       inputContainerStyle={[styles.inputContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}
       inputStyle={[styles.input, { color: theme.text, fontFamily: Fonts?.sans }]}
       placeholderTextColor={theme.muted}
-      searchIcon={{ type: 'material', name: 'search', size: 18, color: theme.muted }}
-      clearIcon={{ type: 'material', name: 'clear', size: 18, color: theme.muted }}
+      // @rneui/themed's IconNode type omits `name` from its Partial<IconProps> arm even
+      // though the underlying Icon component takes it; cast around that upstream type gap.
+      searchIcon={{ type: 'material', name: 'search', size: 18, color: theme.muted } as Record<string, unknown>}
+      clearIcon={{ type: 'material', name: 'clear', size: 18, color: theme.muted } as Record<string, unknown>}
       // Without this, browsers treat this as a login form's username field
       // (it's the first text input above any password field on the page,
       // e.g. Settings' change-password form) and autofill the saved email

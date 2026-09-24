@@ -9,11 +9,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { Colors, Fonts } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { addToWatchlist } from "@/src/api/collection";
 import { useAuthPost } from "@/src/api/authPost";
 import { callSerpAPI, searchDataBase, useVideoApi } from "@/src/api/videos";
@@ -25,7 +25,7 @@ const DB_FILTER_DEBOUNCE_MS = 250;
 // Enter also searches YouTube (same split as SearchScreen). Picking a
 // YouTube-only result creates the VideoEssay first, then adds it.
 export default function AddEssayToListScreen({ collectionId }: { collectionId: string }) {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const { getToken } = useAuth();
   const authPost = useAuthPost();
   const { convertYouTubeResultToVideoEssay } = useVideoApi();

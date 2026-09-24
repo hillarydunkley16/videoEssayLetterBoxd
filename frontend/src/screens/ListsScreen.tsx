@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useAuth } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ListCard, ListsEmptyState, NewListButton, listsGridStyles } from "@/components/ui/ListsGrid";
 import { fetchUsersCollections } from "@/src/api/collection";
 import { fetchProfile } from "@/src/api/users";
@@ -25,7 +26,7 @@ export default function ListsScreen() {
   const contentWidth = Math.min(windowWidth, MAX_CONTENT_WIDTH);
   const numColumns = Math.max(2, Math.floor((contentWidth - GUTTER * 2 + GAP) / (MIN_CARD_WIDTH + GAP)));
   const cardWidth = Math.floor((contentWidth - GUTTER * 2 - GAP * (numColumns - 1)) / numColumns);
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [lists, setLists] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useWindowDimensions,
-  useColorScheme,
   FlatList,
   Image,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/clerk-expo';
 import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import ListResults from './ListResults';
 import PeopleResults from './PeopleResults';
 import { SEARCH_LABEL, SEARCH_MODES, resolveSearchType } from './searchModes';
@@ -54,7 +54,7 @@ const [loading, setLoading] = useState(false);
 const [database, setDatabase] = useState<SearchResult[]>([]);
 const {getToken} = useAuth();
 const { width } = useWindowDimensions();
-const theme = Colors[useColorScheme() ?? 'light'];
+const theme = Colors[useColorScheme()];
 const numColumns = Math.max(1, Math.floor(width / MIN_TILE_WIDTH));
 // Fixed per-column width (instead of flex: 1) so a lone result in the last row
 // keeps normal tile size rather than stretching across the whole page.
@@ -360,7 +360,7 @@ emptyText: {
 // (mobile Log tab) is always the essay search and has no switch.
 const SearchScreen: React.FunctionComponent<SearchBarComponentProps> = () => {
     const { q, type: rawType, mode } = useLocalSearchParams<{ q?: string; type?: string; mode?: string }>();
-    const theme = Colors[(useColorScheme() ?? 'light') as 'light' | 'dark'];
+    const theme = Colors[useColorScheme()];
     const type = resolveSearchType({ type: rawType, mode });
 
     return (

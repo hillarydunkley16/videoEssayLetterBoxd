@@ -6,12 +6,12 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { RatingDots } from "@/components/ui/RatingDots";
 import { fetchPopularVideoEssaysPublic } from "@/src/api/videos";
 import { VideoEssay } from "@/src/types/videoEssay";
@@ -30,7 +30,7 @@ const FEATURES: {
 // the topbar/brand + "Log in" link there is already covered by WebNav/
 // MobileNav, so this starts at the hero.
 export default function SignedOutHomeScreen() {
-  const colorScheme = useColorScheme() ?? "light";
+  const colorScheme = useColorScheme();
   const theme = Colors[colorScheme];
   const [popular, setPopular] = useState<VideoEssay[]>([]);
 

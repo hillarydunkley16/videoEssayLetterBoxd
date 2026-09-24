@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Image, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet, useColorScheme, Text } from "react-native";
+import { View, Image, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet, Text } from "react-native";
 import { fetchLogs, fetchLogsPage } from "../api/logs";
 import { fetchPopularVideoEssays } from "../api/videos";
 import { Log } from "../types/log";
 import { VideoEssay } from "../types/videoEssay";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { Colors, Fonts } from "@/constants/theme";
@@ -23,7 +24,7 @@ export default function RecentLogsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [popular, setPopular] = useState<VideoEssay[]>([]);
   const { getToken, isSignedIn, isLoaded } = useAuth();
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;

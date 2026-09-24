@@ -1,8 +1,9 @@
-import { View, Text, Pressable, StyleSheet, useColorScheme } from 'react-native'
+import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Link, router, useGlobalSearchParams, usePathname } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Colors, Fonts } from '@/constants/theme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 
 function NavItem({
   href,
@@ -57,7 +58,7 @@ function LogButton({ active, theme }: { active: boolean; theme: (typeof Colors)[
 
 export function MobileNav() {
   const insets = useSafeAreaInsets()
-  const theme = Colors[useColorScheme() ?? 'light']
+  const theme = Colors[useColorScheme()]
   const pathname = usePathname()
   const { mode } = useGlobalSearchParams<{ mode?: string }>()
 

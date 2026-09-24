@@ -1,4 +1,4 @@
-import { View, Image, StyleSheet, Pressable, Linking, ActivityIndicator, ScrollView, Platform, TextInput, TouchableOpacity, useColorScheme } from "react-native"
+import { View, Image, StyleSheet, Pressable, Linking, ActivityIndicator, ScrollView, Platform, TextInput, TouchableOpacity } from "react-native"
 import { fetchALog, likeLog, commentOnLog, deleteLog } from "../api/logs";
 import { addToWatchlist, removeFromWatchlist } from "../api/collection";
 import { fetchProfile } from "../api/users";
@@ -7,6 +7,7 @@ import { Log } from "../types/log";
 import { useCallback, useRef, useState } from "react";
 import { Text } from "react-native";
 import { ThemedView } from "@/components/themed-view";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import { useAuthPost } from "../api/authPost";
@@ -32,7 +33,7 @@ function formatViews(views: number | null) {
 }
 
 export default function LogInfo({ id, onTitleLoaded }: Props) {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const authPost = useAuthPost();
   const authDelete = useAuthDelete();
   const { user } = useUser(); // Clerk hook

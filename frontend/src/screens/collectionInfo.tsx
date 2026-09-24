@@ -8,18 +8,18 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
 import { useAuth } from '@clerk/clerk-expo'
 import { Colors, Fonts } from '@/constants/theme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 import { fetchACollection, removeFromWatchlist, deleteCollection } from '@/src/api/collection'
 import { useAuthDelete } from '@/src/api/authDelete'
 import { Collection } from '@/src/types/collection'
 import { VideoEssay } from '@/src/types/videoEssay'
 
 export default function CollectionInfo({ public_id }: { public_id: string }) {
-  const theme = Colors[useColorScheme() ?? 'light']
+  const theme = Colors[useColorScheme()]
   const { getToken } = useAuth()
   const authDelete = useAuthDelete()
 

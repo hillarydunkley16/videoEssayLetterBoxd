@@ -9,14 +9,14 @@ import {
   useWindowDimensions,
   StyleSheet,
   Text,
- TouchableOpacity, 
+ TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { RatingDots } from "@/components/ui/RatingDots";
 import { fetchProfile } from "@/src/api/users";
@@ -38,7 +38,7 @@ function formatShortDate(value: string | Date) {
 }
 
 export default function ProfileScreen() {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const { user } = useUser();
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { changePhoto } = useChangeProfilePhoto();

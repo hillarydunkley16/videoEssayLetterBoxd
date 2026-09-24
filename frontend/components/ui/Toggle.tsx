@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, useColorScheme } from "react-native";
+import { Animated, Pressable, StyleSheet } from "react-native";
 import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // Track/knob toggle matching the design-system mockup's `.toggle` — used
 // for the secondary log actions (rewatch, watchlist).
 export function Toggle({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {

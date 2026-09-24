@@ -11,7 +11,6 @@ import { PaginatedResponse } from "../types/api";
 import { useAuthUpdate } from "./authUpdate";
 import { useAuthPost } from "./authPost";
 import { useAuthDelete } from "./authDelete";
-import { UrlObject } from "expo-router/build/global-state/routeInfo";
 import { Profile } from "../types/profile";
 export async function fetchUsers(): Promise<PaginatedResponse<User>>{
     console.log("fetch users function called?!")

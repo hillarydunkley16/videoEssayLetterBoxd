@@ -9,12 +9,12 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { RatingDots } from "@/components/ui/RatingDots";
 import { getAVideoEssay } from "@/src/api/videos";
 import { fetchProfile } from "@/src/api/users";
@@ -38,7 +38,7 @@ function formatShortDate(value: string | Date) {
 }
 
 export default function VideoInfoScreen({ id }: { id: string }) {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const { getToken } = useAuth();
   const authPost = useAuthPost();
   const authDelete = useAuthDelete();

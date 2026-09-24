@@ -7,10 +7,9 @@ import { ClerkProvider, SignedIn, useAuth } from '@clerk/clerk-expo'
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
 import { ShareIntentProvider } from 'expo-share-intent'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Label, NativeTabs, Icon } from 'expo-router/unstable-native-tabs';
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useAppFonts } from './hooks/use-app-fonts'
-import { useColorScheme } from './hooks/use-color-scheme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 import { useShareIntentRouter } from '@/src/hooks/useShareIntentRouter'
 import { Colors } from '@/constants/theme'
 import { Toast } from '@/components/ui/Toast'
@@ -19,7 +18,7 @@ import { Toast } from '@/components/ui/Toast'
 function RootLayoutNav() {
   const { isLoaded } = useAuth();
   const { loaded: fontsLoaded } = useAppFonts();
-  const theme = Colors[useColorScheme() ?? 'light'];
+  const theme = Colors[useColorScheme()];
   useShareIntentRouter();
   // Web loads Fraunces/Inter via the <link> in app/+html.tsx, not expo-font,
   // so it doesn't need to wait on fontsLoaded.
