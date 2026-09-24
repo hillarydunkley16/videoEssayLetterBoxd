@@ -597,12 +597,16 @@ Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
       redirect + `Strict-Transport-Security` present (deferred from Checkpoint C)
 - [ ] `error.md` `'(home)'` navigator issue does not break routing on the built site
 
-**Frontend cleanup (deferred from Task 12):**
-- [ ] `npx expo lint` → 0 errors (fix 31× `react-hooks/rules-of-hooks` +
-      1× `react/no-unescaped-entities`; warnings may remain)
-- [ ] `npx tsc --noEmit` → 0 errors (9 files: `popularLists.tsx`,
-      `collectionDetail.tsx`, `otherProfile.tsx`, `profile.tsx`, `auth.ts`,
-      `videos.ts`, `jwt.ts`, `collectionInfo.tsx`, `logInfo.tsx`)
+**Frontend cleanup (deferred from Task 12):**  ✅ DONE
+- [x] `npx expo lint` → 0 errors (215 warnings remain, none `rules-of-hooks` or
+      `react/no-unescaped-entities`)
+- [x] `npx tsc --noEmit` → 0 errors
+- [x] `npx expo export --platform web` still succeeds after the fixes
+- Removed unused duplicate hooks (`use-color-scheme.web.ts`, `use-theme-color.ts`)
+  and dead `src/helpers/jwt.ts`; trimmed `client.ts`/`authPost.ts`/`authUpdate.ts`/
+  `authDelete.ts` accordingly. Committed as `91c52ae`.
+
+**Remaining backend debt (still open, not part of the frontend cleanup above):**
 - [ ] `~50 debug print()` in `backend/movie_csv/views/api.py` removed (from Task 7)
 - [ ] `Log` / `Collection` models get `Meta.ordering` (DRF pagination warning, Task 6/8)
 - [ ] Decide: `VideoEssays` + `collections/` list endpoints `AllowAny` — keep for
@@ -610,7 +614,7 @@ Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
 
 **Verification:**
 - [ ] Each `SPEC.md` Success Criteria checkbox ticked
-- [ ] `npx expo export --platform web` still succeeds after the fixes
+- [x] `npx expo export --platform web` still succeeds after the fixes
 - [ ] Backend `manage.py test` still green after api.py/model changes
 
 **Dependencies:** 11, 13
