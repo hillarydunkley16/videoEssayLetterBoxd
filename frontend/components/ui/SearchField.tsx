@@ -62,6 +62,13 @@ export function SearchField({
       placeholderTextColor={theme.muted}
       searchIcon={{ type: 'material', name: 'search', size: 18, color: theme.muted }}
       clearIcon={{ type: 'material', name: 'clear', size: 18, color: theme.muted }}
+      // Without this, browsers treat this as a login form's username field
+      // (it's the first text input above any password field on the page,
+      // e.g. Settings' change-password form) and autofill the saved email
+      // into it, which then fires onChangeText and redirects to search.
+      autoComplete="off"
+      textContentType="none"
+      importantForAutofill="no"
     />
   )
 }
