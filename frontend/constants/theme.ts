@@ -1,5 +1,5 @@
 /**
- * Visual Arguments design tokens.
+ * watchd design tokens.
  *
  * Palette: cool graphite/stone neutrals with a single cobalt-blue pop for
  * ratings and primary actions, and a muted teal accent for secondary
