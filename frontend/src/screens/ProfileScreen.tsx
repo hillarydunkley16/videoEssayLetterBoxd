@@ -558,8 +558,10 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   addEssayBtn: {
+    alignSelf: Platform.OS === "web" ? "flex-start" : "stretch",
     marginTop: 14,
     marginHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 3,
     alignItems: "center",

@@ -124,7 +124,7 @@ export default function SignedOutHomeScreen() {
                   </View>
                   {typeof essay.log_count === "number" ? (
                     <Text style={[styles.logWatcher, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                      Logged by {essay.log_count} {essay.log_count === 1 ? "person" : "people"} this week
+                      Logged {essay.log_count} {essay.log_count === 1 ? "time" : "times"} this week
                     </Text>
                   ) : null}
                 </View>
