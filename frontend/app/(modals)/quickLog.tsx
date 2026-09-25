@@ -11,7 +11,10 @@ import { ReviewsTopNav } from '@/components/ui/reviewsTopNav';
 import { useNavigation } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet'
+import { useAuth } from '@clerk/clerk-expo';
 import { createLog } from '@/src/api/logs';
+import { addToWatchlist } from '@/src/api/collection';
+import { fetchProfile } from '@/src/api/users';
 import { useAuthPost } from '@/src/api/authPost';
 import { showToast } from '@/src/helpers/toast';
 import { validationErrors, validationMessage } from '@/src/helpers/validationMessage';
@@ -19,6 +22,7 @@ import { validationErrors, validationMessage } from '@/src/helpers/validationMes
 export default function QuickLog() {
     const bottomSheetRef = useRef<BottomSheet>(null);
     const authFetch = useAuthPost();
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [sheetIndex, setSheetIndex] = useState(0);
     const [ratingIsSet, setRatingIsSet] = useState(false);
@@ -75,6 +79,17 @@ export default function QuickLog() {
     const handleRatingSetChange = useCallback((isSet: boolean) => {
         setRatingIsSet(isSet);
     }, []);
+    // Best-effort: a failure here shouldn't undo an already-saved log, so it's
+    // logged rather than surfaced as a save error.
+    const addEssayToWatchlist = async (id: string) => {
+        try {
+            const token = await getToken();
+            const profile = await fetchProfile(token!);
+            await addToWatchlist(id, profile.watchList.public_id, authFetch);
+        } catch (err) {
+            console.error("Failed to add to watchlist:", err);
+        }
+    };
     const handleSubmit = async () => {
         if (typeof essayId !== "string") return;
         // Guard against double-taps creating duplicate logs.
@@ -91,8 +106,9 @@ export default function QuickLog() {
                 review_text: reviewText,
                 rewatch: rewatch
             }
-          
+
             await createLog(authFetch, payload);
+            if (watchList) await addEssayToWatchlist(essayId);
             // The log is saved: closing the sheet must not also auto-save a quick log.
             closeHandledRef.current = true;
             showToast('Log created');
@@ -192,6 +208,7 @@ export default function QuickLog() {
                   onReviewTextChange={(text) => { setReviewText(text); setReviewError(""); }}
                   onDateChange={setDate}              // ← pass setter down
                   onWatchedChange={setRewatch}
+                  onWatchListChange={setWatchList}
                 />
                 </View>
                

@@ -6,6 +6,8 @@ import { useEffect, useRef, useState} from 'react';
 import { useAuth } from '@clerk/clerk-expo';
 import { ThemedView } from '@/components/themed-view'
 import { createLog, fetchALog, updateLog } from '@/src/api/logs';
+import { addToWatchlist } from '@/src/api/collection';
+import { fetchProfile } from '@/src/api/users';
 import { useAuthPost } from '@/src/api/authPost';
 import { useAuthUpdate } from '@/src/api/authUpdate';
 import { Colors, Fonts } from '@/constants/theme';
@@ -28,6 +30,7 @@ export default function LogVideoModal() {
     // A rating already given in the quick-log sheet arrives as a param.
     const [ratingValue, setRatingValue] = useState(Number(params.rating) || 0);
     const [rewatch, setRewatch] = useState(false);
+    const [watchlist, setWatchlist] = useState(false);
     const [reviewText, setReviewText] = useState("");
     const [date, setDate] = useState(new Date());
     const [error, setError] = useState("");
@@ -102,6 +105,17 @@ export default function LogVideoModal() {
             router.replace('/');
         }
     };
+    // Best-effort: a failure here shouldn't undo an already-saved log, so it's
+    // logged rather than surfaced as a save error.
+    const addEssayToWatchlist = async () => {
+        try {
+            const token = await getToken();
+            const profile = await fetchProfile(token!);
+            await addToWatchlist(essayId, profile.watchList.public_id, authFetch);
+        } catch (err) {
+            console.error("Failed to add to watchlist:", err);
+        }
+    };
     const handleSubmit = async () => {
         // Guard against double-taps creating duplicate logs.
         if (submittingRef.current) return;
@@ -119,11 +133,13 @@ export default function LogVideoModal() {
 
             if (logId) {
                 await updateLog(logId, fields, authUpdate);
+                if (watchlist) await addEssayToWatchlist();
                 setLoading(false);
                 handleClose();
                 return;
             }
             await createLog(authFetch, { essay: essayId, ...fields });
+            if (watchlist) await addEssayToWatchlist();
             console.log("Log created successfully");
             setLoading(false);
             router.replace('/');
@@ -184,6 +200,7 @@ export default function LogVideoModal() {
               onReviewTextChange={(text) => { setReviewText(text); setReviewError(""); }}
               onDateChange={setDate}
               onWatchedChange={setRewatch}
+              onWatchListChange={setWatchlist}
             />
           </ScrollView>
         </KeyboardAvoidingView>

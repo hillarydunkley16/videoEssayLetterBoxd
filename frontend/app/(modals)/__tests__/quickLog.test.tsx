@@ -30,6 +30,7 @@ jest.mock('@/src/api/logs', () => ({
   createLog: (...args: unknown[]) => mockCreateLog(...args),
 }));
 jest.mock('@/src/api/authPost', () => ({ useAuthPost: () => jest.fn() }));
+jest.mock('@clerk/clerk-expo', () => ({ useAuth: () => ({ getToken: async () => 'tok' }) }));
 
 let sheetProps: { onChange: (index: number) => void } | undefined;
 jest.mock('@gorhom/bottom-sheet', () => {
