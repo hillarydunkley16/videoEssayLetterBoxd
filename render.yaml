@@ -1,12 +1,12 @@
 # Render Blueprint — closed-beta deployment (all resources on the free plan).
 # See DEPLOY.md for the dashboard steps and where each `sync: false` value comes from.
 # Docs: https://render.com/docs/blueprint-spec
-
-databases:
-  - name: videoessay-db
-    plan: free
-    databaseName: videoessay
-    user: videoessay
+#
+# DB is Supabase Postgres (not Render's managed Postgres) — migrated off the
+# free Render Postgres instance ahead of its 90-day expiry. DATABASE_URL is
+# therefore sync:false below instead of fromDatabase; set it in the dashboard
+# to the Supabase Session Pooler URI (IPv4-compatible — the direct connection
+# host is IPv6-only, which Render's network can't reach).
 
 services:
   # --- Django API (DRF + admin) ------------------------------------------
@@ -25,10 +25,8 @@ services:
     envVars:
       - key: PYTHON_VERSION      # Render ignored runtime.txt and used 3.14; pin explicitly
         value: "3.13.7"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: videoessay-db
-          property: connectionString
+      - key: DATABASE_URL   # Supabase Session Pooler URI — set in the dashboard
+        sync: false
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_DEBUG

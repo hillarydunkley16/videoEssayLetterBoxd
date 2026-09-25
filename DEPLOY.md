@@ -8,47 +8,57 @@ Render account and a GitHub repo connected to it.
 - Backend: https://videoessay-backend.onrender.com
 - Frontend: https://videoessay-web.onrender.com
 
-## ⚠️ Known near-term action item
+## Database: Supabase Postgres, not Render's managed Postgres
 
-The free Postgres instance (`videoessay-db`) **expires 90 days after
-creation**. It was created 2026-09-07, so it expires **2026-10-07**. Render
-does not auto-renew a free Postgres instance — before that date, either:
-- Upgrade `videoessay-db` to a paid plan in the Render dashboard (Postgres →
-  the instance → "Upgrade"), or
-- Take a manual `pg_dump` backup and be ready to re-provision + restore.
+The app's database is a Supabase Postgres project, connected via its
+**Session Pooler** URI (IPv4-compatible — Supabase's direct-connection host
+is IPv6-only, which this network / Render's build environment can't always
+reach). `DATABASE_URL` is `sync: false` in `render.yaml` and set by hand in
+the `videoessay-backend` dashboard to that pooler URI.
 
-Missing this date means losing all beta data. Check `render.yaml`'s
-`databases:` block and the dashboard's expiration banner to confirm the
-current status before that date.
+This replaced a Render-managed free Postgres instance (`videoessay-db`),
+migrated off ahead of its 90-day free-tier expiry via `pg_dump` /
+`pg_restore` on 2026-09-25. If `videoessay-db` still exists in the Render
+dashboard, it's no longer in use and can be deleted once the Supabase cutover
+is confirmed stable.
+
+Supabase's own free-tier caveat: a project **pauses after ~1 week of
+inactivity** and needs a manual dashboard "restore" to resume — different
+failure mode than Render's hard 90-day expiry, but worth watching for the
+same reason (closed beta traffic may be too low to keep it warm on its own).
 
 ## 1. Prerequisites
 
 - A Render account, with this repo connected as a GitHub source.
+- A Supabase account with a Postgres project created — see "Database" above
+  for the connection string to use.
 - A Clerk account with the **development** instance already created (the beta
   intentionally uses Clerk dev, not prod — see "Clerk setup" below for why).
 - A SerpAPI account (free tier is ~100 searches/month) for `SERPAPI_KEY`.
 
 ## 2. First-time provisioning (Blueprint deploy)
 
-1. In the Render dashboard: **New → Blueprint**, point it at this repo, branch
+1. Create a Supabase project (supabase.com/dashboard) and note its **Session
+   Pooler** connection string (Settings → Database → Connection string →
+   "Session pooler" tab) — this is `DATABASE_URL`.
+2. In the Render dashboard: **New → Blueprint**, point it at this repo, branch
    `v2` (or `main` after Task 16's merge). Render reads `render.yaml` at the
-   repo root and provisions all three resources in one pass:
-   - `videoessay-db` — Postgres, free plan
+   repo root and provisions both resources in one pass:
    - `videoessay-backend` — Python web service, free plan
    - `videoessay-web` — static site, free plan
-2. The first deploy will likely fail or come up partially broken, because
+3. The first deploy will likely fail or come up partially broken, because
    several env vars are intentionally `sync: false` in `render.yaml` (Render
-   won't guess secrets or the frontend's own URL for you). That's expected —
-   continue to step 3.
-3. Set every `sync: false` env var per the table below, then trigger a manual
+   won't guess secrets, the Supabase connection string, or the frontend's own
+   URL for you). That's expected — continue to step 4.
+4. Set every `sync: false` env var per the table below, then trigger a manual
    redeploy of both services (**Manual Deploy → Deploy latest commit**, or
    just **Save Changes** on the Environment tab, which redeploys
    automatically).
-4. Once `videoessay-backend` is live, add its own web origin's frontend
+5. Once `videoessay-backend` is live, add its own web origin's frontend
    counterpart: set `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and
    `CORS_ALLOWED_ORIGINS` on the backend to `videoessay-web`'s real URL (see
    table), then redeploy the backend again.
-5. Create a Django superuser via the backend's **Shell** tab in the Render
+6. Create a Django superuser via the backend's **Shell** tab in the Render
    dashboard:
    ```
    python manage.py createsuperuser
@@ -63,7 +73,7 @@ current status before that date.
 | Key | Source | Notes |
 |---|---|---|
 | `PYTHON_VERSION` | literal `3.13.7` in `render.yaml` | Render ignores `runtime.txt` and defaults to a newer Python otherwise — pin explicitly. |
-| `DATABASE_URL` | `fromDatabase: videoessay-db` in `render.yaml` | Wired automatically by the Blueprint; never set by hand. |
+| `DATABASE_URL` | dashboard, `sync: false` | Supabase **Session Pooler** URI (`postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`) — not the direct-connection URI, which is IPv6-only. |
 | `DJANGO_SECRET_KEY` | `generateValue: true` in `render.yaml` | Render generates and stores this; never set by hand, never commit it. |
 | `DJANGO_DEBUG` | literal `"false"` in `render.yaml` | Must stay `false` in any real deployment. |
 | `DJANGO_ALLOWED_HOSTS` | dashboard, `sync: false` | Set to `videoessay-backend.onrender.com` (its own host — also auto-trusted via `RENDER_EXTERNAL_HOSTNAME`, but set explicitly per Task 13). |
@@ -126,26 +136,27 @@ cd frontend && npx tsc --noEmit && npm run lint && npx expo export --platform we
   Render's `autoDeploy` picks it up automatically. Never force-push to rewrite
   history on `v2` or `main` to "undo" a bad deploy; a revert commit is safer
   and keeps the audit trail.
-- **Database:** Render's automated Postgres backups (see the Postgres
-  instance's **Backups** tab) are the recovery path for bad data, not code
-  rollback. A schema-changing migration should be reverted with a new
-  migration, never by editing or deleting an applied one (`SPEC.md`
-  Boundaries).
+- **Database:** Supabase's automated daily backups (Project → Database →
+  Backups, retention depends on plan tier) are the recovery path for bad
+  data, not code rollback. A schema-changing migration should be reverted
+  with a new migration, never by editing or deleting an applied one
+  (`SPEC.md` Boundaries).
 
 ## 7. Free-tier caveats
 
 - **Cold start:** the backend web service spins down after ~15 minutes of
   inactivity; the next request pays a ~30-60s cold-start cost while it spins
   back up. Expected on the free plan — not a bug.
-- **Postgres 90-day expiry:** see the warning at the top of this doc. This is
-  the single most important thing to track on the free plan.
+- **Supabase project pausing:** see the database section at the top of this
+  doc — a free-tier Supabase project pauses after ~1 week with no activity
+  and needs a manual "Restore" click in its dashboard to come back.
 - **SerpAPI quota:** the free plan is ~100 searches/month. If beta usage
   exceeds that, `/api/search/` starts returning `502`/`504` (the app degrades
   to DB-only search results, but that's a real UX hit) — upgrade the SerpAPI
   plan or add caching before that becomes a problem.
-- **Backups:** currently just Render's automated Postgres backups. No
-  separate scheduled `pg_dump` — acceptable for closed beta, revisit before
-  public launch.
+- **Backups:** currently just Supabase's automated backups. No separate
+  scheduled `pg_dump` — acceptable for closed beta, revisit before public
+  launch.
 - **Single instance:** the backend runs on a single free-tier instance, so
   there's no rolling-deploy/zero-downtime story and no migration race to
   worry about — `migrate` runs safely in `startCommand` before `gunicorn`
@@ -182,8 +193,8 @@ URLs before telling beta testers to use the app:
    UI is expected for the beta).
 2. Search a video essay → log it → write a review → see it under that video.
 3. Profile shows the new log; list/watchlist add works.
-4. Reload / new browser session persists data (confirms Postgres, not
-   ephemeral state).
+4. Reload / new browser session persists data (confirms Supabase Postgres,
+   not ephemeral state).
 5. An unauthenticated request to a protected endpoint (e.g.
    `GET /api/logList/`) returns `403`; the same request with a valid Clerk
    token returns `200`.
