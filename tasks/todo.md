@@ -680,8 +680,8 @@ Verified live via Chrome DevTools MCP: toggle → save → `POST
 - [x] Each `SPEC.md` Success Criteria checkbox ticked (E2E acceptance portion;
       remaining backend debt above still open)
 - [x] `npx expo export --platform web` still succeeds after the fixes
-- [ ] Backend `manage.py test` still green after api.py/model changes (no
-      api.py/model changes made in this pass — nothing to re-run against)
+- [x] Backend `manage.py test` still green after api.py/model changes — 309/309
+      pass after the debt-cleanup commit (`68c92ea`, print() removal + ordering)
 
 **Dependencies:** 11, 13
 
@@ -689,7 +689,7 @@ Verified live via Chrome DevTools MCP: toggle → save → `POST
 
 ---
 
-## Task 15: Write `DEPLOY.md` runbook
+## Task 15: Write `DEPLOY.md` runbook  ✅ DONE
 
 **Description:** Step-by-step: prerequisites, Render Blueprint setup, every
 dashboard env var and where its value comes from, Clerk prod setup, superuser
@@ -698,14 +698,25 @@ creation, redeploy steps, rollback (Render "Rollback" + how to revert
 SerpAPI quota, backup note).
 
 **Acceptance criteria:**
-- [ ] A reader can rebuild the whole deployment from scratch using only `DEPLOY.md`
-- [ ] Every env var from both `.env.example` files is listed with its source
-- [ ] Rollback procedure documented
-- [ ] Free-tier caveats + secret-rotation note included
+- [x] A reader can rebuild the whole deployment from scratch using only `DEPLOY.md`
+- [x] Every env var from both `.env.example` files is listed with its source
+      (cross-checked against every `render.yaml` var, not just `sync: false` —
+      the literal/generateValue ones are in the table too)
+- [x] Rollback procedure documented (dashboard rollback + git revert, explicitly
+      never force-push)
+- [x] Free-tier caveats + secret-rotation note included
 
 **Verification:**
-- [ ] Cross-check every `render.yaml` `sync: false` var appears in `DEPLOY.md`
-- [ ] Human read-through
+- [x] Cross-check every `render.yaml` `sync: false` var appears in `DEPLOY.md`
+      — all 6 confirmed present (`DJANGO_ALLOWED_HOSTS`,
+      `DJANGO_CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `SERPAPI_KEY`,
+      `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`)
+- [ ] Human read-through — pending, needs the user
+
+**⚠️ Surfaced while writing this:** the free `videoessay-db` Postgres instance
+(created 2026-09-07) expires **2026-10-07** — 12 days out from today
+(2026-09-25). Called out at the top of `DEPLOY.md`; needs a decision
+(upgrade to paid, or manual backup + re-provision plan) well before that date.
 
 **Dependencies:** 14
 
