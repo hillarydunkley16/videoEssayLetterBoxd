@@ -652,11 +652,29 @@ Verified live via Chrome DevTools MCP: toggle → save → `POST
   and dead `src/helpers/jwt.ts`; trimmed `client.ts`/`authPost.ts`/`authUpdate.ts`/
   `authDelete.ts` accordingly. Committed as `91c52ae`.
 
-**Remaining backend debt (still open, not part of the frontend cleanup above):**
-- [ ] `~50 debug print()` in `backend/movie_csv/views/api.py` removed (from Task 7)
-- [ ] `Log` / `Collection` models get `Meta.ordering` (DRF pagination warning, Task 6/8)
-- [ ] Decide: `VideoEssays` + `collections/` list endpoints `AllowAny` — keep for
-      beta or require auth? (flagged Task 7/8)
+**Backend debt (was open, closed 2026-09-25 — see `68c92ea`):**
+- [x] `~35` live debug `print()`s removed from `backend/movie_csv/views/api.py`
+      (request/user dumps, before/after save traces, collection add/remove
+      snapshots). Left the already-commented-out debug lines and the fully
+      dead alternate `logList` class untouched — orthogonal to this cleanup.
+      309/309 backend tests still pass.
+- [x] `Log` gets `Meta.ordering = ("-date", "-id")`, `Collection` gets
+      `Meta.ordering = ("-id",)` — matches the manual `.order_by()` pattern
+      `FollowingFeed` already used. Migration `0013` (options-only, no schema
+      change). `UnorderedObjectListWarning` is gone from the test run.
+- [x] **Decided: keep `AllowAny` on `VideoEssays` (GET) and `CollectionList`
+      (GET) for beta.** Confirmed this is load-bearing, not an oversight —
+      `SignedOutHomeScreen.tsx` calls `fetchPopularVideoEssaysPublic()`
+      (unauthenticated axios, no token) to render the public marketing
+      homepage's "Popular this week" section verified live during Task 14.
+      Revisit only if the public homepage feed is dropped or scoped down.
+      **Separate observation, not fixed here (raise if it matters for beta):**
+      `VideoEssays.post()` (the raw `ListCreateAPIView.post`, not
+      `VideoEssayCreateView` at `/api/video-essays/`) is also `AllowAny` and
+      sets `owner=request.user`, which would be `AnonymousUser` for an
+      unauthenticated caller — likely a 500 on that path today. The frontend
+      never calls it (confirmed via grep — only GET on `/VideoEssays/*`), so
+      it's dead-but-reachable rather than an active bug.
 
 **Verification:**
 - [x] Each `SPEC.md` Success Criteria checkbox ticked (E2E acceptance portion;
