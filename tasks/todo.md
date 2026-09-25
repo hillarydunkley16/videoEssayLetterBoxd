@@ -484,10 +484,11 @@ once Render has assigned `videoessay-web.onrender.com`.
 
 ---
 
-### CHECKPOINT C — backend live  ✅ (headers + token-auth deferred to Task 14)
+### CHECKPOINT C — backend live  ✅ (token-auth still deferred to Task 14)
 - [x] Backend reachable at `https://videoessay-backend.onrender.com`; `/admin/` renders, CSS serves
-- [x] Auth: no token → 403 on `/api/logList/`. Clerk-token → 200 verified end-to-end at Task 14 (live web app)
-- [ ] Headers: HSTS + non-wildcard CORS — check at Task 14 (WebFetch can't see headers)
+- [x] Auth: no token → 403 on `/api/logList/`. Clerk-token → 200 still to be verified end-to-end at Task 14 (live web app, signed-in session)
+- [x] Headers: HSTS + non-wildcard CORS — confirmed live via Chrome DevTools MCP
+      on 2026-09-25 (Task 13)
 
 ---
 
@@ -528,7 +529,7 @@ no hardcoded hosts.
 
 ---
 
-## Task 13: [operator] Deploy frontend static site on Render  — IN PROGRESS
+## Task 13: [operator] Deploy frontend static site on Render  ✅ DONE
 
 **Description:** Set `videoessay-web` env vars (`EXPO_PUBLIC_API_BASE_URL` =
 `https://videoessay-backend.onrender.com`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` =
@@ -537,9 +538,21 @@ no hardcoded hosts.
 
 **Acceptance criteria:**
 - [x] Static site builds + serves at `https://videoessay-web.onrender.com`
-- [ ] Page loads; no CORS errors on API calls (backend CORS/CSRF env set)
+- [x] Page loads; no CORS errors on API calls (backend CORS/CSRF env set)
 - [~] Clerk: dev instances allow all origins — no config needed/possible
-- [ ] `/search` returns results (see Task 13a — needed SerpAPI wiring + `SERPAPI_KEY`)
+- [ ] `/search` returns results (see Task 13a — needed SerpAPI wiring + `SERPAPI_KEY`;
+      not yet checked live, requires a signed-in session — folded into Task 14)
+
+**Verified 2026-09-25 via Render MCP + Chrome DevTools MCP:**
+- `CORS_ALLOWED_ORIGINS`/`DJANGO_CSRF_TRUSTED_ORIGINS`/`SERPAPI_KEY` were already
+  set; added the missing `DJANGO_ALLOWED_HOSTS=videoessay-backend.onrender.com`
+  and redeployed (`dep-dar69se0tbcc73969gag`, live 2026-09-25T12:13:21Z)
+- Live browser check against `https://videoessay-web.onrender.com`: API call to
+  `/api/VideoEssays/popular/` → `200`, response header
+  `access-control-allow-origin: https://videoessay-web.onrender.com` (not `*`),
+  `strict-transport-security: max-age=3600; includeSubDomains; preload` present.
+  No CORS errors in console. This also closes the header check deferred from
+  Checkpoint C / Task 11.
 
 **Dependencies:** 12
 
