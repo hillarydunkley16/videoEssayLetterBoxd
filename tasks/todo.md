@@ -604,8 +604,9 @@ Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
 - [x] Fresh sign-up via Clerk (dev instance) completes on the deployed web app
 - [x] Search → log → review → view-by-video flow works ✅ SerpAPI confirmed
       live (18 real YouTube results); log with 5★ + review saved (`201`)
-- [x] Profile shows the new log; list/watchlist add works ⚠️ log shows
-      correctly; **watchlist add does NOT work — see bug below**
+- [x] Profile shows the new log; list/watchlist add works — log confirmed
+      immediately; watchlist add found broken during this pass and fixed
+      (see bug note below), re-verified working after the fix
 - [x] Reload / new session persists data (Postgres confirmed)
 - [x] Unauthenticated protected endpoint → 403/401; valid token → 200
 - [x] Deployed backend headers: no `Access-Control-Allow-Origin: *`; HTTPS
@@ -629,15 +630,18 @@ via Settings → Delete account, confirmed removed from the public feed):
 - Signed-out `GET /api/logList/` (fresh tab, no token) → `403`; all of the
   app's own authenticated calls carried a Bearer token and returned `200`
 
-**🐛 Bug found — "Add to watchlist" toggle in `logVideoModal` is a no-op:**
-Toggled the switch before saving; the `POST /api/logList/` body was
-`{essay, date, rating, review_text, rewatch}` — no watchlist field, and no
-separate watchlist/collection API call fired. Profile's Watchlist count
-stayed `0`. Not fixed here (out of scope for a verification pass) — needs a
-follow-up task: either wire the toggle to `POST /api/collections/...` (or
-whatever endpoint the standalone "+ Add essay" watchlist button uses,
-confirmed working) or remove the toggle from the modal if watchlist-on-log
-isn't actually supported yet.
+**🐛 Bug found and fixed — "Add to watchlist" toggle was a no-op:**
+`logVideoModal` and `quickLog` both render `CreateLogScreen`'s watchlist
+toggle but neither passed `onWatchListChange` down, so the switch never
+reached component state (`quickLog` even had a dead unused `watchList`
+`useState` sitting there already). Fixed in `f9647fd`: wired the toggle to
+state in both modals; on a successful log save, fetches the profile for
+`watchList.public_id` and calls the existing `addToWatchlist` (same call
+`VideoInfoScreen`'s working toggle uses). Best-effort — a watchlist-add
+failure is logged, not surfaced, so it can't undo an already-saved log.
+Verified live via Chrome DevTools MCP: toggle → save → `POST
+/api/collections/<id>/add/<id>/` → `200` → profile Watchlist count 0 → 1.
+`tsc`/lint/full jest suite (224 tests) all still clean.
 
 **Frontend cleanup (deferred from Task 12):**  ✅ DONE
 - [x] `npx expo lint` → 0 errors (215 warnings remain, none `rules-of-hooks` or
