@@ -601,14 +601,43 @@ Strategy against the live URLs. Fix blockers found (scope permitting) or log the
 Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
 
 **Acceptance criteria:**
-- [ ] Fresh sign-up via Clerk (dev instance) completes on the deployed web app
-- [ ] Search → log → review → view-by-video flow works
-- [ ] Profile shows the new log; list/watchlist add works
-- [ ] Reload / new session persists data (Postgres confirmed)
-- [ ] Unauthenticated protected endpoint → 403/401; valid token → 200
-- [ ] Deployed backend headers: no `Access-Control-Allow-Origin: *`; HTTPS
-      redirect + `Strict-Transport-Security` present (deferred from Checkpoint C)
-- [ ] `error.md` `'(home)'` navigator issue does not break routing on the built site
+- [x] Fresh sign-up via Clerk (dev instance) completes on the deployed web app
+- [x] Search → log → review → view-by-video flow works ✅ SerpAPI confirmed
+      live (18 real YouTube results); log with 5★ + review saved (`201`)
+- [x] Profile shows the new log; list/watchlist add works ⚠️ log shows
+      correctly; **watchlist add does NOT work — see bug below**
+- [x] Reload / new session persists data (Postgres confirmed)
+- [x] Unauthenticated protected endpoint → 403/401; valid token → 200
+- [x] Deployed backend headers: no `Access-Control-Allow-Origin: *`; HTTPS
+      redirect + `Strict-Transport-Security` present (closed at Task 13)
+- [x] `error.md` `'(home)'` navigator issue does not break routing on the built
+      site — confirmed dev-only per its own text; no navigation breakage seen
+
+**Verified 2026-09-25 via Chrome DevTools MCP against the live deployed URLs**
+(Clerk test-mode account `watchd_task14` / `+clerk_test@example.com`, fixed
+code `424242` — no real inbox needed; account + test log deleted afterward
+via Settings → Delete account, confirmed removed from the public feed):
+- Sign-up → email verify → signed-in home render: all clean, no console errors
+  beyond an unrelated `clerk-telemetry.com` DNS block
+- Search: typing hits local DB only; **Enter** is required to also hit
+  SerpAPI (`POST /api/search/` → `200`, 18 results) — matches the UI's own
+  "Press enter to search YouTube" hint, not a bug
+- `POST /api/logList/` → `201`; log appeared instantly in the home feed,
+  profile, and the video's own popular-this-week count
+- Full page reload kept the session and the log (Postgres-backed, not local
+  state)
+- Signed-out `GET /api/logList/` (fresh tab, no token) → `403`; all of the
+  app's own authenticated calls carried a Bearer token and returned `200`
+
+**🐛 Bug found — "Add to watchlist" toggle in `logVideoModal` is a no-op:**
+Toggled the switch before saving; the `POST /api/logList/` body was
+`{essay, date, rating, review_text, rewatch}` — no watchlist field, and no
+separate watchlist/collection API call fired. Profile's Watchlist count
+stayed `0`. Not fixed here (out of scope for a verification pass) — needs a
+follow-up task: either wire the toggle to `POST /api/collections/...` (or
+whatever endpoint the standalone "+ Add essay" watchlist button uses,
+confirmed working) or remove the toggle from the modal if watchlist-on-log
+isn't actually supported yet.
 
 **Frontend cleanup (deferred from Task 12):**  ✅ DONE
 - [x] `npx expo lint` → 0 errors (215 warnings remain, none `rules-of-hooks` or
@@ -626,9 +655,11 @@ Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
       beta or require auth? (flagged Task 7/8)
 
 **Verification:**
-- [ ] Each `SPEC.md` Success Criteria checkbox ticked
+- [x] Each `SPEC.md` Success Criteria checkbox ticked (E2E acceptance portion;
+      remaining backend debt above still open)
 - [x] `npx expo export --platform web` still succeeds after the fixes
-- [ ] Backend `manage.py test` still green after api.py/model changes
+- [ ] Backend `manage.py test` still green after api.py/model changes (no
+      api.py/model changes made in this pass — nothing to re-run against)
 
 **Dependencies:** 11, 13
 
