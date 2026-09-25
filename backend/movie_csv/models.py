@@ -41,7 +41,9 @@ class Log(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(5)]
     )
     rewatch = models.BooleanField(default=False)
-   
+
+    class Meta:
+        ordering = ("-date", "-id")
 
 
 class Like(models.Model): 
@@ -71,6 +73,7 @@ class Collection(models.Model):
     is_watchlist = models.BooleanField(default = False)
 
     class Meta:
+        ordering = ("-id",)
         constraints = [
             # At most one watchlist per owner; ordinary lists are unrestricted.
             models.UniqueConstraint(

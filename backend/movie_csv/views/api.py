@@ -76,8 +76,6 @@ class  VideoEssays(generics.ListCreateAPIView):
         # data = fetch_youtube_data(youtube_url)
         # data = json.loads(request.body)
         # data = request.session["youtube_results"][youtube_id]
-        print(data)
-        print(request.user)
         videoEssay = VideoEssay.objects.create(
             title =data["title"],
             youtube_url=data["youtube_url"],
@@ -107,7 +105,6 @@ class logList(generics.ListCreateAPIView):
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
-    print(permission_classes)
     # permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     
     def create(self, request, *args, **kwargs):
@@ -164,10 +161,6 @@ class userLogs(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        print("USER ID: ", self.request.user.id)
-       
-
-        print("USER LOGS: ", Log.objects.filter(owner_id =self.request.user.id))
         return with_log_relations(Log.objects.filter(owner=self.request.user))
 class logDetail(generics.RetrieveUpdateDestroyAPIView): 
     # authentication_classes = [JWTAuthentication]
@@ -181,15 +174,10 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
         # print("Headers:", request.headers)
         # print("Auth user:", request.user)
         # print("Is authenticated:", request.user.is_authenticated)
-        print(public_id)
-        print(request.data)
         log = self.get_object()
-        print(log)
         # userInfo = Profile.objects.get(user_id = request.user.id)
         # print("USERINFO IMAGEURL: ", userInfo.imageUrl)
         # print("USERINFO USERID: ", userInfo.user_id)
-        print(log.owner_id)
-        print(log.likes)
         
         return Response({
             "log": LogSerializer(log, context={"request": request}).data,
@@ -215,8 +203,6 @@ class UserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     def get(self,request): 
-        print(request.user)
-        print(request.user.id)
         userLogs = Log.objects.get(owner_id = request.user.id)
         return userLogs
     
@@ -252,7 +238,6 @@ class Home(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        print(request.user)
         content = {'message': 'Hello, World!'}
         return Response(content)
 
@@ -265,7 +250,6 @@ class VideoInfo(generics.RetrieveAPIView):
     def get(self, request, public_id):
         video = self.get_object()
         logs = with_log_relations(Log.objects.filter(essay=video))
-        print(logs)
         return Response({
             "video": VideoEssaySerializer(video).data,
             "logs": LogSerializer(logs, many=True, context={"request": request}).data,
@@ -310,11 +294,9 @@ class LikePost(generics.ListCreateAPIView):
             return Response({"message": "404"})
         new_like, created = Like.objects.get_or_create(user=request.user, post=post)
         if created:
-            print(post.likes.count()) 
             return Response({"liked": True, "likes_count": post.likes.count() })
         else: 
             new_like.delete()
-            print("ALREADY LIKED THE POST")
             return Response({"liked": False, "likes_count": post.likes.count()})
 
 class UnLikePost(DestroyAPIView):
@@ -344,7 +326,6 @@ class CommentOnPost(generics.CreateAPIView):
             log = Log.objects.get(public_id = public_id)
         except Log.DoesNotExist: 
             return Response({"message": "Log not found"}, status=404)
-        print(self.request.user)
         comment = Comment.objects.create(
             user = self.request.user, 
             # date = data["date"],
@@ -368,14 +349,11 @@ class updateProfileImage(generics.UpdateAPIView):
         except Profile.DoesNotExist:
             return Response({"message": "Profile does not exist!"}, status=404) 
         
-        print("BEFORE SAVE: ", profile.imageUrl)
         profile.imageUrl = request.data.get('imageUrl', profile.imageUrl)
-        print("AFTER ASSIGNMENT: ", profile.imageUrl)
         profile.save()
         
         # re-fetch from DB to confirm it was actually saved
         profile.refresh_from_db()
-        print("AFTER REFRESH FROM DB: ", profile.imageUrl)
         
         serializer = ProfileSerializer(profile, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -388,7 +366,6 @@ def search(request):
     results = None
     query = None
     indatabase = None
-    print(request.user)
     results = youtube_search(query)
     youtube_results = {}
     for video in results: 
@@ -463,19 +440,7 @@ class VideoEssayCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     
     def perform_create(self, serializer):
-        print("AUTH HEADER:", self.request.headers.get("Authorization"))
-        print("USER:", self.request.user)
-        print("CREATING VIDEO ESSAY WITH DATA:", serializer.validated_data)
-        
-        instance = serializer.save(owner=self.request.user)
-        
-        print("CREATED VIDEO ESSAY ID:", instance.id)
-        print("CREATED VIDEO ESSAY PUBLIC_ID:", instance.public_id)
-        print("CREATED VIDEO ESSAY OWNER:", instance.owner)
-        
-        # Verify it's in the database
-        exists = VideoEssay.objects.filter(public_id=instance.public_id).exists()
-        print("EXISTS IN DATABASE:", exists)
+        serializer.save(owner=self.request.user)
 class VideoEssayFromYoutubeId(generics.GenericAPIView):
     """Get-or-create a VideoEssay by youtube_id, fetching metadata via oEmbed on a miss.
 
@@ -601,10 +566,7 @@ class AddVideoEssayToCollection(APIView):
             videoEssay = VideoEssay.objects.get(public_id = videoessay_public_id)
         except: 
             return Response({"message": "VideoEssay not found"}, status=404)
-        print("COLLECTION ESSAYS BEFORE ADDING: ", collection.essays.all())
-        print("ADDING VIDEO ESSAY: ", videoEssay)
         collection.essays.add(videoEssay)  
-        print("COLLECTION ESSAYS AFTER ADDING: ", collection.essays.all())
         return Response({"message": "VideoEssay added to collection"}, status=200) 
 
 class RemoveEssayFromCollection(APIView): 
@@ -620,10 +582,7 @@ class RemoveEssayFromCollection(APIView):
             videoEssay = VideoEssay.objects.get(public_id = videoessay_public_id)
         except: 
             return Response({"message": "VideoEssay not found"}, status=404)
-        print("COLLECTION ESSAYS BEFORE REMOVING: ", collection.essays.all())
-        print("REMOVING VIDEO ESSAY: ", videoEssay)
         collection.essays.remove(videoEssay)  
-        print("COLLECTION ESSAYS AFTER REMOVING: ", collection.essays.all())
         return Response({"message": "VideoEssay removed from collection"}, status=200)
 
 class RemoveCollection(APIView): 
