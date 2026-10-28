@@ -20,9 +20,10 @@ class RenderBlueprintTests(SimpleTestCase):
     def test_blueprint_file_exists_at_repo_root(self):
         self.assertTrue(RENDER_YAML.exists())
 
-    def test_declares_a_free_postgres_database(self):
-        self.assertIn("databases:", self.text)
+    def test_runs_on_the_free_plan_with_no_render_managed_database(self):
+        # The DB is Supabase (see DEPLOY.md), not a Render-managed Postgres.
         self.assertIn("plan: free", self.text)
+        self.assertNotIn("databases:", self.text)
 
     def test_has_a_python_web_service_and_a_static_site(self):
         self.assertIn("runtime: python", self.text)
@@ -57,9 +58,10 @@ class RenderBlueprintTests(SimpleTestCase):
         self.assertIn("destination: /index.html", self.text)
         self.assertIn("type: rewrite", self.text)
 
-    def test_database_url_wired_from_the_managed_db(self):
-        self.assertIn("fromDatabase:", self.text)
-        self.assertIn("property: connectionString", self.text)
+    def test_database_url_is_a_dashboard_supplied_secret(self):
+        # Supabase Session Pooler URI, set by hand in the Render dashboard.
+        self.assertNotIn("fromDatabase:", self.text)
+        self.assertRegex(self.text, r"-\s*key:\s*DATABASE_URL[^\n]*\n\s*sync:\s*false")
 
     def test_secret_key_is_generated_and_debug_is_off(self):
         self.assertIn("key: DJANGO_SECRET_KEY", self.text)
