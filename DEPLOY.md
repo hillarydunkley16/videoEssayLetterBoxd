@@ -82,6 +82,8 @@ same reason (closed beta traffic may be too low to keep it warm on its own).
 | `CLERK_ISSUER` | literal in `render.yaml` (currently the dev instance URL) | This is a public URL, not a secret — set literally so an unset `sync: false` var can't silently break auth. Swap when cutting over to Clerk prod (see below). |
 | `CLERK_ISSUER_LEGACY` | not set for the beta | Only needed during a dev→prod Clerk cutover window; leave unset until then. |
 | `SERPAPI_KEY` | dashboard, `sync: false` | Real secret from serpapi.com. Missing it degrades `/api/search/` to a `503`, not a crash. |
+| `REDIS_URL` | not set for the beta | Optional. Unset -> in-process cache + synchronous (eager) Celery tasks. See "10. Cache, background jobs, and file storage" below before adding a paid Render Key Value instance. |
+| `AWS_STORAGE_BUCKET_NAME` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_S3_REGION_NAME` | not set for the beta | Optional. Unset -> local filesystem media storage (fine for a single free-tier instance; nothing in the app writes to media storage yet). Targets real AWS S3 — see "10." below for bucket/IAM setup. |
 
 ### `videoessay-web`
 
@@ -200,3 +202,76 @@ URLs before telling beta testers to use the app:
    token returns `200`.
 6. Backend response headers show `Strict-Transport-Security` and a specific
    (non-wildcard) `Access-Control-Allow-Origin` — never `*`.
+
+## 10. Cache, background jobs, and file storage (added, not yet provisioned)
+
+The backend has plumbing for three cloud capabilities it doesn't yet need to
+run for real, wired so each degrades to a free, single-instance-friendly
+default until you're ready to pay for the Render add-on:
+
+| Capability | Unset (today) | Configured |
+|---|---|---|
+| Cache (`/api/search/` result caching, per-IP rate limiting) | Django's in-process `LocMemCache` | `django-redis` against `REDIS_URL` |
+| Background jobs (the SerpAPI call in `/api/search/`) | Celery runs the task eagerly — synchronously, in the request, no worker needed (`CELERY_TASK_ALWAYS_EAGER`) | Celery dispatches to a real broker (same `REDIS_URL`); a separate worker process runs it and retries transient network failures |
+| Media storage | Local filesystem (`MEDIA_ROOT`) — nothing in the app writes here yet | `django-storages` against a real **AWS S3** bucket |
+
+**Local dev, if you want to exercise the Redis-backed paths:**
+```
+docker run -p 6379:6379 redis:7-alpine
+# then, in backend/.env:
+REDIS_URL=redis://127.0.0.1:6379/0
+```
+To actually run a Celery worker locally instead of eager mode:
+```
+cd backend && celery -A config worker --loglevel=info
+```
+
+**Graduating to Render for real (when the beta needs it):**
+1. Render Key Value (starter plan, ~$10/mo) → set `REDIS_URL` (dashboard,
+   `sync: false`) on `videoessay-backend` to its internal connection string.
+2. A Render background worker (starter plan, ~$7/mo) running
+   `celery -A config worker --loglevel=info` from `backend/`, same env vars as
+   the web service (including `REDIS_URL` and `DATABASE_URL`).
+3. For file storage: no Render service needed, just a real AWS account. See
+   "Provisioning the S3 bucket + IAM user" below.
+
+None of this is in `render.yaml` yet since the beta doesn't need it — add the
+`keyvalue` and `worker` blocks there when you provision them, following the
+patterns in the `render:render-keyvalue` and
+`render:render-background-workers` skills.
+
+**Provisioning the S3 bucket + IAM user (AWS Console):**
+1. **S3 → Create bucket.** Name it (e.g. `videoessay-media-prod`), pick a
+   region (e.g. `us-east-1`), keep **Block all public access** ON — the app
+   reads/writes via signed IAM credentials + presigned URLs
+   (`AWS_QUERYSTRING_AUTH` is on by default for that reason), not a public
+   bucket policy.
+2. **IAM → Policies → Create policy** (JSON tab), scoped to that one bucket
+   only:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:ListBucket"],
+       "Resource": [
+         "arn:aws:s3:::videoessay-media-prod",
+         "arn:aws:s3:::videoessay-media-prod/*"
+       ]
+     }]
+   }
+   ```
+3. **IAM → Users → Create user** (e.g. `videoessay-backend-s3`), no console
+   access, attach the policy from step 2. Create an **access key** for it
+   (Security credentials tab → "Application running outside AWS" use case) —
+   this is the one time the secret key is shown; copy both immediately.
+4. Set on `videoessay-backend` (dashboard, `sync: false`):
+   `AWS_STORAGE_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+   `AWS_S3_REGION_NAME` (matching the bucket's region — `config/settings.py`
+   defaults this to `us-east-1` if unset, which is wrong for any other
+   region). Never commit these; never reuse your own root/admin AWS keys —
+   this dedicated IAM user is scoped to nothing but this bucket.
+5. Rotating: create a new access key on the IAM user, update the env vars,
+   redeploy, then deactivate (don't delete yet) the old key on the IAM user
+   until you've confirmed the new one works — same pattern as §8's secret
+   rotation.

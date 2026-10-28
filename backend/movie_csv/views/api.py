@@ -14,6 +14,9 @@ from ..permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
 from ..services.youtube_search import youtube_search
 from ..services.youtube_oembed import fetch_oembed_metadata, OEmbedLookupError
+from ..tasks import run_youtube_search, SearchProviderError
+from celery.exceptions import TimeoutError as CeleryTimeoutError
+from django.core.cache import cache
 from django.contrib.auth import authenticate, login
 from rest_framework.authtoken.models import Token
 from rest_framework.generics import GenericAPIView
@@ -388,9 +391,41 @@ def search(request):
     }
 )
 
+YOUTUBE_SEARCH_CACHE_TTL = 300  # seconds
+YOUTUBE_SEARCH_RATE_LIMIT = 30  # requests per client IP per window
+YOUTUBE_SEARCH_RATE_WINDOW = 60  # seconds
+
+
+def _client_ip(request):
+    # Take the LAST X-Forwarded-For entry: that's the one appended by the
+    # proxy in front of us. Earlier entries are client-supplied and spoofable.
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    return forwarded.split(",")[-1].strip() if forwarded else request.META.get("REMOTE_ADDR", "")
+
+
+def _rate_limited(ip):
+    """Fixed-window counter. add() is a no-op if the key exists, and incr() is
+    atomic on Redis, so concurrent requests can't slip past the limit. On the
+    in-process LocMemCache each gunicorn worker keeps its own counter, so the
+    effective limit there is per-worker; Redis makes it global."""
+    key = f"youtube_search:throttle:{ip}"
+    cache.add(key, 0, YOUTUBE_SEARCH_RATE_WINDOW)
+    try:
+        count = cache.incr(key)
+    except ValueError:  # window expired between add() and incr()
+        cache.set(key, 1, YOUTUBE_SEARCH_RATE_WINDOW)
+        count = 1
+    return count > YOUTUBE_SEARCH_RATE_LIMIT
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def youtube_search(request):
+    # Rate limited by hand: this is a plain Django view, not a DRF one, so
+    # DRF's throttle classes don't apply here.
+    if _rate_limited(_client_ip(request)):
+        return JsonResponse({"error": "rate limit exceeded"}, status=429)
+
     try:
         data = json.loads(request.body or b"{}")
     except (json.JSONDecodeError, ValueError):
@@ -406,33 +441,36 @@ def youtube_search(request):
             {"error": "YouTube search is not configured on the server"}, status=503
         )
 
+    location = data.get("location", "us")
+    language = data.get("language", "en")
     params = {
         "engine": "youtube",
         "search_query": search_query,
-        "location": data.get("location", "us"),
-        "hl": data.get("language", "en"),
+        "location": location,
+        "hl": language,
         "api_key": api_key,
     }
+
+    # Cache key omits api_key (a secret, and constant per deployment).
+    cache_key = f"youtube_search:{search_query}:{location}:{language}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return JsonResponse(cached)
+
+    # Runs inline today (CELERY_TASK_ALWAYS_EAGER, no REDIS_URL). With a broker
+    # configured the task runs on a worker and retries transient failures, but
+    # this request still waits on the result, so it doesn't free the web process.
     try:
-        response = requests.get(
-            "https://serpapi.com/search", params=params, timeout=10
-        )
-    except requests.exceptions.Timeout:
+        results = run_youtube_search.delay(params).get(timeout=30)
+    except (requests.exceptions.Timeout, CeleryTimeoutError):
         logger.warning("SerpAPI request timed out")
         return JsonResponse({"error": "search provider timed out"}, status=504)
-    except requests.exceptions.RequestException as exc:
-        logger.warning("SerpAPI unreachable: %s", exc)
-        return JsonResponse({"error": "search provider unreachable"}, status=502)
+    except (requests.exceptions.ConnectionError, SearchProviderError) as exc:
+        logger.warning("SerpAPI search failed: %s", exc)
+        return JsonResponse({"error": "search provider error"}, status=502)
 
-    if response.status_code >= 400:
-        logger.warning(
-            "SerpAPI returned %s: %s", response.status_code, response.text[:300]
-        )
-        return JsonResponse(
-            {"error": "search provider error", "provider_status": response.status_code},
-            status=502,
-        )
-    return JsonResponse(response.json())
+    cache.set(cache_key, results, YOUTUBE_SEARCH_CACHE_TTL)
+    return JsonResponse(results)
 
 class VideoEssayCreateView(generics.CreateAPIView):
     serializer_class = VideoEssaySerializer
