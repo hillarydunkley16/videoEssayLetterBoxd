@@ -55,7 +55,7 @@ change to signed-in/signed-out behavior.
 ## Dependency graph
 
 ```
-T1 baseline ──► T2 shell paints before Clerk ──► T3 critical CSS ──► T4 self-hosted fonts ─┐
+T1 baseline ──► T2 shell paints before Clerk ──► T2b drop TTF preloads ──► T3 critical CSS ──► T4 self-hosted fonts ─┐
       └────────────────────────────────────────► T5 cache headers (independent) ──────────┤
                                                                                            ▼
                                                                         T6 after-measurement + decision
@@ -71,6 +71,7 @@ T3 and T4 both edit `+html.tsx`, so they are sequential.
 
 ### Phase 2: Paint something sooner
 - [ ] T2: Web shell + skeleton paints before Clerk loads
+- [ ] T2b: Drop the unused web TTF preloads (split from T4; tests the bandwidth-contention guess early)
 - [ ] T3: Inline critical CSS (themed background, no white/dark flash)
 
 ### Checkpoint A

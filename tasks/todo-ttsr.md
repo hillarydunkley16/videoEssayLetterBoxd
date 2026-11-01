@@ -86,6 +86,41 @@ after JS + Clerk) and Speed Index 12.6s. TBT rose 42 -> 979ms only because FCP n
 earlier, so the TBT window starts sooner; it is not a regression. Remaining gap to 1.5s:
 blocking Google Fonts CSS + six TTF preloads sharing a 1.6 Mbps link (both removed in T4).
 
+## Task 2b: Drop the unused web TTF font preloads  ✅ DONE (Lighthouse re-run pending)
+
+**Description:** Split out of T4 to test a hypothesis early: after T2, First Paint is 3.1s
+vs the 1.5s target, and Expo injects six `preload as=font` links for `.ttf` files that web
+never uses (it takes fonts from the Google Fonts `<link>`). On a 1.6 Mbps throttled link they
+may be competing with the HTML/CSS. Add `app/hooks/use-app-fonts.web.ts` returning
+`{ loaded: true, error: null }` so the `@expo-google-fonts` TTFs drop out of the web bundle.
+Native file unchanged.
+
+**Acceptance criteria:**
+- [x] Web `useAppFonts()` returns `{ loaded: true, error: null }` and loads no font files
+- [x] The six `.ttf` `preload as=font` links are gone from `dist/index.html`
+- [x] Native behavior unchanged (`use-app-fonts.ts` untouched; `_layout` still gates on it)
+
+**Verification:**
+- [x] New jest test (`app/__tests__/use-app-fonts.web.test.ts`); `npm test`, `npx tsc --noEmit`, `npm run lint`
+- [x] `npx expo export --platform web`; grep `dist/index.html` for `.ttf` -> none
+- [ ] **Pending (you run it):** `lh-median.sh` before/after: record First Paint (After-T2 baseline: 3103 ms)
+
+**Dependencies:** T2
+**Files likely touched:**
+- `frontend/app/hooks/use-app-fonts.web.ts` (new)
+- `frontend/app/__tests__/use-app-fonts.web.test.ts` (new)
+
+**Estimated scope:** XS
+
+---
+
+**Results:** 1 new test (229/229 pass), `tsc` clean, lint clean. `dist/index.html` has no `.ttf`
+preload links (only the CSS preload remains).
+**Left alone (out of scope):** the 55 TTFs are still emitted into `dist/assets` and referenced from
+the bundle, because Expo Router treats `app/hooks/use-app-fonts.ts` as a route file and bundles it
+alongside the `.web.ts` stub. Nothing fetches them. Moving `app/hooks/` out of `app/` would drop them
+but is a separate refactor.
+
 ## Task 3: Inline critical CSS
 
 **Description:** Add an inline `<style>` in `+html.tsx` that sets the page background
@@ -106,7 +141,7 @@ rule) or the shell flashes light until hydration.
 - [ ] Manual: with DevTools dark-mode emulation and CPU throttling, no white flash
 - [ ] `tsc`, `lint` pass
 
-**Dependencies:** T2
+**Dependencies:** T2b
 **Files likely touched:** `frontend/app/+html.tsx`
 **Estimated scope:** XS
 
@@ -131,9 +166,7 @@ delete the `fonts.googleapis.com` link. Update the two comments that mention it.
 - [ ] No network request to `fonts.googleapis.com` / `fonts.gstatic.com` on load
 - [ ] Text renders in Fraunces/Inter on web (headings vs body visibly unchanged)
 - [ ] At most 3 font files preloaded
-- [ ] The six `.ttf` `preload as=font` links Expo currently injects are gone from
-      `dist/index.html` (add `app/hooks/use-app-fonts.web.ts` returning `{ loaded: true, error: null }`
-      so the `@expo-google-fonts` TTFs drop out of the web bundle; native file unchanged)
+- [ ] (The six-TTF-preload removal moved to T2b.)
 - [ ] CLS < 0.1 across the font swap
 
 **Verification:**
