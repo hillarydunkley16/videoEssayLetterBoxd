@@ -1,0 +1,191 @@
+# TTSR (web start render) — Task List
+
+Plan: `tasks/plan-ttsr.md`. Spec: `SPEC-ttsr.md`. Branch: `v2`.
+Run frontend commands from `frontend/`. Record all measurements (median of 5) in the
+**Measurements** table at the bottom.
+
+---
+
+## Task 1: Baseline measurement and hypothesis check
+
+**Description:** Capture current Start Render / FCP / CLS and confirm the
+pre-rendered HTML is an empty shell. No code changes.
+
+**Acceptance criteria:**
+- [x] `dist/index.html` inspected; whether it contains nav/content markup is recorded
+      — **empty shell**: `<div id="root">` with no nav or content; 4.1 MB entry bundle
+- [x] Lighthouse mobile (Slow 4G, 4x CPU) median-of-5 recorded for local `dist/`
+- [ ] Same recorded for the deployed `videoessay-web` URL — **deferred**: needs the
+      deployed URL; run `lh-median.sh` against it and fill the table
+
+**Verification:**
+- [x] `npx expo export --platform web` succeeds
+- [x] Numbers are in the Measurements table
+
+**Findings (change later tasks):**
+- Lighthouse's *simulated* FCP is bimodal (1.7s x3, 6.3s/6.9s x2) and sits below the
+  *observed* first paint (2.1s x3, 3.0s, 3.5s), so it cannot be trusted as the success
+  metric for this page. Observed FP == FCP == LCP in every run (first paint is real
+  content, i.e. nothing paints until JS + Clerk finish). Speed Index (~8.4s) and TBT
+  (~944ms) are the steadier signals. **Decision needed:** measure with applied
+  throttling (`--throttling-method=devtools`) and report observed first paint.
+- Clerk's script chain (`clerk.browser.js` -> 4 more files, ~400ms each) gates
+  `isLoaded`; this is what T2 stops the first paint from waiting on.
+- Expo injects `preload as=font` for six `.ttf` files because `use-app-fonts.ts` is
+  bundled on web. Web uses Google Fonts, so these are wasted bandwidth. Added to T4.
+
+**Dependencies:** None
+**Files likely touched:** `tasks/todo-ttsr.md` only
+**Estimated scope:** XS
+
+---
+
+## Task 2: Web shell + skeleton paints before Clerk loads
+
+**Description:** In `RootLayoutNav`, on web render the themed container, `WebNav`
+and a content skeleton while `!isLoaded`, then swap in `<Stack>`. Native keeps its
+current `null` gate. Skeleton uses a fixed nav height and no auth state.
+
+**Acceptance criteria:**
+- [ ] Web, `isLoaded=false`: nav and skeleton render; `<Stack>` does not mount
+- [ ] Web, `isLoaded=true`: identical output to today
+- [ ] Native, `isLoaded=false` or fonts not loaded: still renders `null`
+- [ ] `dist/index.html` from `expo export` contains the nav/skeleton markup
+
+**Verification:**
+- [ ] New jest test (`app/__tests__/_layout.test.tsx`) covers the three cases above
+- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web` pass
+- [ ] Manual: serve `dist/`, throttle in DevTools, nav visible before bundle loads; no hydration warnings in console; signed-in and signed-out home still behave correctly
+
+**Dependencies:** T1
+**Files likely touched:**
+- `frontend/app/_layout.tsx`
+- `frontend/components/ui/WebShellSkeleton.tsx` (new)
+- `frontend/app/__tests__/_layout.test.tsx` (new)
+
+**Estimated scope:** S
+
+---
+
+## Task 3: Inline critical CSS
+
+**Description:** Add an inline `<style>` in `+html.tsx` that sets the page background
+and text color from the theme tokens (`paper`/`ink`) with a `prefers-color-scheme`
+dark variant, so the first paint is never a white flash.
+
+**Acceptance criteria:**
+- [ ] Light and dark first paint use the themed background
+- [ ] Values match `Colors.light/dark.background` in `constants/theme.ts`
+
+**Verification:**
+- [ ] `expo export` succeeds; `dist/index.html` contains the style in `<head>`
+- [ ] Manual: with DevTools dark-mode emulation and CPU throttling, no white flash
+- [ ] `tsc`, `lint` pass
+
+**Dependencies:** T2
+**Files likely touched:** `frontend/app/+html.tsx`
+**Estimated scope:** XS
+
+---
+
+## Checkpoint A: After Tasks 1-3
+- [ ] All frontend gates pass
+- [ ] Pre-rendered HTML shows the shell; Lighthouse median improved vs T1
+- [ ] Review with human before proceeding
+
+---
+
+## Task 4: Self-host fonts, preload, remove Google Fonts link
+
+**Description:** Convert the installed TTFs (Fraunces 400/500/600, Inter 400/500/600/700)
+to woff2 with a one-off fonttools run, place them in `frontend/public/fonts/` with
+versioned names, add `@font-face` (`font-display: swap`, fallback with `size-adjust`)
+and `<link rel="preload" as="font" crossorigin>` for the above-the-fold weights, and
+delete the `fonts.googleapis.com` link. Update the two comments that mention it.
+
+**Acceptance criteria:**
+- [ ] No network request to `fonts.googleapis.com` / `fonts.gstatic.com` on load
+- [ ] Text renders in Fraunces/Inter on web (headings vs body visibly unchanged)
+- [ ] At most 3 font files preloaded
+- [ ] The six `.ttf` `preload as=font` links Expo currently injects are gone from
+      `dist/index.html` (add `app/hooks/use-app-fonts.web.ts` returning `{ loaded: true, error: null }`
+      so the `@expo-google-fonts` TTFs drop out of the web bundle; native file unchanged)
+- [ ] CLS < 0.1 across the font swap
+
+**Verification:**
+- [ ] DevTools Network panel: fonts load from `/fonts/*.woff2` and nothing from Google
+- [ ] Visual compare of home page headings before/after (screenshot)
+- [ ] `expo export` copies `public/fonts` to `dist/fonts`; `tsc`, `lint`, `npm test` pass
+
+**Dependencies:** T3
+**Files likely touched:**
+- `frontend/app/+html.tsx`
+- `frontend/public/fonts/*.woff2` (7 binary assets)
+- `frontend/constants/theme.ts` (comment only)
+- `frontend/app/hooks/use-app-fonts.ts` (comment only)
+
+**Estimated scope:** M
+
+---
+
+## Task 5: Cache headers on the static site
+
+**Description:** Add a `headers` block to `videoessay-web` in `render.yaml`:
+immutable one-year caching for `/_expo/static/*` and `/fonts/*`, and
+`max-age=0, must-revalidate` for HTML. Guard with a content test.
+
+**Acceptance criteria:**
+- [ ] `render.yaml` defines the three header rules under `videoessay-web`
+- [ ] Existing blueprint tests still pass
+
+**Verification:**
+- [ ] `cd backend && python manage.py test movie_csv.test_render_static_headers movie_csv.test_render_blueprint`
+- [ ] `render blueprints validate` (if the CLI is installed)
+- [ ] After deploy (T6): `curl -I` on a hashed asset shows the immutable header
+
+**Dependencies:** None (can run in parallel with T2-T4; `/fonts/*` is harmless before T4)
+**Files likely touched:**
+- `render.yaml`
+- `backend/movie_csv/test_render_static_headers.py` (new)
+
+**Estimated scope:** S
+
+---
+
+## Checkpoint B: After Tasks 4-5
+- [ ] All frontend gates and the backend blueprint tests pass
+- [ ] Review with human before deploying
+
+---
+
+## Task 6: After-measurement and decision
+
+**Description:** Repeat the T1 measurements on the local build and the deployed URL,
+fill in the table, and decide whether the target is met or bundle splitting becomes a
+follow-up spec. Deploying means pushing the deploy branch, which needs your go-ahead first.
+
+**Acceptance criteria:**
+- [ ] Start Render < 1.5s, FCP < 1.8s, CLS < 0.1 on the deployed URL, or the gap is documented
+- [ ] `curl -I` confirms cache headers on a hashed asset and a font
+- [ ] `SPEC-ttsr.md` open questions resolved or carried forward
+
+**Verification:**
+- [ ] Measurements table complete; before/after comparison written up
+
+**Dependencies:** T1-T5
+**Files likely touched:** `tasks/todo-ttsr.md`, `SPEC-ttsr.md`
+**Estimated scope:** XS
+
+---
+
+## Measurements
+
+| Run | Start Render | FCP | LCP | CLS |
+|-----|--------------|-----|-----|-----|
+| Baseline, local dist (simulated, median of 5) | n/a (not reported) | 1709 ms (runs: 6268, 1705, 6928, 1698, 1709) | 1709 ms | 0.02 |
+| Baseline, local dist (observed first paint) | 2118, 2092, 2123, 3007, 3512 ms | same as first paint | same | 0.02 |
+| Baseline, local dist (other) | Speed Index 8450 ms, TBT 944 ms | | | |
+| Baseline, deployed | | | | |
+| After T3, local dist | | | | |
+| After T5, local dist | | | | |
+| After, deployed | | | | |
