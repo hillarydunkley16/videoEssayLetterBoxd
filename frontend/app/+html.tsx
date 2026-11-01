@@ -49,11 +49,19 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        {/* Only the brand font: it's the one the first-paint shell uses. Inter isn't needed
-            until the real screens render, and extra preloads compete with the bundle. */}
+        {/* Only the two Fraunces weights the first screens use: 400 (brand, first-paint shell)
+            and 500 (home hero heading; unpreloaded it swapped in late and shifted the hero).
+            Inter isn't needed until later and extra preloads compete with the bundle. */}
         <link
           rel="preload"
           href="/fonts/fraunces-400-v1.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin=""
+        />
+        <link
+          rel="preload"
+          href="/fonts/fraunces-500-v1.woff2"
           as="font"
           type="font/woff2"
           crossOrigin=""

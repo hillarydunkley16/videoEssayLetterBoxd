@@ -293,5 +293,8 @@ for reference only; add applied-throttling rows next to them.
 | After T2b, local dist (applied throttling, median of 5) | **1516 ms** (1417-1531) | 1516 ms | 11433 ms | 0.01 |
 | After T2b, local dist (applied throttling, other) | Speed Index 9358 ms, TBT 603 ms | | | |
 | After T3, local dist | | | | |
+| After T4 (fonts self-hosted, one Fraunces-400 preload), local dist (applied, median of 5) | **1358 ms** (1352-1372) | 1358 ms | 12257 ms | **0.23** (4 of 5 runs; run 1 = 0 but never hydrated, LCP=FCP) |
+| After T4, other | Speed Index 5525 ms, TBT 604 ms | | | |
+| After T4 CLS cause | one shift of 0.227: `fraunces-500-v1.woff2` (home hero heading) loaded after first render. Fix: also preload Fraunces 500. Re-measure into `/tmp/lh-after-t4b`. | | | |
 | After T5, local dist | | | | |
 | After, deployed | | | | |

@@ -85,11 +85,16 @@ describe('web document fonts', () => {
     expect(fs.statSync(filePath).size).toBeGreaterThan(1000);
   });
 
-  it('preloads only the font the first-paint shell uses (Fraunces 400, the brand)', () => {
+  // Fraunces 400 is the brand in the first-paint shell; Fraunces 500 is the heading weight
+  // on the home hero. Left unpreloaded, 500 swapped in late and shifted the hero (CLS 0.23).
+  it('preloads only the two Fraunces weights the first screens use (400 and 500)', () => {
     const preloads = markup.match(/<link rel="preload"[^>]*as="font"[^>]*>/g) ?? [];
-    expect(preloads).toHaveLength(1);
+    expect(preloads).toHaveLength(2);
     expect(preloads[0]).toContain('href="/fonts/fraunces-400-v1.woff2"');
-    expect(preloads[0]).toContain('type="font/woff2"');
-    expect(preloads[0]).toContain('crossorigin=""');
+    expect(preloads[1]).toContain('href="/fonts/fraunces-500-v1.woff2"');
+    for (const link of preloads) {
+      expect(link).toContain('type="font/woff2"');
+      expect(link).toContain('crossorigin=""');
+    }
   });
 });
