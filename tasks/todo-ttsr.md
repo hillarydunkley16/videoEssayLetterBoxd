@@ -6,7 +6,7 @@ Run frontend commands from `frontend/`. Record all measurements (median of 5) in
 
 ---
 
-## Task 1: Baseline measurement and hypothesis check
+## Task 1: Baseline measurement and hypothesis check  ✅ DONE (local; deployed URL deferred)
 
 **Description:** Capture current Start Render / FCP / CLS and confirm the
 pre-rendered HTML is an empty shell. No code changes.
@@ -17,7 +17,8 @@ pre-rendered HTML is an empty shell. No code changes.
 - [x] Lighthouse mobile (Slow 4G, 4x CPU) median-of-5 recorded for local `dist/`
       — **simulated throttling; superseded.** Re-run with the updated `lh-median.sh`
       (applied throttling, prints First Paint) and replace the baseline rows below.
-- [ ] Re-baseline local `dist/` with applied throttling (First Paint, FCP, Speed Index, TBT, CLS)
+- [x] Re-baseline local `dist/` with applied throttling (First Paint, FCP, Speed Index, TBT, CLS)
+      — **First Paint 14.4s** (14331-14484 over 5 runs), Speed Index 14.7s, TBT 42ms, CLS 0.01
 - [ ] Same recorded for the deployed `videoessay-web` URL — **deferred**: needs the
       deployed URL; run `lh-median.sh` against it and fill the table
 
@@ -32,6 +33,11 @@ pre-rendered HTML is an empty shell. No code changes.
   content, i.e. nothing paints until JS + Clerk finish). Speed Index (~8.4s) and TBT
   (~944ms) are the steadier signals. **Decision needed:** measure with applied
   throttling (`--throttling-method=devtools`) and report observed first paint.
+- **Real baseline (applied throttling): First Paint 14.4s vs the 1.5s target.** Tight spread
+  (~150ms), so the number is reliable. The wait is the ~1 MB gzipped bundle + Clerk chain, so
+  T2 must put the shell in the *pre-rendered HTML* (visible in `dist/index.html` before any JS
+  runs), not just render it after load. The blocking Google Fonts CSS likely keeps First Paint
+  above 1.5s until T4, so check the target at Checkpoint B, not only Checkpoint A.
 - Clerk's script chain (`clerk.browser.js` -> 4 more files, ~400ms each) gates
   `isLoaded`; this is what T2 stops the first paint from waiting on.
 - Expo injects `preload as=font` for six `.ttf` files because `use-app-fonts.ts` is
@@ -53,7 +59,8 @@ current `null` gate. Skeleton uses a fixed nav height and no auth state.
 - [ ] Web, `isLoaded=false`: nav and skeleton render; `<Stack>` does not mount
 - [ ] Web, `isLoaded=true`: identical output to today
 - [ ] Native, `isLoaded=false` or fonts not loaded: still renders `null`
-- [ ] `dist/index.html` from `expo export` contains the nav/skeleton markup
+- [ ] `dist/index.html` from `expo export` contains the nav/skeleton markup (the shell must be
+      visible in the static HTML itself, since the 14.4s baseline is JS + Clerk loading)
 
 **Verification:**
 - [ ] New jest test (`app/__tests__/_layout.test.tsx`) covers the three cases above
@@ -189,9 +196,11 @@ for reference only; add applied-throttling rows next to them.
 
 | Run | First Paint ("Start Render") | FCP | LCP | CLS |
 |-----|--------------|-----|-----|-----|
-| Baseline, local dist (simulated, median of 5) | n/a (not reported) | 1709 ms (runs: 6268, 1705, 6928, 1698, 1709) | 1709 ms | 0.02 |
-| Baseline, local dist (observed first paint) | 2118, 2092, 2123, 3007, 3512 ms | same as first paint | same | 0.02 |
-| Baseline, local dist (other) | Speed Index 8450 ms, TBT 944 ms | | | |
+| **Baseline, local dist (applied throttling, median of 5)** | **14367 ms** (14331-14484) | 14367 ms | 14367 ms | 0.01 |
+| Baseline, local dist (applied throttling, other) | Speed Index 14682 ms, TBT 42 ms | | | |
+| _Superseded:_ local dist (simulated, median of 5) | n/a (not reported) | 1709 ms (runs: 6268, 1705, 6928, 1698, 1709) | 1709 ms | 0.02 |
+| _Superseded:_ local dist (observed first paint, simulated runs) | 2118, 2092, 2123, 3007, 3512 ms | same as first paint | same | 0.02 |
+| _Superseded:_ local dist (other, simulated runs) | Speed Index 8450 ms, TBT 944 ms | | | |
 | Baseline, deployed | | | | |
 | After T3, local dist | | | | |
 | After T5, local dist | | | | |

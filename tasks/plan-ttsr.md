@@ -31,6 +31,9 @@ change to signed-in/signed-out behavior.
 - Observed first paint is 2.1-3.5s locally, and equals FCP/LCP, so nothing paints before
   JS + Clerk's script chain finish. Simulated FCP (1.7s median) is bimodal and misleading.
 - Expo injects `preload as=font` for six TTFs because `use-app-fonts.ts` is bundled on web.
+- Applied-throttling baseline: **First Paint 14.4s** (~150ms spread), Speed Index 14.7s, TBT 42ms,
+  CLS 0.01. The shell must be in the pre-rendered HTML; Google Fonts CSS may hold First Paint
+  above 1.5s until T4.
 - Metric decided: observed First Paint under applied throttling (`--throttling-method=devtools`),
   plus FCP and Speed Index. The simulated baseline above is NOT comparable and must be re-run.
 
