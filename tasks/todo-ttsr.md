@@ -49,23 +49,23 @@ pre-rendered HTML is an empty shell. No code changes.
 
 ---
 
-## Task 2: Web shell + skeleton paints before Clerk loads
+## Task 2: Web shell + skeleton paints before Clerk loads  ✅ DONE (browser checks pending)
 
 **Description:** In `RootLayoutNav`, on web render the themed container, `WebNav`
 and a content skeleton while `!isLoaded`, then swap in `<Stack>`. Native keeps its
 current `null` gate. Skeleton uses a fixed nav height and no auth state.
 
 **Acceptance criteria:**
-- [ ] Web, `isLoaded=false`: nav and skeleton render; `<Stack>` does not mount
-- [ ] Web, `isLoaded=true`: identical output to today
-- [ ] Native, `isLoaded=false` or fonts not loaded: still renders `null`
-- [ ] `dist/index.html` from `expo export` contains the nav/skeleton markup (the shell must be
+- [x] Web, `isLoaded=false`: nav and skeleton render; `<Stack>` does not mount
+- [x] Web, `isLoaded=true`: identical output to today
+- [x] Native, `isLoaded=false` or fonts not loaded: still renders `null`
+- [x] `dist/index.html` from `expo export` contains the nav/skeleton markup (the shell must be
       visible in the static HTML itself, since the 14.4s baseline is JS + Clerk loading)
 
 **Verification:**
-- [ ] New jest test (`app/__tests__/_layout.test.tsx`) covers the three cases above
-- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web` pass
-- [ ] Manual: serve `dist/`, throttle in DevTools, nav visible before bundle loads; no hydration warnings in console; signed-in and signed-out home still behave correctly
+- [x] New jest test (`app/__tests__/_layout.test.tsx`) covers the three cases above
+- [x] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web` pass
+- [ ] **Not yet done (needs a browser):** manual: serve `dist/`, throttle in DevTools, nav visible before bundle loads; no hydration warnings in console; signed-in and signed-out home still behave correctly
 
 **Dependencies:** T1
 **Files likely touched:**
@@ -77,11 +77,22 @@ current `null` gate. Skeleton uses a fixed nav height and no auth state.
 
 ---
 
+**Results:** 4 new tests (228/228 total pass), `tsc` clean, lint 0 errors, export OK.
+`dist/index.html` now contains the `watchd` nav bar + skeleton (was an empty `#root`).
+Still to check in a real browser: no hydration warnings in the console, and the
+signed-in/signed-out home still behave. Re-run `lh-median.sh` to see First Paint after T2
+(expected: still held up by the blocking Google Fonts CSS until T4).
+
 ## Task 3: Inline critical CSS
 
 **Description:** Add an inline `<style>` in `+html.tsx` that sets the page background
 and text color from the theme tokens (`paper`/`ink`) with a `prefers-color-scheme`
 dark variant, so the first paint is never a white flash.
+
+**Heads-up from T2:** `useColorScheme` (web) returns `light` during static render, so the
+pre-rendered shell has an inline *light* `background-color` on the layout containers. The
+critical CSS must override it in dark mode (e.g. `!important` in a `prefers-color-scheme: dark`
+rule) or the shell flashes light until hydration.
 
 **Acceptance criteria:**
 - [ ] Light and dark first paint use the themed background

@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform, Text } from 'react-native'
 import { WebNav } from '../components/ui/WebNav'
 import { MobileNav } from '../components/ui/MobileNav'
 import { MobileTopNav } from '../components/ui/MobileTopNav'
+import { WebShellSkeleton } from '../components/ui/WebShellSkeleton'
 import { ClerkProvider, SignedIn, useAuth } from '@clerk/clerk-expo'
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
 import { ShareIntentProvider } from 'expo-share-intent'
@@ -20,9 +21,11 @@ function RootLayoutNav() {
   const { loaded: fontsLoaded } = useAppFonts();
   const theme = Colors[useColorScheme()];
   useShareIntentRouter();
+  const isWeb = Platform.OS === 'web';
   // Web loads Fraunces/Inter via the <link> in app/+html.tsx, not expo-font,
-  // so it doesn't need to wait on fontsLoaded.
-  if (!isLoaded || (Platform.OS !== 'web' && !fontsLoaded)) return null;
+  // so it doesn't need to wait on fontsLoaded. It also paints the shell while Clerk
+  // loads (the skeleton below stands in for <Stack>) so the static HTML isn't blank.
+  if (!isWeb && (!isLoaded || !fontsLoaded)) return null;
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.background }]}>
@@ -30,7 +33,7 @@ function RootLayoutNav() {
             {Platform.OS === 'web' && <WebNav />}
             {Platform.OS !== 'web' && <MobileTopNav />}
           <View style={styles.content}>
-            <Stack screenOptions={{ headerShown: false }} />
+            {isWeb && !isLoaded ? <WebShellSkeleton /> : <Stack screenOptions={{ headerShown: false }} />}
             <Toast />
           </View>
           {Platform.OS !== 'web' && (
