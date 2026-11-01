@@ -47,7 +47,7 @@ npx lighthouse http://localhost:4173 --only-categories=performance \
   --throttling-method=devtools --output=json --output-path=./lh.json
 ```
 
-For a median of 5 with First Paint extracted, use the helper script (prints First Paint, FCP, LCP, Speed Index, TBT, CLS): `bash lh-median.sh <url> <outdir> 5`. It lives in the session scratchpad; copy it into the repo (e.g. `frontend/scripts/lh-median.sh`) if it should be kept.
+For a median of 5 with First Paint extracted, use the helper script (prints First Paint, FCP, LCP, Speed Index, TBT, CLS): `bash frontend/scripts/lh-median.sh <url> <outdir> 5` (needs Chrome; set `CHROME_PATH` to override the macOS default). Serve the build first with `npx serve dist -l 4173`.
 
 For true Start Render, run WebPageTest against the deployed `videoessay-web` URL.
 
@@ -56,6 +56,7 @@ For true Start Render, run WebPageTest against the deployed `videoessay-web` URL
 ```
 frontend/app/+html.tsx             -> web document shell: critical CSS, font preload/@font-face
 frontend/app/_layout.tsx           -> root layout: remove the web null-gate on Clerk isLoaded
+frontend/scripts/lh-median.sh        -> Lighthouse median-of-N helper (First Paint under applied throttling)
 frontend/public/fonts/             -> self-hosted Fraunces + Inter woff2 (web); Expo copies public/ into dist/
 frontend/components/ui/            -> shell skeleton component (new, web pre-auth)
 frontend/constants/theme.ts        -> source of background colors for critical CSS
