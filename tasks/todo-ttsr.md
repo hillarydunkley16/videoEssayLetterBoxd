@@ -128,7 +128,7 @@ the bundle, because Expo Router treats `app/hooks/use-app-fonts.ts` as a route f
 alongside the `.web.ts` stub. Nothing fetches them. Moving `app/hooks/` out of `app/` would drop them
 but is a separate refactor.
 
-## Task 3: Inline critical CSS  ✅ DONE (dark-mode visual check pending)
+## Task 3: Inline critical CSS  ✅ DONE
 
 **Description:** Add an inline `<style>` in `+html.tsx` that sets the page background
 and text color from the theme tokens (`paper`/`ink`) with a `prefers-color-scheme`
@@ -145,7 +145,9 @@ rule) or the shell flashes light until hydration.
 
 **Verification:**
 - [x] `expo export` succeeds; `dist/index.html` contains the style in `<head>`
-- [ ] **Pending (needs a browser):** manual: with DevTools dark-mode emulation and CPU throttling, no white flash
+- [x] Manual (system is in dark mode; DevTools Performance filmstrip, Slow 4G, cache off): frames before
+      first paint are black, first painted frame is the dark shell + skeleton, no light/white frame through
+      hydration or when real content arrives. (Original wording: with DevTools dark-mode emulation and CPU throttling, no white flash
 - [x] `tsc`, `lint` pass
 
 **Dependencies:** T2b
@@ -165,7 +167,6 @@ rule) or the shell flashes light until hydration.
 (1 `require()` warning in the new test, same kind the other tests have). The CSS is built from
 `Colors` in `+html.tsx`; the exported `dist/index.html` has `<style id="critical-theme">` and all four
 override selectors match inline values that really appear in the pre-rendered `<body>`.
-Still to check in a browser: dark-mode emulation shows no light flash (and the shell recolors).
 Note: this task adds no network change, so expect First Paint to stay ~1.5s; its value is dark mode.
 
 ## Task 4: Self-host fonts, preload, remove Google Fonts link
@@ -187,6 +188,10 @@ delete the `fonts.googleapis.com` link. Update the two comments that mention it.
 - [ ] DevTools Network panel: fonts load from `/fonts/*.woff2` and nothing from Google
 - [ ] Visual compare of home page headings before/after (screenshot)
 - [ ] `expo export` copies `public/fonts` to `dist/fonts`; `tsc`, `lint`, `npm test` pass
+
+**Evidence for the target (DevTools Insights, Slow 4G):** "Render-blocking requests: est. savings 1.36s"
+(Google Fonts CSS + global CSS). Waterfall: HTML 610ms, then Google CSS 890ms in parallel with global CSS
+591ms, so paint waits ~1.5s. Optional extra after T4: inline the 2 KB `global.css` to drop one more round trip.
 
 **Dependencies:** T3
 **Files likely touched:**
@@ -213,6 +218,9 @@ immutable one-year caching for `/_expo/static/*` and `/fonts/*`, and
 - [ ] `cd backend && python manage.py test movie_csv.test_render_static_headers movie_csv.test_render_blueprint`
 - [ ] `render blueprints validate` (if the CLI is installed)
 - [ ] After deploy (T6): `curl -I` on a hashed asset shows the immutable header
+
+**Evidence (DevTools Insights):** "Use efficient cache lifetimes: est. savings 999 kB" (the entry bundle).
+Local `serve` is not Render's CDN, so confirm the effect on the deployed site in T6.
 
 **Dependencies:** None (can run in parallel with T2-T4; `/fonts/*` is harmless before T4)
 **Files likely touched:**
