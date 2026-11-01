@@ -59,6 +59,18 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    # Hashed bundle files and versioned fonts never change; HTML must revalidate so a
+    # deploy is picked up. Bump the -vN suffix on a font to change it (see +html.tsx).
+    headers:
+      - path: /_expo/static/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /fonts/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
     envVars:
       - key: NODE_VERSION
         value: "22.11.0"

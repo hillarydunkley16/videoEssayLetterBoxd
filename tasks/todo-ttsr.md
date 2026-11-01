@@ -221,15 +221,15 @@ Sizes: Fraunces ~28 kB each, Inter ~36 kB each (was Google: 68 kB + 48 kB variab
 - To regenerate the fonts: re-run the fontTools subset, write new files with a bumped `-vN` suffix, update
   `FONT_FACES` in `+html.tsx` (the tests check each file exists).
 
-## Task 5: Cache headers on the static site
+## Task 5: Cache headers on the static site ✅ DONE (deployed effect checked in T6)
 
 **Description:** Add a `headers` block to `videoessay-web` in `render.yaml`:
 immutable one-year caching for `/_expo/static/*` and `/fonts/*`, and
 `max-age=0, must-revalidate` for HTML. Guard with a content test.
 
 **Acceptance criteria:**
-- [ ] `render.yaml` defines the three header rules under `videoessay-web`
-- [ ] Existing blueprint tests still pass
+- [x] `render.yaml` defines the three header rules under `videoessay-web`
+- [x] Existing blueprint tests still pass
 
 **Verification:**
 - [ ] `cd backend && python manage.py test movie_csv.test_render_static_headers movie_csv.test_render_blueprint`
@@ -238,6 +238,10 @@ immutable one-year caching for `/_expo/static/*` and `/fonts/*`, and
 
 **Evidence (DevTools Insights):** "Use efficient cache lifetimes: est. savings 999 kB" (the entry bundle).
 Local `serve` is not Render's CDN, so confirm the effect on the deployed site in T6.
+
+**Results:** 5 new tests in `test_render_static_headers.py`; full backend suite passes. `render` CLI not installed, so
+`render blueprints validate` not run. HTML rule targets `/index.html` (rewritten SPA routes serve it; Render's default for
+static HTML is already must-revalidate) - confirm with `curl -I` on `/` and a deep link in T6.
 
 **Dependencies:** None (can run in parallel with T2-T4; `/fonts/*` is harmless before T4)
 **Files likely touched:**
