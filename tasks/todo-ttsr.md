@@ -86,7 +86,7 @@ after JS + Clerk) and Speed Index 12.6s. TBT rose 42 -> 979ms only because FCP n
 earlier, so the TBT window starts sooner; it is not a regression. Remaining gap to 1.5s:
 blocking Google Fonts CSS + six TTF preloads sharing a 1.6 Mbps link (both removed in T4).
 
-## Task 2b: Drop the unused web TTF font preloads  ✅ DONE (Lighthouse re-run pending)
+## Task 2b: Drop the unused web TTF font preloads  ✅ DONE
 
 **Description:** Split out of T4 to test a hypothesis early: after T2, First Paint is 3.1s
 vs the 1.5s target, and Expo injects six `preload as=font` links for `.ttf` files that web
@@ -103,7 +103,10 @@ Native file unchanged.
 **Verification:**
 - [x] New jest test (`app/__tests__/use-app-fonts.web.test.ts`); `npm test`, `npx tsc --noEmit`, `npm run lint`
 - [x] `npx expo export --platform web`; grep `dist/index.html` for `.ttf` -> none
-- [ ] **Pending (you run it):** `lh-median.sh` before/after: record First Paint (After-T2 baseline: 3103 ms)
+- [x] `lh-median.sh` before/after: **First Paint 3103 -> 1516 ms** (LCP 14.6 -> 11.4s, Speed Index 12.6 -> 9.4s,
+      TBT 979 -> 603ms). Confirms the TTF preloads were competing for bandwidth. 1516 ms is ~16ms over the
+      1.5s target (2 of 5 runs under), so not yet cleanly met. (Run 1 printed `run 1 failed` but its JSON
+      was written and in line with the rest; treated as valid.)
 
 **Dependencies:** T2
 **Files likely touched:**
@@ -251,6 +254,8 @@ for reference only; add applied-throttling rows next to them.
 | Baseline, deployed | | | | |
 | After T2, local dist (applied throttling, median of 5) | **3103 ms** (3099-3106) | 3103 ms | 14642 ms | 0.01 |
 | After T2, local dist (applied throttling, other) | Speed Index 12551 ms, TBT 979 ms | | | |
+| After T2b, local dist (applied throttling, median of 5) | **1516 ms** (1417-1531) | 1516 ms | 11433 ms | 0.01 |
+| After T2b, local dist (applied throttling, other) | Speed Index 9358 ms, TBT 603 ms | | | |
 | After T3, local dist | | | | |
 | After T5, local dist | | | | |
 | After, deployed | | | | |
