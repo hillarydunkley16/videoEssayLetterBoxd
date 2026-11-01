@@ -7,8 +7,8 @@ deploy plan in `tasks/plan.md` / `tasks/todo.md`, which still has open tasks.
 
 The web build paints nothing useful until the JS bundle has loaded and Clerk's
 `isLoaded` is true (`app/_layout.tsx` returns `null`), and the Google Fonts
-stylesheet in `app/+html.tsx` blocks rendering. Goal: Start Render < 1.5s,
-FCP < 1.8s on a throttled mobile Lighthouse profile, with no layout shift and no
+stylesheet in `app/+html.tsx` blocks rendering. Goal: observed First Paint
+< 1.5s (Lighthouse's stand-in for Start Render) and FCP < 1.8s under applied Slow 4G / 4x CPU throttling, with no layout shift and no
 change to signed-in/signed-out behavior.
 
 ## Findings from the codebase
@@ -31,7 +31,8 @@ change to signed-in/signed-out behavior.
 - Observed first paint is 2.1-3.5s locally, and equals FCP/LCP, so nothing paints before
   JS + Clerk's script chain finish. Simulated FCP (1.7s median) is bimodal and misleading.
 - Expo injects `preload as=font` for six TTFs because `use-app-fonts.ts` is bundled on web.
-- Metric decision pending: use applied throttling and observed first paint (plus Speed Index).
+- Metric decided: observed First Paint under applied throttling (`--throttling-method=devtools`),
+  plus FCP and Speed Index. The simulated baseline above is NOT comparable and must be re-run.
 
 ## Architecture decisions
 

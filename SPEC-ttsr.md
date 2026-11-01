@@ -10,9 +10,10 @@ Cut the time before the web app paints its first pixel. Today `app/_layout.tsx` 
 
 ## Success Criteria
 
-Measured with Lighthouse (mobile profile: Slow 4G, 4x CPU) against a production build served from `frontend/dist/` and again against the deployed URL:
+**How it is measured.** Lighthouse has no "Start Render" metric (that is WebPageTest's first non-white filmstrip frame). The closest Lighthouse value is **observed First Paint** (`audits.metrics.details.items[0].observedFirstPaint` in the JSON). Run Lighthouse with applied throttling (`--throttling-method=devtools`, Slow 4G + 4x CPU) and take the median of 5. Simulated throttling is not used: on this page its FCP was bimodal (1.7s / 6-7s) and lower than what the browser observed, so it would have passed the old target at baseline. Run against a production build served from `frontend/dist/` and again against the deployed URL; `lh-median.sh` (see Commands) prints the numbers.
 
-- Start Render < 1.5s; FCP < 1.8s
+- **First Paint < 1.5s** (primary, replaces "Start Render"); FCP < 1.8s; Speed Index reported as a supporting number (baseline 8.4s simulated, to be re-measured under applied throttling)
+- Optional cross-check: WebPageTest "Start Render" on the deployed URL
 - Baseline captured **before** any change and recorded in `tasks/todo-ttsr.md` for before/after comparison
 - First paint shows the themed background and app shell (nav + skeleton), not a blank page
 - No layout shift when fonts swap or Clerk loads (CLS < 0.1)
@@ -42,11 +43,13 @@ npx serve dist -l 4173                  # serve the production build locally
 npx tsc --noEmit
 npm run lint
 npm test
-npx lighthouse http://localhost:4173 --preset=perf --form-factor=mobile \
-  --throttling-method=simulate --output=json --output-path=./lh.json
+npx lighthouse http://localhost:4173 --only-categories=performance \
+  --throttling-method=devtools --output=json --output-path=./lh.json
 ```
 
-For real-network numbers, run WebPageTest or the Chrome DevTools Lighthouse audit against the deployed `videoessay-web` URL.
+For a median of 5 with First Paint extracted, use the helper script (prints First Paint, FCP, LCP, Speed Index, TBT, CLS): `bash lh-median.sh <url> <outdir> 5`. It lives in the session scratchpad; copy it into the repo (e.g. `frontend/scripts/lh-median.sh`) if it should be kept.
+
+For true Start Render, run WebPageTest against the deployed `videoessay-web` URL.
 
 ## Project Structure
 

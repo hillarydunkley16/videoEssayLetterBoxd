@@ -15,6 +15,9 @@ pre-rendered HTML is an empty shell. No code changes.
 - [x] `dist/index.html` inspected; whether it contains nav/content markup is recorded
       — **empty shell**: `<div id="root">` with no nav or content; 4.1 MB entry bundle
 - [x] Lighthouse mobile (Slow 4G, 4x CPU) median-of-5 recorded for local `dist/`
+      — **simulated throttling; superseded.** Re-run with the updated `lh-median.sh`
+      (applied throttling, prints First Paint) and replace the baseline rows below.
+- [ ] Re-baseline local `dist/` with applied throttling (First Paint, FCP, Speed Index, TBT, CLS)
 - [ ] Same recorded for the deployed `videoessay-web` URL — **deferred**: needs the
       deployed URL; run `lh-median.sh` against it and fill the table
 
@@ -165,7 +168,7 @@ fill in the table, and decide whether the target is met or bundle splitting beco
 follow-up spec. Deploying means pushing the deploy branch, which needs your go-ahead first.
 
 **Acceptance criteria:**
-- [ ] Start Render < 1.5s, FCP < 1.8s, CLS < 0.1 on the deployed URL, or the gap is documented
+- [ ] First Paint < 1.5s, FCP < 1.8s, CLS < 0.1 (applied throttling) on the deployed URL, or the gap is documented
 - [ ] `curl -I` confirms cache headers on a hashed asset and a font
 - [ ] `SPEC-ttsr.md` open questions resolved or carried forward
 
@@ -180,7 +183,11 @@ follow-up spec. Deploying means pushing the deploy branch, which needs your go-a
 
 ## Measurements
 
-| Run | Start Render | FCP | LCP | CLS |
+Primary metric is observed **First Paint** (Lighthouse has no "Start Render"), measured with
+`--throttling-method=devtools`. The first baseline rows below were *simulated* and are kept
+for reference only; add applied-throttling rows next to them.
+
+| Run | First Paint ("Start Render") | FCP | LCP | CLS |
 |-----|--------------|-----|-----|-----|
 | Baseline, local dist (simulated, median of 5) | n/a (not reported) | 1709 ms (runs: 6268, 1705, 6928, 1698, 1709) | 1709 ms | 0.02 |
 | Baseline, local dist (observed first paint) | 2118, 2092, 2123, 3007, 3512 ms | same as first paint | same | 0.02 |
