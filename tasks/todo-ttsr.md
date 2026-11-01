@@ -107,6 +107,10 @@ Native file unchanged.
       TBT 979 -> 603ms). Confirms the TTF preloads were competing for bandwidth. 1516 ms is ~16ms over the
       1.5s target (2 of 5 runs under), so not yet cleanly met. (Run 1 printed `run 1 failed` but its JSON
       was written and in line with the rest; treated as valid.)
+      **Caveat:** the same command was run twice into the same `/tmp/lh-after-t2b` while the first was
+      still in the background, so runs 1-3 are shared between both summaries (median 1516 vs 1521 ms,
+      range 1415-1670). Read this as First Paint ~1.5s +/- 0.1s, not ten independent runs. Re-measure
+      cleanly (one process, fresh output dir) at the next checkpoint.
 
 **Dependencies:** T2
 **Files likely touched:**
