@@ -128,7 +128,7 @@ the bundle, because Expo Router treats `app/hooks/use-app-fonts.ts` as a route f
 alongside the `.web.ts` stub. Nothing fetches them. Moving `app/hooks/` out of `app/` would drop them
 but is a separate refactor.
 
-## Task 3: Inline critical CSS
+## Task 3: Inline critical CSS  ✅ DONE (dark-mode visual check pending)
 
 **Description:** Add an inline `<style>` in `+html.tsx` that sets the page background
 and text color from the theme tokens (`paper`/`ink`) with a `prefers-color-scheme`
@@ -140,13 +140,13 @@ critical CSS must override it in dark mode (e.g. `!important` in a `prefers-colo
 rule) or the shell flashes light until hydration.
 
 **Acceptance criteria:**
-- [ ] Light and dark first paint use the themed background
-- [ ] Values match `Colors.light/dark.background` in `constants/theme.ts`
+- [x] Light and dark first paint use the themed background
+- [x] Values match `Colors.light/dark.background` in `constants/theme.ts`
 
 **Verification:**
-- [ ] `expo export` succeeds; `dist/index.html` contains the style in `<head>`
-- [ ] Manual: with DevTools dark-mode emulation and CPU throttling, no white flash
-- [ ] `tsc`, `lint` pass
+- [x] `expo export` succeeds; `dist/index.html` contains the style in `<head>`
+- [ ] **Pending (needs a browser):** manual: with DevTools dark-mode emulation and CPU throttling, no white flash
+- [x] `tsc`, `lint` pass
 
 **Dependencies:** T2b
 **Files likely touched:** `frontend/app/+html.tsx`
@@ -160,6 +160,13 @@ rule) or the shell flashes light until hydration.
 - [ ] Review with human before proceeding
 
 ---
+
+**Results:** 4 new tests (`app/__tests__/html.test.tsx`), 233/233 total pass, `tsc` clean, lint 0 errors
+(1 `require()` warning in the new test, same kind the other tests have). The CSS is built from
+`Colors` in `+html.tsx`; the exported `dist/index.html` has `<style id="critical-theme">` and all four
+override selectors match inline values that really appear in the pre-rendered `<body>`.
+Still to check in a browser: dark-mode emulation shows no light flash (and the shell recolors).
+Note: this task adds no network change, so expect First Paint to stay ~1.5s; its value is dark mode.
 
 ## Task 4: Self-host fonts, preload, remove Google Fonts link
 
