@@ -1,0 +1,150 @@
+# Task List: LCP (SPEC-lcp.md)
+
+Plan: `tasks/plan-lcp.md`. Method: `bash frontend/scripts/lh-median.sh <url> /tmp/lh-<label> 5`
+(fresh outdir, one run at a time, applied throttling, median of 5). Run one task per `/agent-skills:build`.
+Gates every task: full jest, `npx tsc --noEmit`, `npm run lint` (0 errors), `npx expo export --platform web`.
+
+## Phase 1: the hero stops waiting for Clerk
+
+### [ ] Task 1: Signed-out hero in the static HTML, shown before Clerk loads (risk-first)
+
+**Description:** On web, the home route (`/`) renders the signed-out hero while Clerk is not loaded, both in the exported
+HTML and in the client's first render, so hydration reuses the DOM. Other routes keep `WebShellSkeleton` until Clerk loads.
+
+**Acceptance criteria:**
+- [ ] `dist/index.html` contains the headline text ("Track every video essay that…") and the "Create account" button
+- [ ] With Clerk not loaded on web: `/` renders the hero, any other route renders the skeleton (no `<Stack>` content)
+- [ ] With Clerk loaded and signed out: hero stays; native behavior (`Platform.OS !== 'web'`) is unchanged
+- [ ] The Fraunces weight used by the headline is preloaded (add a preload and update the `html.test.tsx` preload test if it isn't 400/500)
+- [ ] Hero colors in dark mode are covered by the critical CSS (no light flash on the filmstrip)
+- [ ] No hydration warnings in the browser console
+
+**Verification:**
+- [ ] RED then GREEN tests: `_layout.test.tsx` (web/loading/home vs other route), home route test with mocked Clerk (not loaded → hero)
+- [ ] `grep -c "rewired" frontend/dist/index.html` > 0 after export
+- [ ] Lighthouse median into `/tmp/lh-after-lcp-t1`: record LCP, First Paint, CLS in the Measurements table
+
+**Stop condition:** if hydration mismatches or Clerk cannot render the hero server-side, stop and report options; do not work around it silently.
+
+**Dependencies:** none (builds on TTSR T2/T4)
+**Files likely touched:** `app/_layout.tsx`, `app/(home)/index.tsx`, `app/+html.tsx` (preload), `app/__tests__/_layout.test.tsx`, `app/__tests__/html.test.tsx`, a new home-route test
+**Estimated scope:** M
+
+### [ ] Task 2: Signed-in users still land on the feed; regression sweep
+
+**Description:** Once Clerk reports signed in, the hero is replaced by the feed; signed-out stays on the hero; no stale
+fetches or flicker loops. Covers the "brief hero flash" the spec accepts.
+
+**Acceptance criteria:**
+- [ ] Test: Clerk loaded + signed in → feed (and `UsernameGateBanner`) renders, hero does not
+- [ ] Test: Clerk not loaded → no authenticated API calls are made from the home route
+- [ ] Manual (browser, backend running): signed-in home works, signed-out home works, sign-out returns to the hero
+- [ ] Both color schemes correct on first paint; CLS < 0.1
+
+**Verification:**
+- [ ] Gates above; Lighthouse median into `/tmp/lh-after-lcp-t2` recorded
+
+**Dependencies:** Task 1
+**Files likely touched:** `app/(home)/index.tsx`, `app/(home)/__tests__/…`
+**Estimated scope:** S
+
+---
+
+## Checkpoint A: After Tasks 1-2
+- [ ] All frontend gates pass
+- [ ] LCP median < 4s, First Paint < 1.5s, FCP < 1.8s, CLS < 0.1 (local export)
+- [ ] **Decision with you:** is Phase 2 still needed (TBT ~600 ms, signed-in users, 4 MB bundle), or is LCP done?
+
+---
+
+## Phase 2: reduce the cost behind the hero (only if Checkpoint A says so)
+
+### [ ] Task 3: Bundle analysis (no behavior change)
+
+**Description:** Find what is in the 4 MB (996 kB transferred) entry bundle and rank candidates by size and by whether the
+home page needs them. Output is a written finding, not code.
+
+**Acceptance criteria:**
+- [ ] Top 15 modules by size, from a source-map explorer run through `npx` (no `package.json` change)
+- [ ] Each candidate marked: needed on home / lazy-loadable, with estimated saving
+- [ ] Findings and a recommended split list written into this file; Task 6 scoped from it
+
+**Verification:** analysis reproducible from the commands recorded here.
+**Dependencies:** Checkpoint A **Files:** `tasks/todo-lcp.md` **Scope:** XS
+
+### [ ] Task 4: Icon font (562 kB TTF)
+
+**Description:** Stop shipping `MaterialCommunityIcons.ttf` on web, or subset it. Inventory the icon names used (~14 files),
+then render them as inline SVG on web (a web-only icon component) or ship a subset font. Pick the smaller, simpler one.
+
+**Acceptance criteria:**
+- [ ] Inventory of icon names used, recorded here
+- [ ] Web no longer requests the 562 kB TTF (or it is a small subset); native unchanged
+- [ ] Icons look the same (manual screenshot comparison on home, search, profile)
+- [ ] Tests for the web icon component (renders the right glyph for each used name)
+
+**Verification:** gates; Network tab shows no large icon font; Lighthouse median recorded.
+**Dependencies:** Checkpoint A **Files likely touched:** a new `components/ui/Icon*.tsx`, call sites (~14), tests **Scope:** M (watch for L; split if > 5 files)
+
+### [ ] Task 5: Clerk loading (measure first)
+
+**Description:** The Clerk script chain is ~5 sequential requests (~121+91+49+44 kB). Measure what is controllable
+(preconnect to the Clerk host, load order) before changing anything; change only if it helps and stays safe.
+
+**Acceptance criteria:**
+- [ ] Waterfall findings recorded (what is serialized, what the dev-key instance adds)
+- [ ] Either a measured improvement (e.g. `<link rel="preconnect">` to the Clerk origin, derived from env, never hardcoded) or a documented "no change" with numbers
+- [ ] No hardcoded Clerk issuer/keys/hosts in source
+
+**Verification:** gates; Lighthouse median recorded; signed-in flow manually checked.
+**Dependencies:** Checkpoint A **Files likely touched:** `app/+html.tsx`, its test **Scope:** S
+
+### [ ] Task 6: Bundle splits (scoped from Task 3)
+
+**Description:** Lazy-load the heaviest things the home page doesn't need, as listed by Task 3. Split into one commit per
+module group. Placeholder until Task 3 produces the list.
+
+**Acceptance criteria:**
+- [ ] Each split has a before/after entry-bundle size and a Lighthouse median
+- [ ] All routes still load (manual sweep of the main routes); no native changes
+- [ ] Full jest + export pass after each split
+
+**Dependencies:** Task 3 **Scope:** to be set after Task 3
+
+---
+
+## Checkpoint B: After Phase 2
+- [ ] All gates pass; numbers in the table for each task
+- [ ] Review with you before any deploy
+
+---
+
+## Task 7: Final measurement and decision
+
+**Description:** Repeat the measurements on the local export and the deployed URL, fill the table, and write up
+before/after. Deploying (pushing the deploy branch) needs your go-ahead first.
+
+**Acceptance criteria:**
+- [ ] LCP < 4s, First Paint < 1.5s, FCP < 1.8s, CLS < 0.1 on the deployed URL, or the gap documented
+- [ ] `SPEC-lcp.md` open questions resolved or carried forward
+- [ ] Re-measure after the Clerk production cutover (carried forward if it hasn't happened)
+
+**Dependencies:** Checkpoint A (and B if Phase 2 was done) **Files:** `tasks/todo-lcp.md`, `SPEC-lcp.md` **Scope:** XS
+
+---
+
+## Measurements (applied throttling, median of 5)
+
+| Build | LCP | First Paint | FCP | TBT | CLS |
+|---|---|---|---|---|---|
+| Baseline = TTSR After-T4 + Fraunces-500 preload, local dist | 12,454 ms | 1,374 ms | 1,374 ms | 597 ms | 0.01 |
+| After T1, local dist | | | | | |
+| After T2, local dist | | | | | |
+| After T4 (icon font), local dist | | | | | |
+| After T5 (Clerk), local dist | | | | | |
+| After T6 (splits), local dist | | | | | |
+| Final, deployed | | | | | |
+
+## Notes
+- Baseline facts (from `/tmp/lh-after-t4b`): LCP element is the hero `<h1>`; render delay ≈ all of LCP; entry bundle
+  996 kB transferred, done ≈7s; icon TTF 562 kB, done ≈17s; Clerk chain done ≈15s (dev keys).
