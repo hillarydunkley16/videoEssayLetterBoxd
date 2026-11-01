@@ -81,7 +81,10 @@ current `null` gate. Skeleton uses a fixed nav height and no auth state.
 `dist/index.html` now contains the `watchd` nav bar + skeleton (was an empty `#root`).
 Still to check in a real browser: no hydration warnings in the console, and the
 signed-in/signed-out home still behave. Re-run `lh-median.sh` to see First Paint after T2
-(expected: still held up by the blocking Google Fonts CSS until T4).
+**Measured: First Paint 14.4s -> 3.1s** (FCP 3.1s). LCP is still 14.6s (real content
+after JS + Clerk) and Speed Index 12.6s. TBT rose 42 -> 979ms only because FCP now lands
+earlier, so the TBT window starts sooner; it is not a regression. Remaining gap to 1.5s:
+blocking Google Fonts CSS + six TTF preloads sharing a 1.6 Mbps link (both removed in T4).
 
 ## Task 3: Inline critical CSS
 
@@ -213,6 +216,8 @@ for reference only; add applied-throttling rows next to them.
 | _Superseded:_ local dist (observed first paint, simulated runs) | 2118, 2092, 2123, 3007, 3512 ms | same as first paint | same | 0.02 |
 | _Superseded:_ local dist (other, simulated runs) | Speed Index 8450 ms, TBT 944 ms | | | |
 | Baseline, deployed | | | | |
+| After T2, local dist (applied throttling, median of 5) | **3103 ms** (3099-3106) | 3103 ms | 14642 ms | 0.01 |
+| After T2, local dist (applied throttling, other) | Speed Index 12551 ms, TBT 979 ms | | | |
 | After T3, local dist | | | | |
 | After T5, local dist | | | | |
 | After, deployed | | | | |
