@@ -23,18 +23,42 @@ const criticalCss =
   `[style*="border-top-color:${light.border}"]{border-color:${dark.border}!important}` +
   '}';
 
-// Web-only document shell. Fraunces/Inter are loaded here via Google Fonts
-// instead of expo-font, matching how the design-system mockup pulls them.
+// Self-hosted Latin/Latin-Extended woff2 subsets of the weights the app uses (served from
+// frontend/public/fonts). The -vN suffix is part of the name because /fonts/* is cached
+// immutably: bump it when a file changes.
+const FONT_FACES = [
+  { family: 'Fraunces', weight: 400, file: 'fraunces-400-v1.woff2' },
+  { family: 'Fraunces', weight: 500, file: 'fraunces-500-v1.woff2' },
+  { family: 'Fraunces', weight: 600, file: 'fraunces-600-v1.woff2' },
+  { family: 'Inter', weight: 400, file: 'inter-400-v1.woff2' },
+  { family: 'Inter', weight: 500, file: 'inter-500-v1.woff2' },
+  { family: 'Inter', weight: 600, file: 'inter-600-v1.woff2' },
+  { family: 'Inter', weight: 700, file: 'inter-700-v1.woff2' },
+];
+
+const fontFaceCss = FONT_FACES.map(
+  ({ family, weight, file }) =>
+    `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:swap;src:url(/fonts/${file}) format("woff2")}`,
+).join('');
+
+// Web-only document shell. Fraunces/Inter are self-hosted here instead of loaded through
+// expo-font or Google Fonts (a render-blocking third-party stylesheet).
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        {/* Only the brand font: it's the one the first-paint shell uses. Inter isn't needed
+            until the real screens render, and extra preloads compete with the bundle. */}
         <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+          rel="preload"
+          href="/fonts/fraunces-400-v1.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin=""
         />
+        <style id="font-faces" dangerouslySetInnerHTML={{ __html: fontFaceCss }} />
         <style id="critical-theme" dangerouslySetInnerHTML={{ __html: criticalCss }} />
         <ScrollViewStyleReset />
       </head>

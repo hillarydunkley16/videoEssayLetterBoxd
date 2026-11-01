@@ -169,7 +169,7 @@ rule) or the shell flashes light until hydration.
 override selectors match inline values that really appear in the pre-rendered `<body>`.
 Note: this task adds no network change, so expect First Paint to stay ~1.5s; its value is dark mode.
 
-## Task 4: Self-host fonts, preload, remove Google Fonts link
+## Task 4: Self-host fonts, preload, remove Google Fonts link  ✅ DONE (browser + Lighthouse checks pending)
 
 **Description:** Convert the installed TTFs (Fraunces 400/500/600, Inter 400/500/600/700)
 to woff2 with a one-off fonttools run, place them in `frontend/public/fonts/` with
@@ -178,16 +178,16 @@ and `<link rel="preload" as="font" crossorigin>` for the above-the-fold weights,
 delete the `fonts.googleapis.com` link. Update the two comments that mention it.
 
 **Acceptance criteria:**
-- [ ] No network request to `fonts.googleapis.com` / `fonts.gstatic.com` on load
+- [x] No network request to `fonts.googleapis.com` / `fonts.gstatic.com` on load
 - [ ] Text renders in Fraunces/Inter on web (headings vs body visibly unchanged)
-- [ ] At most 3 font files preloaded
+- [x] At most 3 font files preloaded (exactly 1: Fraunces 400, the only font the first-paint shell uses)
 - [ ] (The six-TTF-preload removal moved to T2b.)
-- [ ] CLS < 0.1 across the font swap
+- [ ] **Pending (Lighthouse):** CLS < 0.1 across the font swap
 
 **Verification:**
-- [ ] DevTools Network panel: fonts load from `/fonts/*.woff2` and nothing from Google
-- [ ] Visual compare of home page headings before/after (screenshot)
-- [ ] `expo export` copies `public/fonts` to `dist/fonts`; `tsc`, `lint`, `npm test` pass
+- [ ] **Pending (browser):** DevTools Network panel: fonts load from `/fonts/*.woff2` and nothing from Google
+- [ ] **Pending (browser):** visual compare of home page headings before/after (screenshot)
+- [x] `expo export` copies `public/fonts` to `dist/fonts`; `tsc`, `lint`, `npm test` pass
 
 **Evidence for the target (DevTools Insights, Slow 4G):** "Render-blocking requests: est. savings 1.36s"
 (Google Fonts CSS + global CSS). Waterfall: HTML 610ms, then Google CSS 890ms in parallel with global CSS
@@ -203,6 +203,23 @@ delete the `fonts.googleapis.com` link. Update the two comments that mention it.
 **Estimated scope:** M
 
 ---
+
+**Results:** 16 new tests in `html.test.tsx` (249/249 total pass), `tsc` clean, lint 0 errors.
+`dist/index.html`: no third-party hosts, 7 `@font-face`, 1 font preload, all 7 files in `dist/fonts/`.
+Sizes: Fraunces ~28 kB each, Inter ~36 kB each (was Google: 68 kB + 48 kB variable files).
+
+**Decisions / differences to know about:**
+- Files are Latin + Latin Extended (+ Latin Extended Additional) subsets made once with fontTools from the
+  installed TTFs (script not committed). Greek/Cyrillic/other scripts now fall back to the system font; Google's
+  CSS would have fetched those subsets on demand.
+- OpenType alternates (stylistic sets, `tnum`, etc.) were dropped; default features (kerning, ligatures, ...) kept.
+- Inter is four static weights, not one variable file, so a page using all four downloads ~145 kB of Inter
+  instead of 48 kB. Only weights actually used are fetched.
+- Fraunces is static (no `opsz` axis, unlike Google's variable file) and has no italic file, same as before
+  (italic text was already synthesized). Compare headings visually.
+- No size-adjusted fallback font was added: CLS was 0.01 before; add one only if CLS regresses.
+- To regenerate the fonts: re-run the fontTools subset, write new files with a bumped `-vN` suffix, update
+  `FONT_FACES` in `+html.tsx` (the tests check each file exists).
 
 ## Task 5: Cache headers on the static site
 

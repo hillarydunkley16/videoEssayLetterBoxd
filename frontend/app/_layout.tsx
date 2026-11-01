@@ -22,7 +22,7 @@ function RootLayoutNav() {
   const theme = Colors[useColorScheme()];
   useShareIntentRouter();
   const isWeb = Platform.OS === 'web';
-  // Web loads Fraunces/Inter via the <link> in app/+html.tsx, not expo-font,
+  // Web loads Fraunces/Inter via the self-hosted @font-face in app/+html.tsx, not expo-font,
   // so it doesn't need to wait on fontsLoaded. It also paints the shell while Clerk
   // loads (the skeleton below stands in for <Stack>) so the static HTML isn't blank.
   if (!isWeb && (!isLoaded || !fontsLoaded)) return null;

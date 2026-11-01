@@ -6,6 +6,8 @@
  * hydration) must be recolored by CSS so it doesn't flash light.
  */
 import React from 'react';
+import fs from 'fs';
+import path from 'path';
 import { Colors } from '@/constants/theme';
 
 import Root from '../+html';
@@ -51,5 +53,43 @@ describe('web document critical CSS', () => {
     const beforeDark = css.slice(0, css.indexOf('@media (prefers-color-scheme: dark)'));
     expect(css).toContain('[style*=');
     expect(beforeDark).not.toContain('[style*=');
+  });
+});
+
+describe('web document fonts', () => {
+  // Self-hosted subsets of the same weights the Google Fonts link used to request.
+  const faces = [
+    ['Fraunces', 400, 'fraunces-400-v1.woff2'],
+    ['Fraunces', 500, 'fraunces-500-v1.woff2'],
+    ['Fraunces', 600, 'fraunces-600-v1.woff2'],
+    ['Inter', 400, 'inter-400-v1.woff2'],
+    ['Inter', 500, 'inter-500-v1.woff2'],
+    ['Inter', 600, 'inter-600-v1.woff2'],
+    ['Inter', 700, 'inter-700-v1.woff2'],
+  ] as const;
+
+  it('does not depend on Google Fonts', () => {
+    expect(markup).not.toContain('fonts.googleapis.com');
+    expect(markup).not.toContain('fonts.gstatic.com');
+  });
+
+  it.each(faces)('declares %s %i from a self-hosted woff2 with font-display: swap', (family, weight, file) => {
+    expect(markup).toContain(
+      `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:swap;src:url(/fonts/${file}) format("woff2")}`,
+    );
+  });
+
+  it.each(faces)('ships the file for %s %i in public/fonts', (_family, _weight, file) => {
+    const filePath = path.join(__dirname, '../../public/fonts', file);
+    expect(fs.existsSync(filePath)).toBe(true);
+    expect(fs.statSync(filePath).size).toBeGreaterThan(1000);
+  });
+
+  it('preloads only the font the first-paint shell uses (Fraunces 400, the brand)', () => {
+    const preloads = markup.match(/<link rel="preload"[^>]*as="font"[^>]*>/g) ?? [];
+    expect(preloads).toHaveLength(1);
+    expect(preloads[0]).toContain('href="/fonts/fraunces-400-v1.woff2"');
+    expect(preloads[0]).toContain('type="font/woff2"');
+    expect(preloads[0]).toContain('crossorigin=""');
   });
 });
