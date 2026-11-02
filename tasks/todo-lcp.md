@@ -31,6 +31,13 @@ signed in; native keeps SignedOut semantics. `_layout.tsx` renders `<Stack>` bef
 Headline is Fraunces 500, already preloaded (no new preload needed). Added dark-mode overrides for the hero's muted/teal/cobalt text
 (the static HTML carries light colors until hydration). Primary button background (cobalt) is not recolored in dark: it is
 readable and only differs from the dark accent until hydration.
+**First measurement (`/tmp/lh-after-lcp-t1`):** LCP 12,454 -> 1,430 ms (target < 4s met), Speed Index 5.5s -> 2.9s. Two side effects:
+- CLS 0.22: the hero now paints (~1.43s) just before the preloaded fraunces-500 arrives (~1.47s), so the headline swapped
+  from Georgia to Fraunces and the page reflowed. Fix: `'Fraunces Fallback'` = `local('Georgia')` with size-adjust 107.5%,
+  ascent 91%, descent 23.7% (measured with fontTools from Fraunces 500 and Georgia); added to the web display font stack.
+  Georgia-only: platforms without Georgia fall through to the next serif and may still shift slightly.
+- TBT 597 -> 1,054 ms: same JS work, but the TBT window starts at FCP, which moved from ~12s to ~1.4s, so the bundle
+  parse/hydration now falls inside it. Not a regression in work done; Phase 2 (bundle) is what lowers it.
 Still to check in the browser: no hydration warnings, hero visible with JS blocked, dark-mode filmstrip, Lighthouse median.
 
 **Stop condition:** if hydration mismatches or Clerk cannot render the hero server-side, stop and report options; do not work around it silently.
@@ -147,7 +154,8 @@ before/after. Deploying (pushing the deploy branch) needs your go-ahead first.
 | Build | LCP | First Paint | FCP | TBT | CLS |
 |---|---|---|---|---|---|
 | Baseline = TTSR After-T4 + Fraunces-500 preload, local dist | 12,454 ms | 1,374 ms | 1,374 ms | 597 ms | 0.01 |
-| After T1, local dist | | | | | |
+| After T1 (hero in HTML), local dist | **1,430 ms** (1424-1430) | 1,430 ms | 1,430 ms | 1,054 ms | **0.22** (all 5) |
+| After T1 + Fraunces fallback metrics, local dist | | | | | |
 | After T2, local dist | | | | | |
 | After T4 (icon font), local dist | | | | | |
 | After T5 (Clerk), local dist | | | | | |

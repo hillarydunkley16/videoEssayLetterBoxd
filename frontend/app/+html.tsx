@@ -44,7 +44,13 @@ const FONT_FACES = [
   { family: 'Inter', weight: 700, file: 'inter-700-v1.woff2' },
 ];
 
-const fontFaceCss = FONT_FACES.map(
+// Georgia scaled to Fraunces' metrics (measured with fontTools: average advance width of
+// English text 107.5%, ascent/descent divided by that scale). The hero paints before the
+// preloaded Fraunces arrives, and without this the swap reflowed the page (CLS 0.22).
+const frauncesFallbackCss =
+  "@font-face{font-family:'Fraunces Fallback';src:local('Georgia');size-adjust:107.5%;ascent-override:91%;descent-override:23.7%;line-gap-override:0%}";
+
+const fontFaceCss = frauncesFallbackCss + FONT_FACES.map(
   ({ family, weight, file }) =>
     `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:swap;src:url(/fonts/${file}) format("woff2")}`,
 ).join('');

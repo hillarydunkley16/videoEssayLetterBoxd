@@ -102,6 +102,22 @@ describe('web document fonts', () => {
 
   // Fraunces 400 is the brand in the first-paint shell; Fraunces 500 is the heading weight
   // on the home hero. Left unpreloaded, 500 swapped in late and shifted the hero (CLS 0.23).
+  // The hero paints just before the preloaded Fraunces arrives (~30 ms on Slow 4G), so the
+  // swap must not reflow: the fallback is Georgia scaled to Fraunces' metrics.
+  it('declares a Fraunces fallback sized to Fraunces metrics so the font swap does not shift layout', () => {
+    expect(markup).toContain(
+      "@font-face{font-family:'Fraunces Fallback';src:local('Georgia');size-adjust:107.5%;ascent-override:91%;descent-override:23.7%;line-gap-override:0%}",
+    );
+  });
+
+  it('puts the Fraunces fallback right after Fraunces in the web display font stack', () => {
+    // Platform.select can't be switched to web inside jest-expo, so read the web branch from source.
+    const theme = fs.readFileSync(path.join(__dirname, '../../constants/theme.ts'), 'utf8');
+    const web = theme.slice(theme.indexOf('web: {'), theme.indexOf('default: {'));
+    expect(web).toMatch(/display: "'Fraunces', 'Fraunces Fallback', Georgia/);
+    expect(web).toMatch(/displayMedium: "'Fraunces', 'Fraunces Fallback', Georgia/);
+  });
+
   it('preloads only the two Fraunces weights the first screens use (400 and 500)', () => {
     const preloads = markup.match(/<link rel="preload"[^>]*as="font"[^>]*>/g) ?? [];
     expect(preloads).toHaveLength(2);
