@@ -74,14 +74,17 @@ describe('web document critical CSS', () => {
 
 describe('web document fonts', () => {
   // Self-hosted subsets of the same weights the Google Fonts link used to request.
+  // Fraunces swaps in (its first-paint weights are preloaded or inlined). Inter is `optional`:
+  // its files arrive after first paint on Slow 4G, and swapping the body text from the system
+  // font to the wider Inter re-wrapped the cards and shifted the page (CLS ~0.22).
   const faces = [
-    ['Fraunces', 400, 'fraunces-400-v1.woff2'],
-    ['Fraunces', 500, 'fraunces-500-v1.woff2'],
-    ['Fraunces', 600, 'fraunces-600-v1.woff2'],
-    ['Inter', 400, 'inter-400-v1.woff2'],
-    ['Inter', 500, 'inter-500-v1.woff2'],
-    ['Inter', 600, 'inter-600-v1.woff2'],
-    ['Inter', 700, 'inter-700-v1.woff2'],
+    ['Fraunces', 400, 'fraunces-400-v1.woff2', 'swap'],
+    ['Fraunces', 500, 'fraunces-500-v1.woff2', 'swap'],
+    ['Fraunces', 600, 'fraunces-600-v1.woff2', 'swap'],
+    ['Inter', 400, 'inter-400-v1.woff2', 'optional'],
+    ['Inter', 500, 'inter-500-v1.woff2', 'optional'],
+    ['Inter', 600, 'inter-600-v1.woff2', 'optional'],
+    ['Inter', 700, 'inter-700-v1.woff2', 'optional'],
   ] as const;
 
   it('does not depend on Google Fonts', () => {
@@ -89,9 +92,9 @@ describe('web document fonts', () => {
     expect(markup).not.toContain('fonts.gstatic.com');
   });
 
-  it.each(faces)('declares %s %i from a self-hosted woff2 with font-display: swap', (family, weight, file) => {
+  it.each(faces)('declares %s %i from %s with font-display: %s', (family, weight, file, display) => {
     expect(markup).toContain(
-      `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:swap;src:url(/fonts/${file}) format("woff2")}`,
+      `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:${display};src:url(/fonts/${file}) format("woff2")}`,
     );
   });
 
