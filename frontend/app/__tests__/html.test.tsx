@@ -9,6 +9,7 @@ import React from 'react';
 import fs from 'fs';
 import path from 'path';
 import { Colors } from '@/constants/theme';
+import { FRAUNCES_500_ASCII_BASE64 } from '@/constants/fraunces500Ascii';
 
 import Root from '../+html';
 
@@ -100,32 +101,28 @@ describe('web document fonts', () => {
     expect(fs.statSync(filePath).size).toBeGreaterThan(1000);
   });
 
-  // Fraunces 400 is the brand in the first-paint shell; Fraunces 500 is the heading weight
-  // on the home hero. Left unpreloaded, 500 swapped in late and shifted the hero (CLS 0.23).
-  // The hero paints just before the preloaded Fraunces arrives (~30 ms on Slow 4G), so the
-  // swap must not reflow: the fallback is Georgia scaled to Fraunces' metrics.
-  it('declares a Fraunces fallback sized to Fraunces metrics so the font swap does not shift layout', () => {
-    expect(markup).toContain(
-      "@font-face{font-family:'Fraunces Fallback';src:local('Georgia');size-adjust:107.5%;ascent-override:91%;descent-override:23.7%;line-gap-override:0%}",
-    );
+  // The hero paints ~40 ms before even a preloaded Fraunces arrives on Slow 4G. With swap the
+  // headline re-wrapped from 2 to 3 lines and shifted the page (CLS 0.24; a metric-matched
+  // Georgia fallback did not help), so the headline weight's ASCII subset is inlined.
+  it('inlines the ASCII subset of Fraunces 500 as a data URI, declared after the file so it wins for those characters', () => {
+    const inline = `@font-face{font-family:'Fraunces';font-style:normal;font-weight:500;font-display:swap;src:url(data:font/woff2;base64,${FRAUNCES_500_ASCII_BASE64}) format("woff2");unicode-range:U+0020-007E,U+00A0,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026}`;
+    expect(markup).toContain(inline);
+    expect(markup.indexOf(inline)).toBeGreaterThan(markup.indexOf('/fonts/fraunces-500-v1.woff2'));
   });
 
-  it('puts the Fraunces fallback right after Fraunces in the web display font stack', () => {
-    // Platform.select can't be switched to web inside jest-expo, so read the web branch from source.
-    const theme = fs.readFileSync(path.join(__dirname, '../../constants/theme.ts'), 'utf8');
-    const web = theme.slice(theme.indexOf('web: {'), theme.indexOf('default: {'));
-    expect(web).toMatch(/display: "'Fraunces', 'Fraunces Fallback', Georgia/);
-    expect(web).toMatch(/displayMedium: "'Fraunces', 'Fraunces Fallback', Georgia/);
+  it('the inlined font is a real woff2 and small enough not to slow first paint', () => {
+    const bytes = Buffer.from(FRAUNCES_500_ASCII_BASE64, 'base64');
+    expect(bytes.subarray(0, 4).toString('latin1')).toBe('wOF2');
+    expect(bytes.length).toBeLessThan(14000);
   });
 
-  it('preloads only the two Fraunces weights the first screens use (400 and 500)', () => {
+  // Fraunces 400 is the brand in the first-paint shell. 500 (the hero heading weight) needs no
+  // preload for ASCII text because that subset is inlined above.
+  it('preloads only the brand font (Fraunces 400)', () => {
     const preloads = markup.match(/<link rel="preload"[^>]*as="font"[^>]*>/g) ?? [];
-    expect(preloads).toHaveLength(2);
+    expect(preloads).toHaveLength(1);
     expect(preloads[0]).toContain('href="/fonts/fraunces-400-v1.woff2"');
-    expect(preloads[1]).toContain('href="/fonts/fraunces-500-v1.woff2"');
-    for (const link of preloads) {
-      expect(link).toContain('type="font/woff2"');
-      expect(link).toContain('crossorigin=""');
-    }
+    expect(preloads[0]).toContain('type="font/woff2"');
+    expect(preloads[0]).toContain('crossorigin=""');
   });
 });

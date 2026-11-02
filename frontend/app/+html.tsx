@@ -1,5 +1,6 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import { Colors } from '@/constants/theme';
+import { FRAUNCES_500_ASCII_BASE64 } from '@/constants/fraunces500Ascii';
 
 const { light, dark } = Colors;
 
@@ -44,16 +45,19 @@ const FONT_FACES = [
   { family: 'Inter', weight: 700, file: 'inter-700-v1.woff2' },
 ];
 
-// Georgia scaled to Fraunces' metrics (measured with fontTools: average advance width of
-// English text 107.5%, ascent/descent divided by that scale). The hero paints before the
-// preloaded Fraunces arrives, and without this the swap reflowed the page (CLS 0.22).
-const frauncesFallbackCss =
-  "@font-face{font-family:'Fraunces Fallback';src:local('Georgia');size-adjust:107.5%;ascent-override:91%;descent-override:23.7%;line-gap-override:0%}";
+// Fraunces 500 is the home hero's headline weight and the LCP element. The hero paints ~40 ms
+// before even a preloaded font arrives on Slow 4G, so the swap re-wrapped the headline and
+// shifted the page (CLS 0.24). The ASCII subset is therefore inlined (~15 kB base64): it is
+// declared after the file face so it wins for those characters, and the file is only fetched
+// for anything outside it.
+const fraunces500InlineCss =
+  `@font-face{font-family:'Fraunces';font-style:normal;font-weight:500;font-display:swap;src:url(data:font/woff2;base64,${FRAUNCES_500_ASCII_BASE64}) format("woff2");` +
+  'unicode-range:U+0020-007E,U+00A0,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026}';
 
-const fontFaceCss = frauncesFallbackCss + FONT_FACES.map(
+const fontFaceCss = FONT_FACES.map(
   ({ family, weight, file }) =>
     `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:swap;src:url(/fonts/${file}) format("woff2")}`,
-).join('');
+).join('') + fraunces500InlineCss;
 
 // Web-only document shell. Fraunces/Inter are self-hosted here instead of loaded through
 // expo-font or Google Fonts (a render-blocking third-party stylesheet).
@@ -63,19 +67,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        {/* Only the two Fraunces weights the first screens use: 400 (brand, first-paint shell)
-            and 500 (home hero heading; unpreloaded it swapped in late and shifted the hero).
+        {/* Only the brand font, used by the first-paint shell. Fraunces 500 is inlined below;
             Inter isn't needed until later and extra preloads compete with the bundle. */}
         <link
           rel="preload"
           href="/fonts/fraunces-400-v1.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin=""
-        />
-        <link
-          rel="preload"
-          href="/fonts/fraunces-500-v1.woff2"
           as="font"
           type="font/woff2"
           crossOrigin=""

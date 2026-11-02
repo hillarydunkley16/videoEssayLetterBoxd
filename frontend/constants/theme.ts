@@ -61,11 +61,10 @@ export const Colors = {
 // Native font family names must match the @expo-google-fonts asset names
 // loaded via useFonts (see app/hooks/use-app-fonts.ts); web falls back to
 // the self-hosted @font-face rules in app/+html.tsx (files in public/fonts).
-// 'Fraunces Fallback' is a metric-matched Georgia so the font swap doesn't shift layout.
 export const Fonts = Platform.select({
   web: {
-    display: "'Fraunces', 'Fraunces Fallback', Georgia, 'Times New Roman', serif",
-    displayMedium: "'Fraunces', 'Fraunces Fallback', Georgia, 'Times New Roman', serif",
+    display: "'Fraunces', Georgia, 'Times New Roman', serif",
+    displayMedium: "'Fraunces', Georgia, 'Times New Roman', serif",
     sans: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     sansMedium: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     sansSemiBold: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
