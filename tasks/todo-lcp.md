@@ -161,7 +161,9 @@ before/after. Deploying (pushing the deploy branch) needs your go-ahead first.
 | _Diagnosis 2_ | DevTools trace (4x CPU, Slow 4G): worst shift cluster at ~1.0s, culprit "Web font"; console `document.fonts`: Fraunces 500 inline `loaded`, Inter 400/600 `loaded` late. Inter's body text swaps from the system font after first paint and re-wraps the cards. Fix: Inter faces `font-display: optional`. | | | | |
 | After T1 + Inter optional, local dist | 1,462 ms | 1,462 ms | 1,462 ms | 1,094 ms | **0.22** (all 5): fonts were not the cause |
 | _Diagnosis 3_ | CLS identical to the previous run, so font swapping is ruled out. `createIconSet` renders an empty `<Text/>` until the icon font loads (~12s), so the 3 feature cards are ~34px shorter in the static HTML than once hydrated, and the closing section jumps. Fix: fixed 24x24 slot around each icon. | | | | |
-| After T1 + icon slot, local dist | | | | | |
+| After T1 + icon slot, local dist (`/tmp/lh-after-lcp-t1e`) | 1,453 ms | 1,453 ms | 1,453 ms | 1,117 ms | **0.23** (all 5): icon slot was not the cause either |
+| _Diagnosis 4_ | Trace from a Lighthouse run with `--save-assets`: one LayoutShift at 1,453 ms (= first paint), score 0.232; everything below the headline moves down exactly 34px (one line) - the headline paints in the fallback font for one frame, then the inlined Fraunces 500 arrives. Fix: the inlined face uses `font-display: block`. | | | | |
+| After T1 + inline Fraunces 500 `block`, local dist (3 runs) | 1,462 ms | 1,454 ms | 1,454 ms | 1,089 ms | **0.02** (all 3) |
 | After T2, local dist | | | | | |
 | After T4 (icon font), local dist | | | | | |
 | After T5 (Clerk), local dist | | | | | |

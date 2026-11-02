@@ -107,8 +107,8 @@ describe('web document fonts', () => {
   // The hero paints ~40 ms before even a preloaded Fraunces arrives on Slow 4G. With swap the
   // headline re-wrapped from 2 to 3 lines and shifted the page (CLS 0.24; a metric-matched
   // Georgia fallback did not help), so the headline weight's ASCII subset is inlined.
-  it('inlines the ASCII subset of Fraunces 500 as a data URI, declared after the file so it wins for those characters', () => {
-    const inline = `@font-face{font-family:'Fraunces';font-style:normal;font-weight:500;font-display:swap;src:url(data:font/woff2;base64,${FRAUNCES_500_ASCII_BASE64}) format("woff2");unicode-range:U+0020-007E,U+00A0,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026}`;
+  it('inlines the ASCII subset of Fraunces 500 as a data URI with font-display: block (no fallback frame), declared after the file so it wins for those characters', () => {
+    const inline = `@font-face{font-family:'Fraunces';font-style:normal;font-weight:500;font-display:block;src:url(data:font/woff2;base64,${FRAUNCES_500_ASCII_BASE64}) format("woff2");unicode-range:U+0020-007E,U+00A0,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026}`;
     expect(markup).toContain(inline);
     expect(markup.indexOf(inline)).toBeGreaterThan(markup.indexOf('/fonts/fraunces-500-v1.woff2'));
   });

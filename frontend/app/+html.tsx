@@ -54,9 +54,11 @@ const FONT_FACES = [
 // before even a preloaded font arrives on Slow 4G, so the swap re-wrapped the headline and
 // shifted the page (CLS 0.24). The ASCII subset is therefore inlined (~15 kB base64): it is
 // declared after the file face so it wins for those characters, and the file is only fetched
-// for anything outside it.
+// for anything outside it. `block`, not `swap`: even a data-URI font decodes a few ms after the
+// first frame, and swap painted that frame in the fallback (headline one line shorter, so
+// everything below moved 34px: CLS 0.23). Block holds the text for those ms instead.
 const fraunces500InlineCss =
-  `@font-face{font-family:'Fraunces';font-style:normal;font-weight:500;font-display:swap;src:url(data:font/woff2;base64,${FRAUNCES_500_ASCII_BASE64}) format("woff2");` +
+  `@font-face{font-family:'Fraunces';font-style:normal;font-weight:500;font-display:block;src:url(data:font/woff2;base64,${FRAUNCES_500_ASCII_BASE64}) format("woff2");` +
   'unicode-range:U+0020-007E,U+00A0,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026}';
 
 const fontFaceCss = FONT_FACES.map(
