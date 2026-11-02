@@ -174,8 +174,13 @@ before/after. Deploying (pushing the deploy branch) needs your go-ahead first.
 | After T4 (icon font), local dist | | | | | |
 | After T5 (Clerk), local dist | | | | | |
 | After T6 (splits), local dist | | | | | |
-| Final, deployed | | | | | |
+| Deployed BEFORE (live, old build, 2026-11-02) | 14,743 ms | 14,743 ms | 14,743 ms | 41 ms | 0.01 |
+| Deployed AFTER (live, `b243c46`, deploy dep-dbkgofm417fc73beudbg, 5 runs) | **1,604 ms** (1594-1631) | **1,592 ms** | 1,592 ms | 1,096 ms | **0.03** (0.02-0.03) |
+| Final, deployed | see the AFTER row | | | | |
 
 ## Notes
+- Deployed check (2026-11-02): hashed `entry-*.js` and `/fonts/*` return `public, max-age=31536000, immutable`; HTML routes (`/`, `/search`)
+  return `public, max-age=0, s-maxage=300` (browsers revalidate; Render's CDN holds them 5 min), br-compressed. The `/index.html` must-revalidate
+  header rule in render.yaml is not what `/` gets. Live First Paint 1.59s is slightly over the 1.5s target (local was 1.45s); LCP/FCP/CLS meet theirs.
 - Baseline facts (from `/tmp/lh-after-t4b`): LCP element is the hero `<h1>`; render delay ≈ all of LCP; entry bundle
   996 kB transferred, done ≈7s; icon TTF 562 kB, done ≈17s; Clerk chain done ≈15s (dev keys).
