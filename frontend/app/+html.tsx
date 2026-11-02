@@ -9,6 +9,9 @@ const rnwRgba = (hex: string) => {
   return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},1.00)`;
 };
 
+const textColorOverride = (lightHex: string, darkColor: string) =>
+  `[style^="color:${rnwRgba(lightHex)}"],[style*=";color:${rnwRgba(lightHex)}"]{color:${darkColor}!important}`;
+
 // Inline so the first paint is already themed. The web useColorScheme is `light` until
 // hydration, so the statically exported shell carries the light palette inline; in dark
 // mode the attribute selectors recolor it (inline styles need !important) until hydration
@@ -21,6 +24,11 @@ const criticalCss =
   `[style*="background-color:${rnwRgba(light.surface)}"]{background-color:${dark.surface}!important}` +
   `[style*="color:${rnwRgba(light.text)}"]{color:${dark.text}!important}` +
   `[style*="border-top-color:${light.border}"]{border-color:${dark.border}!important}` +
+  // The home hero is also in the static HTML: its muted/teal/cobalt text. Anchored so
+  // background-color and border-color values aren't matched.
+  textColorOverride(light.muted, dark.muted) +
+  textColorOverride(light.accent2, dark.accent2) +
+  textColorOverride(light.accent, dark.accent) +
   '}';
 
 // Self-hosted Latin/Latin-Extended woff2 subsets of the weights the app uses (served from

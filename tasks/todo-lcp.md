@@ -6,7 +6,7 @@ Gates every task: full jest, `npx tsc --noEmit`, `npm run lint` (0 errors), `npx
 
 ## Phase 1: the hero stops waiting for Clerk
 
-### [ ] Task 1: Signed-out hero in the static HTML, shown before Clerk loads (risk-first)
+### [x] Task 1: Signed-out hero in the static HTML, shown before Clerk loads (risk-first) ✅ DONE (browser + Lighthouse checks pending)
 
 **Description:** On web, the home route (`/`) renders the signed-out hero while Clerk is not loaded, both in the exported
 HTML and in the client's first render, so hydration reuses the DOM. Other routes keep `WebShellSkeleton` until Clerk loads.
@@ -23,6 +23,15 @@ HTML and in the client's first render, so hydration reuses the DOM. Other routes
 - [ ] RED then GREEN tests: `_layout.test.tsx` (web/loading/home vs other route), home route test with mocked Clerk (not loaded → hero)
 - [ ] `grep -c "rewired" frontend/dist/index.html` > 0 after export
 - [ ] Lighthouse median into `/tmp/lh-after-lcp-t1`: record LCP, First Paint, CLS in the Measurements table
+
+**Results:** new `HeroGate` (`components/ui/HeroGate.tsx`): on web the signed-out hero shows while Clerk loads and until
+signed in; native keeps SignedOut semantics. `_layout.tsx` renders `<Stack>` before Clerk loads only at `usePathname() === '/'`.
+`(home)/index.tsx` uses `HeroGate` instead of `SignedOut`. 258 -> 259+ tests (HeroGate x5, layout x1, home x3, html dark hero text x1),
+`tsc` clean, lint 0 errors. Export: `dist/index.html` has the hero text and no skeleton; `search.html`/`profile.html` still have the skeleton.
+Headline is Fraunces 500, already preloaded (no new preload needed). Added dark-mode overrides for the hero's muted/teal/cobalt text
+(the static HTML carries light colors until hydration). Primary button background (cobalt) is not recolored in dark: it is
+readable and only differs from the dark accent until hydration.
+Still to check in the browser: no hydration warnings, hero visible with JS blocked, dark-mode filmstrip, Lighthouse median.
 
 **Stop condition:** if hydration mismatches or Clerk cannot render the hero server-side, stop and report options; do not work around it silently.
 

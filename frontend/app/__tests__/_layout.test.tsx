@@ -2,8 +2,9 @@
  * Root layout paint gate.
  *
  * On web the shell (nav + skeleton) must render while Clerk is still loading, so the
- * pre-rendered HTML and the first paint are not blank. Routes (<Stack>) still mount only
- * after Clerk has loaded, exactly as before. Native keeps its null gate.
+ * pre-rendered HTML and the first paint are not blank. Routes (<Stack>) mount only after
+ * Clerk has loaded, except the home route ('/'), which renders its signed-out hero straight
+ * away so the largest element is in the static HTML. Native keeps its null gate.
  */
 import React from 'react';
 import { Platform } from 'react-native';
@@ -11,6 +12,7 @@ import { render, screen } from '@testing-library/react-native';
 
 const mockAuth = { isLoaded: false };
 const mockFonts = { loaded: true };
+let mockPathname = '/';
 
 jest.mock('@clerk/clerk-expo', () => ({
   ClerkProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -20,7 +22,7 @@ jest.mock('@clerk/clerk-expo', () => ({
 jest.mock('@clerk/clerk-expo/token-cache', () => ({ tokenCache: {} }));
 jest.mock('expo-router', () => {
   const { Text } = require('react-native');
-  return { Stack: () => <Text>STACK</Text> };
+  return { Stack: () => <Text>STACK</Text>, usePathname: () => mockPathname };
 });
 jest.mock('expo-share-intent', () => ({
   ShareIntentProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -62,8 +64,9 @@ afterEach(() => {
 });
 
 describe('root layout paint gate', () => {
-  it('web, Clerk still loading: renders the nav and skeleton but not the routes', () => {
+  it('web, Clerk still loading, other route: renders the nav and skeleton but not the routes', () => {
     jest.replaceProperty(Platform, 'OS', 'web');
+    mockPathname = '/search';
     mockAuth.isLoaded = false;
     mockFonts.loaded = false; // fonts come from <link>/CSS on web, never gate it
 
@@ -72,6 +75,19 @@ describe('root layout paint gate', () => {
     expect(screen.getByText('WEBNAV')).toBeTruthy();
     expect(screen.getByTestId('web-shell-skeleton')).toBeTruthy();
     expect(screen.queryByText('STACK')).toBeNull();
+  });
+
+  it('web, Clerk still loading, home route: renders the routes (the hero) instead of the skeleton', () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    mockPathname = '/';
+    mockAuth.isLoaded = false;
+    mockFonts.loaded = false;
+
+    render(<RootLayout />);
+
+    expect(screen.getByText('WEBNAV')).toBeTruthy();
+    expect(screen.getByText('STACK')).toBeTruthy();
+    expect(screen.queryByTestId('web-shell-skeleton')).toBeNull();
   });
 
   it('web, Clerk loaded: renders the routes and drops the skeleton', () => {
@@ -88,6 +104,7 @@ describe('root layout paint gate', () => {
 
   it('native, Clerk still loading: renders nothing', () => {
     jest.replaceProperty(Platform, 'OS', 'ios');
+    mockPathname = '/';
     mockAuth.isLoaded = false;
     mockFonts.loaded = true;
 

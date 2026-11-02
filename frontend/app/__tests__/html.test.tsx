@@ -48,6 +48,21 @@ describe('web document critical CSS', () => {
     );
   });
 
+  it('recolors the pre-rendered hero text (muted, teal, cobalt) in dark mode', () => {
+    // The home hero is in the static HTML, so its text carries light-theme colors until hydration.
+    const cases: [string, string][] = [
+      ['rgba(99,102,108,1.00)', Colors.dark.muted], // slate -> muted
+      ['rgba(30,122,108,1.00)', Colors.dark.accent2], // teal -> accent2
+      ['rgba(47,93,255,1.00)', Colors.dark.accent], // cobalt -> accent
+    ];
+    for (const [light, dark] of cases) {
+      // Anchored to the start of the style or after ';' so background-color/border-color don't match.
+      expect(markup).toContain(
+        `[style^="color:${light}"],[style*=";color:${light}"]{color:${dark}!important}`,
+      );
+    }
+  });
+
   it('applies the shell overrides only inside the dark media query', () => {
     const css = markup.match(/<style id="critical-theme">([\s\S]*?)<\/style>/)?.[1] ?? '';
     const beforeDark = css.slice(0, css.indexOf('@media (prefers-color-scheme: dark)'));

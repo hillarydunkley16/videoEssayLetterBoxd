@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router'
+import { Stack, usePathname } from 'expo-router'
 import { View, StyleSheet, Platform, Text } from 'react-native'
 import { WebNav } from '../components/ui/WebNav'
 import { MobileNav } from '../components/ui/MobileNav'
@@ -21,10 +21,14 @@ function RootLayoutNav() {
   const { loaded: fontsLoaded } = useAppFonts();
   const theme = Colors[useColorScheme()];
   useShareIntentRouter();
+  const pathname = usePathname();
   const isWeb = Platform.OS === 'web';
   // Web loads Fraunces/Inter via the self-hosted @font-face in app/+html.tsx, not expo-font,
   // so it doesn't need to wait on fontsLoaded. It also paints the shell while Clerk
   // loads (the skeleton below stands in for <Stack>) so the static HTML isn't blank.
+  // The home route is the exception: it renders its signed-out hero immediately (see
+  // HeroGate), so the largest element is in the static HTML. Other routes still wait,
+  // because their screens expect Clerk to be loaded.
   if (!isWeb && (!isLoaded || !fontsLoaded)) return null;
 
   return (
@@ -33,7 +37,7 @@ function RootLayoutNav() {
             {Platform.OS === 'web' && <WebNav />}
             {Platform.OS !== 'web' && <MobileTopNav />}
           <View style={styles.content}>
-            {isWeb && !isLoaded ? <WebShellSkeleton /> : <Stack screenOptions={{ headerShown: false }} />}
+            {isWeb && !isLoaded && pathname !== '/' ? <WebShellSkeleton /> : <Stack screenOptions={{ headerShown: false }} />}
             <Toast />
           </View>
           {Platform.OS !== 'web' && (
