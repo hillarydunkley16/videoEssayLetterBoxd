@@ -46,19 +46,25 @@ Still to check in the browser: no hydration warnings, hero visible with JS block
 **Files likely touched:** `app/_layout.tsx`, `app/(home)/index.tsx`, `app/+html.tsx` (preload), `app/__tests__/_layout.test.tsx`, `app/__tests__/html.test.tsx`, a new home-route test
 **Estimated scope:** M
 
-### [ ] Task 2: Signed-in users still land on the feed; regression sweep
+### [x] Task 2: Signed-in users still land on the feed; regression sweep ✅ DONE (manual browser checks pending)
 
 **Description:** Once Clerk reports signed in, the hero is replaced by the feed; signed-out stays on the hero; no stale
 fetches or flicker loops. Covers the "brief hero flash" the spec accepts.
 
 **Acceptance criteria:**
-- [ ] Test: Clerk loaded + signed in → feed (and `UsernameGateBanner`) renders, hero does not
-- [ ] Test: Clerk not loaded → no authenticated API calls are made from the home route
+- [x] Test: Clerk loaded + signed in → feed (and `UsernameGateBanner`) renders, hero does not
+- [x] Test: Clerk not loaded → no authenticated API calls are made from the home route (no feed, banner or tabs mount)
 - [ ] Manual (browser, backend running): signed-in home works, signed-out home works, sign-out returns to the hero
-- [ ] Both color schemes correct on first paint; CLS < 0.1
+- [x] CLS < 0.1 (0.02, see Measurements); both color schemes on first paint still to eyeball
 
 **Verification:**
 - [ ] Gates above; Lighthouse median into `/tmp/lh-after-lcp-t2` recorded
+
+**Results:** no production code change was needed: `SignedIn` already mounts nothing until Clerk is loaded and signed in, so the feed, banner and
+their authenticated fetches wait for Clerk, and `HeroGate` hides the hero once `isSignedIn`. Added 3 tests in `(home)/__tests__/index.test.tsx`
+(`home auth transitions`): nothing signed-in mounts while Clerk loads; loading -> signed in swaps hero for feed + banner; sign-out returns to the hero.
+They passed on first run (characterization of T1 behavior, not RED). 262 -> 265 tests. Lighthouse unchanged from T1 (no code change): CLS 0.02.
+Still manual (needs backend + Clerk): signed-in home, signed-out home, sign-out back to hero, and how long the hero flash lasts for a signed-in user.
 
 **Dependencies:** Task 1
 **Files likely touched:** `app/(home)/index.tsx`, `app/(home)/__tests__/…`
