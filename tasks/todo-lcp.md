@@ -155,7 +155,8 @@ before/after. Deploying (pushing the deploy branch) needs your go-ahead first.
 |---|---|---|---|---|---|
 | Baseline = TTSR After-T4 + Fraunces-500 preload, local dist | 12,454 ms | 1,374 ms | 1,374 ms | 597 ms | 0.01 |
 | After T1 (hero in HTML), local dist | **1,430 ms** (1424-1430) | 1,430 ms | 1,430 ms | 1,054 ms | **0.22** (all 5) |
-| After T1 + Fraunces fallback metrics, local dist | | | | | |
+| After T1 + Fraunces fallback metrics, local dist (build 18:35Z, run 18:38Z) | 1,425 ms | 1,425 ms | 1,425 ms | 1,110 ms | **0.24** (all 5): fallback did not fix it |
+| _Diagnosis_ | filmstrip: headline is 2 lines at first paint, 3 lines after the swap; "Track every video essay that" is ~13.7em in Fraunces 500 (~383px at 28px, container 372px) vs 12.6em in Georgia (~353px). With a working 107.5% fallback it would already wrap. Checking whether `'Fraunces Fallback'` is applied. | | | | |
 | After T2, local dist | | | | | |
 | After T4 (icon font), local dist | | | | | |
 | After T5 (Clerk), local dist | | | | | |
