@@ -148,7 +148,9 @@ export default function SignedOutHomeScreen() {
       <View style={styles.features}>
         {FEATURES.map((feature) => (
           <View key={feature.label} style={[styles.feature, { borderColor: theme.border }]}>
-            <MaterialCommunityIcons name={feature.icon} size={24} color={theme.accent2} />
+            <View testID="feature-icon-slot" style={styles.featureIconSlot}>
+              <MaterialCommunityIcons name={feature.icon} size={24} color={theme.accent2} />
+            </View>
             <Text style={[styles.featureLabel, { color: theme.text, fontFamily: Fonts?.sansSemiBold }]}>
               {feature.label}
             </Text>
@@ -298,6 +300,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 4,
     padding: 14,
+  },
+  // The icon renders nothing until its font loads; reserve its size so the card doesn't grow.
+  featureIconSlot: {
+    width: 24,
+    height: 24,
   },
   featureLabel: {
     fontSize: 12,

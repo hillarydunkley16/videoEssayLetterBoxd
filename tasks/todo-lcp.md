@@ -159,7 +159,9 @@ before/after. Deploying (pushing the deploy branch) needs your go-ahead first.
 | _Diagnosis_ | filmstrip: headline is 2 lines at first paint, 3 lines after the swap; "Track every video essay that" is ~13.7em in Fraunces 500 (~383px at 28px, container 372px) vs 12.6em in Georgia (~353px). With a working 107.5% fallback it would already wrap. Console check: `'Fraunces Fallback'` measured 319px (Georgia 346, Fraunces 376), so it was not behaving as sized. Replaced by inlining the Fraunces 500 ASCII subset (11.6 kB woff2, 15.4 kB base64) in the HTML so no swap happens for the headline; the fallback face, its theme.ts stack entry and the 500 preload were removed. | | | | |
 | After T1 + inlined Fraunces 500, local dist | 1,452 ms | 1,452 ms | 1,452 ms | 1,091 ms | **0.22** (all 5) |
 | _Diagnosis 2_ | DevTools trace (4x CPU, Slow 4G): worst shift cluster at ~1.0s, culprit "Web font"; console `document.fonts`: Fraunces 500 inline `loaded`, Inter 400/600 `loaded` late. Inter's body text swaps from the system font after first paint and re-wraps the cards. Fix: Inter faces `font-display: optional`. | | | | |
-| After T1 + Inter optional, local dist | | | | | |
+| After T1 + Inter optional, local dist | 1,462 ms | 1,462 ms | 1,462 ms | 1,094 ms | **0.22** (all 5): fonts were not the cause |
+| _Diagnosis 3_ | CLS identical to the previous run, so font swapping is ruled out. `createIconSet` renders an empty `<Text/>` until the icon font loads (~12s), so the 3 feature cards are ~34px shorter in the static HTML than once hydrated, and the closing section jumps. Fix: fixed 24x24 slot around each icon. | | | | |
+| After T1 + icon slot, local dist | | | | | |
 | After T2, local dist | | | | | |
 | After T4 (icon font), local dist | | | | | |
 | After T5 (Clerk), local dist | | | | | |
