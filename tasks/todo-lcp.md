@@ -105,6 +105,19 @@ Next levers by size: production Clerk keys (re-measure after cutover), bundle sp
 
 ---
 
+### [x] Task 2d: The feed rows no longer wait on the "popular this week" call ✅ DONE locally (live effect to confirm by you)
+
+**Why (your trace, signed in, no throttling, warm, 2026-11-03):** a long `popular/ (videoessay-backend)` bar from ~2.7 s to ~5.5 s with the loading spinner
+animating for the same span. `RecentLogsScreen.loadInitial` awaited `Promise.all([fetchLogs, fetchPopularVideoEssays])` and only then set `loading=false`,
+so the rows waited on the secondary popular strip. The same endpoint took ~0.75 s via the hero's public (no-token) call vs ~2.8 s authenticated: the
+backend's `ClerkAuthentication` does JWKS handling plus `get_or_create` User/Profile queries on every authenticated request, and `PopularVideoEssays` is `AllowAny`.
+**What:** popular now uses `fetchPopularVideoEssaysPublic()` (no token, started immediately, never blocks); rows show when `fetchLogs` resolves; a failed
+popular call only logs. `src/screens/__tests__/RecentLogsScreen.test.tsx` (new, 5 tests, RED first). 293 -> 298 tests.
+**Not fixed (needs backend profiling, not guessed):** `logList` still goes through the same authenticated path, so its time includes that auth work. If the feed is
+still slow after this, next step is timing `ClerkAuthentication` and `logList` server-side (queries per request, DB location) rather than more frontend changes.
+
+---
+
 ## Checkpoint A: After Tasks 1-2
 - [ ] All frontend gates pass
 - [ ] LCP median < 4s, First Paint < 1.5s, FCP < 1.8s, CLS < 0.1 (local export)
