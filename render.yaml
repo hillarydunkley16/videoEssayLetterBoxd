@@ -21,7 +21,7 @@ services:
     # build time. Free tier is a single instance, so no migration race.
     # preDeployCommand is paid-only, so it's not an option here.
     buildCommand: pip install -r requirements.txt
-    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --threads 4
     envVars:
       - key: PYTHON_VERSION      # Render ignored runtime.txt and used 3.14; pin explicitly
         value: "3.13.7"

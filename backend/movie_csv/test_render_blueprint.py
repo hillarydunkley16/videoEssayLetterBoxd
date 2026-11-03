@@ -37,6 +37,17 @@ class RenderBlueprintTests(SimpleTestCase):
         self.assertIn("gunicorn config.wsgi:application", self.text)
         self.assertIn("0.0.0.0:$PORT", self.text)
 
+    def test_gunicorn_serves_requests_concurrently(self):
+        # The home screen fires profile and logList together. A single sync worker answers them
+        # one after the other, and each waits on the (cross-region) database, so the later
+        # request queued behind the earlier. Threads, not a second worker: the free plan has
+        # 512 MB and these requests mostly wait on I/O.
+        start_line = next(
+            (ln for ln in self.text.splitlines() if ln.strip().startswith("startCommand:")),
+            "",
+        )
+        self.assertRegex(start_line, r"gunicorn .*--threads [2-9]")
+
     def test_python_version_pinned_to_313(self):
         self.assertIn("key: PYTHON_VERSION", self.text)
         self.assertRegex(self.text, r'value:\s*"3\.13\.\d+"')
