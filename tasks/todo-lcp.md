@@ -72,6 +72,20 @@ Still manual (needs backend + Clerk): signed-in home, signed-out home, sign-out 
 
 ---
 
+### [x] Task 2b: Returning signed-in visitors see a feed skeleton, not the hero ✅ DONE (needs your browser check)
+
+**Why:** manual check on the live site: signed in, the page starts on the signed-out hero and then switches to the feed, and the feed
+takes ~4s to appear warm (10+ s right after Render's free backend wakes). The hero flash tells a signed-in user they were logged out.
+**What:** `src/lib/signedInHint.ts` (guarded localStorage flag, no user data). `HeroGate` sets it once Clerk reports signed in, clears it on
+signed out, and on web while Clerk loads shows `WebShellSkeleton` instead of the hero when the flag is set. The flag is read after mount, so the
+server render and first client render still show the hero (hydration matches; LCP for signed-out/first-time visitors is unchanged).
+**Tests:** 265 -> 276 (hint module x5, gate x6 incl. a server-render-matches-hero test). Not changed: the ~4s wait itself.
+**Known limits:** between the static HTML paint and hydration (JS running) a returning user still sees the hero for a moment; a CSS-only
+pre-hydration swap (inline script setting an attribute on `<html>`) would remove that and is not done. The 10+ s cold start is Render's free
+plan (paid instance or an uptime ping), not the frontend. Still to measure: where the warm 4s goes (Clerk vs the `/api` logs request).
+
+---
+
 ## Checkpoint A: After Tasks 1-2
 - [ ] All frontend gates pass
 - [ ] LCP median < 4s, First Paint < 1.5s, FCP < 1.8s, CLS < 0.1 (local export)
