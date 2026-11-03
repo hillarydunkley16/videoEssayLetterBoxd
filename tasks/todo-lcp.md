@@ -116,6 +116,17 @@ popular call only logs. `src/screens/__tests__/RecentLogsScreen.test.tsx` (new, 
 **Not fixed (needs backend profiling, not guessed):** `logList` still goes through the same authenticated path, so its time includes that auth work. If the feed is
 still slow after this, next step is timing `ClerkAuthentication` and `logList` server-side (queries per request, DB location) rather than more frontend changes.
 
+### [x] Task 2e: Backend auth and serving cost ✅ DONE locally (not pushed; live effect to confirm)
+
+**Profiled (query counts, sqlite test client; no timings, the live DB isn't reachable from here):** steady-state `logList/` = 10 queries (4 are the view's), `users/profile` = 15,
+anonymous `popular/` = 1. `ClerkAuthentication` ran ~6 round trips on EVERY request: select user, select profile, then `Profile.update_or_create(imageUrl)`, which always
+writes (BEGIN, SELECT FOR UPDATE, UPDATE, COMMIT) even when nothing changed. Render backend is in Oregon, Supabase (session pooler) in us-east-1, so each round trip is
+cross-country (~60-80 ms, estimated, not measured). gunicorn also ran its default single sync worker, so the home screen's parallel `profile` + `logList` queued.
+**What:** (1) auth reads the profile once and saves only the changed fields: unchanged claims = 2 SELECTs, no writes (`ProfileSyncCostTests`, 4 tests, RED first).
+(2) `--threads 4` on the gunicorn start command (one worker, because the free plan has 512 MB; `test_gunicorn_serves_requests_concurrently`, RED first).
+Backend suite 322/323 pass; the 1 failure is `test_graphql_schema` (untracked, fails without these changes too).
+**Not done (bigger, needs a decision):** move the backend to Virginia (Render can't change a service's region: new service + CORS + `EXPO_PUBLIC_API_BASE_URL`) or the DB to us-west.
+
 ---
 
 ## Checkpoint A: After Tasks 1-2
