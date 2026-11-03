@@ -81,14 +81,20 @@ class ClerkAuthentication(BaseAuthentication):
             username=clerk_id,
             defaults={"email": payload.get("email", "")},
         )
-        # An absent, null, or empty claim never overwrites a stored name.
+        # An absent, null, or empty claim never overwrites a stored value. The profile is read
+        # once and written only when a claim differs: this runs on every request, and each
+        # query is a round trip to the database.
         username = payload.get("username")
-        if username:
+        image_url = payload.get("imageUrl")
+        if username or image_url:
             profile, _ = Profile.objects.get_or_create(user=user)
-            if profile.display_username != username:
+            changed = []
+            if username and profile.display_username != username:
                 profile.display_username = username
-                profile.save(update_fields=["display_username"])
-        image_url = payload.get("imageUrl", "")
-        if image_url:
-            Profile.objects.update_or_create(user=user, defaults={"imageUrl": image_url})
+                changed.append("display_username")
+            if image_url and profile.imageUrl != image_url:
+                profile.imageUrl = image_url
+                changed.append("imageUrl")
+            if changed:
+                profile.save(update_fields=changed)
         return (user, None)

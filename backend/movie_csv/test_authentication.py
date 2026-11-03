@@ -7,6 +7,8 @@ user provisioning), not python-jose or the network.
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -158,6 +160,54 @@ class DisplayUsernameCaptureTests(TestCase):
         User.objects.get(username="clerk_abc").profile.delete()
         user = self._authenticate({"username": "hillary"})
         self.assertEqual(user.profile.display_username, "hillary")
+
+
+class ProfileSyncCostTests(TestCase):
+    """Every authenticated request pays for authenticate() before the view runs, and each
+    query is a cross-region round trip in production. A request whose claims already match
+    the stored profile must therefore be read-only and cheap."""
+
+    CLAIMS = {"username": "hillary", "imageUrl": "https://img.example.com/a.png"}
+
+    def setUp(self):
+        authentication.reset_jwks_cache()
+
+    def _authenticate(self, payload):
+        with mock.patch("movie_csv.authentication.requests.get") as mock_get, \
+                mock.patch("movie_csv.authentication.jwt.get_unverified_header") as mock_hdr, \
+                mock.patch("movie_csv.authentication.jwt.decode") as mock_decode:
+            mock_get.return_value = mock.Mock(json=lambda: _FAKE_JWKS)
+            mock_hdr.return_value = {"kid": "kid-1"}
+            mock_decode.return_value = {"sub": "clerk_abc", **payload}
+            user, _ = ClerkAuthentication().authenticate(_request("Bearer good.token.sig"))
+        return user
+
+    def test_unchanged_claims_run_no_writes_and_at_most_two_queries(self):
+        self._authenticate(self.CLAIMS)
+        with CaptureQueriesContext(connection) as ctx:
+            self._authenticate(self.CLAIMS)
+        sql = [q["sql"] for q in ctx.captured_queries]
+        self.assertEqual([s for s in sql if not s.lstrip().upper().startswith("SELECT")], [])
+        self.assertLessEqual(len(sql), 2, sql)
+
+    def test_changed_image_url_is_saved(self):
+        self._authenticate(self.CLAIMS)
+        user = self._authenticate({**self.CLAIMS, "imageUrl": "https://img.example.com/b.png"})
+        user.profile.refresh_from_db()
+        self.assertEqual(user.profile.imageUrl, "https://img.example.com/b.png")
+
+    def test_image_url_without_username_creates_the_profile(self):
+        user = self._authenticate({"imageUrl": "https://img.example.com/a.png"})
+        user.profile.refresh_from_db()
+        self.assertEqual(user.profile.imageUrl, "https://img.example.com/a.png")
+
+    def test_missing_or_empty_image_url_never_overwrites_stored_value(self):
+        self._authenticate(self.CLAIMS)
+        for payload in ({"username": "hillary"}, {**self.CLAIMS, "imageUrl": ""}):
+            with self.subTest(payload=payload):
+                user = self._authenticate(payload)
+                user.profile.refresh_from_db()
+                self.assertEqual(user.profile.imageUrl, "https://img.example.com/a.png")
 
 
 class SourceHygieneTests(SimpleTestCase):
