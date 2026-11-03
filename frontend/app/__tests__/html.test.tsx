@@ -178,3 +178,47 @@ describe('web document returning-visitor hint', () => {
     expect(css).toContain('html[data-returning] [data-testid="home-hero"]{display:none!important}');
   });
 });
+
+describe('web document Clerk early hints', () => {
+  // Clerk's script is requested only after the 1 MB app bundle has run (~2s on a fast laptop,
+  // ~9s on Slow 4G), so a signed-in user waited for bundle THEN a redirect, connection and
+  // download. Hinting it from the HTML starts all of that in parallel with the bundle.
+  const HOST = 'splendid-sunbird-55.clerk.accounts.dev';
+  const KEY = `pk_test_${Buffer.from(`${HOST}$`).toString('base64')}`;
+
+  const render = (key: string | undefined) => {
+    const prev = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    if (key === undefined) delete process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    else process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = key;
+    try {
+      let out = '';
+      jest.isolateModules(() => {
+        const FreshRoot = require('../+html').default;
+        const { renderToStaticMarkup: r } = require('react-dom/server');
+        out = r(<FreshRoot>{null}</FreshRoot>);
+      });
+      return out;
+    } finally {
+      if (prev === undefined) delete process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+      else process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = prev;
+    }
+  };
+
+  it('preconnects to the Clerk host derived from the publishable key', () => {
+    expect(render(KEY)).toContain(`<link rel="preconnect" href="https://${HOST}" crossorigin=""/>`);
+  });
+
+  it("preloads Clerk's script with the same CORS mode the SDK's script tag uses", () => {
+    expect(render(KEY)).toContain(
+      `<link rel="preload" href="https://${HOST}/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous"/>`,
+    );
+  });
+
+  it('adds no Clerk hints when the key is missing or unreadable', () => {
+    for (const key of [undefined, 'nope']) {
+      const html = render(key);
+      expect(html).not.toContain('clerk.browser.js');
+      expect(html).not.toContain('rel="preconnect"');
+    }
+  });
+});

@@ -89,6 +89,22 @@ CLS 0.01, TBT 1,084 ms, Speed Index 1,675 ms: no regression.
 
 ---
 
+### [x] Task 2c: Start Clerk's script early (warm signed-in feed load) ✅ DONE locally (not yet measured live)
+
+**Why:** you want the warm feed load as fast as possible (~4s). Live waterfall, no throttling, warm backend: bundle done ~1.6s and running until ~2.0s;
+only then does Clerk's script start (redirect `clerk-js@5` -> `@5.128.0`, connection, 89 kB: 2,022 -> 2,706 ms); Clerk handshake
+(`dev_browser`, `environment`, `client`) 2.7 -> 3.3 s; Clerk chunks 3.3 -> 3.95 s; THEN token and the feed's `/api` call (public popular call ~750 ms).
+**What:** `src/lib/clerkHost.ts` decodes the host from `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (validated as a plain hostname, null on anything odd);
+`+html.tsx` adds `<link rel="preconnect">` and `<link rel="preload" as="script" crossorigin="anonymous">` for Clerk's first script URL.
+No host hardcoded; no hints if the key is missing.
+**Local waterfall after:** Clerk script request now starts at 45 ms, in parallel with the bundle (49 ms), one request per Clerk URL (SDK reused the preload).
+Expected win live: the ~0.7 s redirect + connect + download leaves the critical path. **Tests:** 280 -> 293.
+**Still serial after this (not fixed):** Clerk handshake ~0.75 s (dev instance does an extra `dev_browser` call; production keys should be leaner), Clerk
+chunks ~0.5 s (versioned hashed names; not preloaded on purpose), bundle execution ~0.4-0.6 s, then token + `/api/logList/`.
+Next levers by size: production Clerk keys (re-measure after cutover), bundle splitting (Phase 2), showing a cached "everyone" feed instantly then revalidating.
+
+---
+
 ## Checkpoint A: After Tasks 1-2
 - [ ] All frontend gates pass
 - [ ] LCP median < 4s, First Paint < 1.5s, FCP < 1.8s, CLS < 0.1 (local export)

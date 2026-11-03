@@ -2,6 +2,7 @@ import { ScrollViewStyleReset } from 'expo-router/html';
 import { Colors } from '@/constants/theme';
 import { FRAUNCES_500_ASCII_BASE64 } from '@/constants/fraunces500Ascii';
 import { SIGNED_IN_HINT_KEY } from '@/src/lib/signedInHint';
+import { clerkFrontendHost, clerkScriptUrl } from '@/src/lib/clerkHost';
 
 const { light, dark } = Colors;
 
@@ -72,6 +73,11 @@ const fontFaceCss = FONT_FACES.map(
     `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:${display};src:url(/fonts/${file}) format("woff2")}`,
 ).join('') + fraunces500InlineCss;
 
+// Clerk's script is only requested after the 1 MB app bundle has run, so a signed-in user waited
+// for the bundle and then for Clerk's redirect, connection and download in series. Hinting it
+// here starts those in parallel. Host derived from the publishable key (never hardcoded).
+const clerkHost = clerkFrontendHost(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
 // Runs before first paint: a visitor who was signed in last time gets data-returning on <html>,
 // so CSS can swap the marketing hero for the feed skeleton (see HeroGate). A hint only; Clerk
 // still decides. Same key as src/lib/signedInHint.ts.
@@ -94,6 +100,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
           type="font/woff2"
           crossOrigin=""
         />
+        {clerkHost ? (
+          <>
+            <link rel="preconnect" href={`https://${clerkHost}`} crossOrigin="" />
+            <link rel="preload" href={clerkScriptUrl(clerkHost)} as="script" crossOrigin="anonymous" />
+          </>
+        ) : null}
         <script id="returning-hint" dangerouslySetInnerHTML={{ __html: returningHintScript }} />
         <style id="font-faces" dangerouslySetInnerHTML={{ __html: fontFaceCss }} />
         <style id="critical-theme" dangerouslySetInnerHTML={{ __html: criticalCss }} />
