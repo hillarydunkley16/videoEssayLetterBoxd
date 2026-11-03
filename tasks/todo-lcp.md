@@ -89,7 +89,7 @@ CLS 0.01, TBT 1,084 ms, Speed Index 1,675 ms: no regression.
 
 ---
 
-### [x] Task 2c: Start Clerk's script early (warm signed-in feed load) ✅ DONE locally (not yet measured live)
+### [x] Task 2c: Start Clerk's script early (warm signed-in feed load) ✅ DONE locally (live waterfall measured; signed-in feed time still to confirm by you)
 
 **Why:** you want the warm feed load as fast as possible (~4s). Live waterfall, no throttling, warm backend: bundle done ~1.6s and running until ~2.0s;
 only then does Clerk's script start (redirect `clerk-js@5` -> `@5.128.0`, connection, 89 kB: 2,022 -> 2,706 ms); Clerk handshake
@@ -97,7 +97,7 @@ only then does Clerk's script start (redirect `clerk-js@5` -> `@5.128.0`, connec
 **What:** `src/lib/clerkHost.ts` decodes the host from `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (validated as a plain hostname, null on anything odd);
 `+html.tsx` adds `<link rel="preconnect">` and `<link rel="preload" as="script" crossorigin="anonymous">` for Clerk's first script URL.
 No host hardcoded; no hints if the key is missing.
-**Local waterfall after:** Clerk script request now starts at 45 ms, in parallel with the bundle (49 ms), one request per Clerk URL (SDK reused the preload).
+**Live waterfall after (unthrottled, deploy of `40cf25e`):** Clerk script request starts 2,022 -> 336 ms; handshake starts 2,747 -> 1,638 ms; `environment`/`client` done 3,322 -> 2,230 ms; last Clerk chunk done ~3,950 -> ~2,850 ms (about 1.1 s earlier). Signed-out live (5 runs): LCP 1,613, First Paint 1,602, CLS 0.02, TBT 1,040: unchanged. Feed time for a signed-in user not yet measured (needs a signed-in session).\n**Local waterfall after:** Clerk script request now starts at 45 ms, in parallel with the bundle (49 ms), one request per Clerk URL (SDK reused the preload).
 Expected win live: the ~0.7 s redirect + connect + download leaves the critical path. **Tests:** 280 -> 293.
 **Still serial after this (not fixed):** Clerk handshake ~0.75 s (dev instance does an extra `dev_browser` call; production keys should be leaner), Clerk
 chunks ~0.5 s (versioned hashed names; not preloaded on purpose), bundle execution ~0.4-0.6 s, then token + `/api/logList/`.
