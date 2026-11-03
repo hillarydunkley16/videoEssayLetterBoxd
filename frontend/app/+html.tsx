@@ -21,9 +21,10 @@ const textColorOverride = (lightHex: string, darkColor: string) =>
 const criticalCss =
   `body{background-color:${light.background};color:${light.text}}` +
   // Returning signed-in visitors (see returningHintScript): skeleton instead of the hero.
-  '[data-testid="home-returning-skeleton"]{display:none}' +
-  'html[data-returning] [data-testid="home-returning-skeleton"]{display:flex}' +
-  'html[data-returning] [data-testid="home-hero"]{display:none}' +
+  // !important: react-native-web's atomic `display:flex` class has the same specificity and loads later.
+  '[data-testid="home-returning-skeleton"]{display:none!important}' +
+  'html[data-returning] [data-testid="home-returning-skeleton"]{display:flex!important}' +
+  'html[data-returning] [data-testid="home-hero"]{display:none!important}' +
   '@media (prefers-color-scheme: dark){' +
   `body{background-color:${dark.background};color:${dark.text}}` +
   `[style*="background-color:${rnwRgba(light.background)}"]{background-color:${dark.background}!important}` +

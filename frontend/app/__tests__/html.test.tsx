@@ -171,8 +171,10 @@ describe('web document returning-visitor hint', () => {
 
   it('CSS: skeleton hidden by default, and for a returning visitor the hero hides and the skeleton shows', () => {
     const css = markup.match(/<style id="critical-theme">([\s\S]*?)<\/style>/)?.[1] ?? '';
-    expect(css).toContain('[data-testid="home-returning-skeleton"]{display:none}');
-    expect(css).toContain('html[data-returning] [data-testid="home-returning-skeleton"]{display:flex}');
-    expect(css).toContain('html[data-returning] [data-testid="home-hero"]{display:none}');
+    // !important: react-native-web's own atomic `display:flex` class has the same specificity and
+    // loads later, so without it the skeleton showed for every visitor.
+    expect(css).toContain('[data-testid="home-returning-skeleton"]{display:none!important}');
+    expect(css).toContain('html[data-returning] [data-testid="home-returning-skeleton"]{display:flex!important}');
+    expect(css).toContain('html[data-returning] [data-testid="home-hero"]{display:none!important}');
   });
 });

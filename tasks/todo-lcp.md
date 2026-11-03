@@ -83,6 +83,7 @@ signed in and clears it on signed out. An inline `<script id="returning-hint">` 
 If Clerk says signed out, `HeroGate` removes the attribute and the hero returns. Native unchanged (no wrappers).
 **Tests:** 265 -> 280 (hint x4, gate x6, html script/CSS x5). **Signed-out local measurement after (5 runs):** LCP 1,460 ms, First Paint 1,454 ms,
 CLS 0.01, TBT 1,084 ms, Speed Index 1,675 ms: no regression.
+**Bug found on the live site (screenshot, 2026-11-03):** the hero AND the skeleton showed for every visitor: the unlayered `display:none` rule has the same specificity as RNW's atomic `display:flex` class, which loads later and wins. Fixed with `!important` on the three swap rules (test written first). Verified with real renders: Lighthouse screenshot (signed out: hero, no grey blocks) and headless Chrome with the hint set and the bundle blocked (returning: skeleton only). Lesson: I had only compared Lighthouse numbers, which don't show this; look at a screenshot.
 **Known limits:** the wait itself (~4s warm) is unchanged, now shown as a skeleton; the 10+ s cold start is Render's free plan. A stale hint
 (signed out elsewhere) shows the skeleton until Clerk loads, then the hero. Where the warm 4s goes (Clerk vs `/api` logs) is still unmeasured.
 
