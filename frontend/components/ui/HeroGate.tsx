@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
-import { Platform } from 'react-native'
+import { useEffect } from 'react'
+import { Platform, StyleSheet, View } from 'react-native'
 import { useAuth } from '@clerk/clerk-expo'
 import { WebShellSkeleton } from '@/components/ui/WebShellSkeleton'
-import { clearSignedInHint, hasSignedInHint, setSignedInHint } from '@/src/lib/signedInHint'
+import { clearSignedInHint, setSignedInHint } from '@/src/lib/signedInHint'
 
 // Signed-out branch of the home screen. Clerk's <SignedOut> renders nothing until Clerk has
 // loaded, which kept the hero (the page's largest element) off screen for ~12s on Slow 4G.
@@ -10,27 +10,40 @@ import { clearSignedInHint, hasSignedInHint, setSignedInHint } from '@/src/lib/s
 // and survives hydration; a signed-in user gets the feed once Clerk reports it. Native
 // keeps SignedOut's behavior (and never renders before Clerk is loaded anyway).
 //
-// A returning signed-in visitor shouldn't see the marketing hero while Clerk loads, so a
-// browser hint (set once Clerk says signed in) swaps it for the feed skeleton. The hint is
-// read after mount: the server render and the first client render must both show the hero
-// so hydration matches.
+// A returning signed-in visitor shouldn't see the marketing hero flash before the feed. An
+// inline script in +html sets data-returning on <html> from a localStorage hint before first
+// paint, and CSS then hides the hero and shows the skeleton rendered beside it. Both are always
+// in the DOM (static HTML too), so there is nothing to hydrate-mismatch. If Clerk says the
+// visitor is not signed in after all, the attribute is removed and the hero comes back.
 export function HeroGate({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
   const isWeb = Platform.OS === 'web'
-  const [returning, setReturning] = useState(false)
 
   useEffect(() => {
-    if (!isWeb) return
-    if (!isLoaded) {
-      setReturning(hasSignedInHint())
-    } else if (isSignedIn) {
+    if (!isWeb || !isLoaded) return
+    if (isSignedIn) {
       setSignedInHint()
     } else {
       clearSignedInHint()
+      globalThis.document?.documentElement?.removeAttribute('data-returning')
     }
   }, [isWeb, isLoaded, isSignedIn])
 
-  if (isWeb && !isLoaded && returning) return <WebShellSkeleton />
   const show = isWeb ? !isSignedIn : isLoaded && !isSignedIn
-  return show ? <>{children}</> : null
+  if (!show) return null
+  if (!isWeb) return <>{children}</>
+  return (
+    <>
+      <View testID="home-hero" style={styles.fill}>
+        {children}
+      </View>
+      <View testID="home-returning-skeleton" style={styles.fill}>
+        <WebShellSkeleton />
+      </View>
+    </>
+  )
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+})

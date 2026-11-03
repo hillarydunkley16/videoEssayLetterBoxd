@@ -72,17 +72,19 @@ Still manual (needs backend + Clerk): signed-in home, signed-out home, sign-out 
 
 ---
 
-### [x] Task 2b: Returning signed-in visitors see a feed skeleton, not the hero ✅ DONE (needs your browser check)
+### [x] Task 2b: Returning signed-in visitors never see the hero ✅ DONE (needs your browser check)
 
 **Why:** manual check on the live site: signed in, the page starts on the signed-out hero and then switches to the feed, and the feed
 takes ~4s to appear warm (10+ s right after Render's free backend wakes). The hero flash tells a signed-in user they were logged out.
-**What:** `src/lib/signedInHint.ts` (guarded localStorage flag, no user data). `HeroGate` sets it once Clerk reports signed in, clears it on
-signed out, and on web while Clerk loads shows `WebShellSkeleton` instead of the hero when the flag is set. The flag is read after mount, so the
-server render and first client render still show the hero (hydration matches; LCP for signed-out/first-time visitors is unchanged).
-**Tests:** 265 -> 276 (hint module x5, gate x6 incl. a server-render-matches-hero test). Not changed: the ~4s wait itself.
-**Known limits:** between the static HTML paint and hydration (JS running) a returning user still sees the hero for a moment; a CSS-only
-pre-hydration swap (inline script setting an attribute on `<html>`) would remove that and is not done. The 10+ s cold start is Render's free
-plan (paid instance or an uptime ping), not the frontend. Still to measure: where the warm 4s goes (Clerk vs the `/api` logs request).
+**What:** `src/lib/signedInHint.ts` (guarded localStorage flag under `SIGNED_IN_HINT_KEY`, no user data). `HeroGate` sets it once Clerk reports
+signed in and clears it on signed out. An inline `<script id="returning-hint">` in `+html.tsx` runs before first paint and sets
+`data-returning` on `<html>` when the flag is set; critical CSS then hides `[data-testid="home-hero"]` and shows
+`[data-testid="home-returning-skeleton"]`. Hero and skeleton are both in the DOM and static HTML (CSS picks one), so hydration can't mismatch.
+If Clerk says signed out, `HeroGate` removes the attribute and the hero returns. Native unchanged (no wrappers).
+**Tests:** 265 -> 280 (hint x4, gate x6, html script/CSS x5). **Signed-out local measurement after (5 runs):** LCP 1,460 ms, First Paint 1,454 ms,
+CLS 0.01, TBT 1,084 ms, Speed Index 1,675 ms: no regression.
+**Known limits:** the wait itself (~4s warm) is unchanged, now shown as a skeleton; the 10+ s cold start is Render's free plan. A stale hint
+(signed out elsewhere) shows the skeleton until Clerk loads, then the hero. Where the warm 4s goes (Clerk vs `/api` logs) is still unmeasured.
 
 ---
 

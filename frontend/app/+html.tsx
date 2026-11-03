@@ -1,6 +1,7 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import { Colors } from '@/constants/theme';
 import { FRAUNCES_500_ASCII_BASE64 } from '@/constants/fraunces500Ascii';
+import { SIGNED_IN_HINT_KEY } from '@/src/lib/signedInHint';
 
 const { light, dark } = Colors;
 
@@ -19,6 +20,10 @@ const textColorOverride = (lightHex: string, darkColor: string) =>
 // swaps in the real values. Built from Colors so it can't drift from the theme.
 const criticalCss =
   `body{background-color:${light.background};color:${light.text}}` +
+  // Returning signed-in visitors (see returningHintScript): skeleton instead of the hero.
+  '[data-testid="home-returning-skeleton"]{display:none}' +
+  'html[data-returning] [data-testid="home-returning-skeleton"]{display:flex}' +
+  'html[data-returning] [data-testid="home-hero"]{display:none}' +
   '@media (prefers-color-scheme: dark){' +
   `body{background-color:${dark.background};color:${dark.text}}` +
   `[style*="background-color:${rnwRgba(light.background)}"]{background-color:${dark.background}!important}` +
@@ -66,6 +71,11 @@ const fontFaceCss = FONT_FACES.map(
     `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:${display};src:url(/fonts/${file}) format("woff2")}`,
 ).join('') + fraunces500InlineCss;
 
+// Runs before first paint: a visitor who was signed in last time gets data-returning on <html>,
+// so CSS can swap the marketing hero for the feed skeleton (see HeroGate). A hint only; Clerk
+// still decides. Same key as src/lib/signedInHint.ts.
+const returningHintScript = `try{if(localStorage.getItem(${JSON.stringify(SIGNED_IN_HINT_KEY)})==='1')document.documentElement.setAttribute('data-returning','')}catch(e){}`;
+
 // Web-only document shell. Fraunces/Inter are self-hosted here instead of loaded through
 // expo-font or Google Fonts (a render-blocking third-party stylesheet).
 export default function Root({ children }: { children: React.ReactNode }) {
@@ -83,6 +93,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
           type="font/woff2"
           crossOrigin=""
         />
+        <script id="returning-hint" dangerouslySetInnerHTML={{ __html: returningHintScript }} />
         <style id="font-faces" dangerouslySetInnerHTML={{ __html: fontFaceCss }} />
         <style id="critical-theme" dangerouslySetInnerHTML={{ __html: criticalCss }} />
         <ScrollViewStyleReset />

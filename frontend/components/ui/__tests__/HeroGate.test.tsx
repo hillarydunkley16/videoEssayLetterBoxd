@@ -12,13 +12,12 @@ const mockAuth: { isLoaded: boolean; isSignedIn?: boolean } = { isLoaded: false 
 
 jest.mock('@clerk/clerk-expo', () => ({ useAuth: () => mockAuth }));
 jest.mock('@/src/lib/signedInHint', () => ({
-  hasSignedInHint: jest.fn(() => false),
   setSignedInHint: jest.fn(),
   clearSignedInHint: jest.fn(),
 }));
 
 import { HeroGate } from '../HeroGate';
-import { clearSignedInHint, hasSignedInHint, setSignedInHint } from '@/src/lib/signedInHint';
+import { clearSignedInHint, setSignedInHint } from '@/src/lib/signedInHint';
 
 const { renderToStaticMarkup } = require('react-dom/server') as {
   renderToStaticMarkup: (element: React.ReactElement) => string;
@@ -27,7 +26,6 @@ const { renderToStaticMarkup } = require('react-dom/server') as {
 afterEach(() => {
   jest.restoreAllMocks();
   jest.clearAllMocks();
-  (hasSignedInHint as jest.Mock).mockReturnValue(false);
 });
 
 const renderGate = () =>
@@ -80,63 +78,84 @@ describe('HeroGate', () => {
 });
 
 describe('HeroGate returning-visitor skeleton', () => {
-  const loading = () => {
+  // The inline script in +html sets data-returning on <html> before first paint; CSS then hides
+  // [data-testid="home-hero"] and shows [data-testid="home-returning-skeleton"]. So both are in the
+  // DOM (static HTML included) and only CSS decides which one is visible: nothing to hydrate-mismatch.
+  const removeAttribute = jest.fn();
+
+  beforeEach(() => {
+    removeAttribute.mockClear();
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      value: { documentElement: { removeAttribute } },
+    });
+  });
+
+  afterEach(() => {
+    // @ts-expect-error restore "no document"
+    delete globalThis.document;
+  });
+
+  it('web: wraps the hero and renders a skeleton beside it (hidden by CSS unless the visitor is returning)', () => {
     jest.replaceProperty(Platform, 'OS', 'web');
     mockAuth.isLoaded = false;
     mockAuth.isSignedIn = undefined;
-  };
-
-  it('web, Clerk loading, was signed in last time: shows the feed skeleton, not the hero', () => {
-    loading();
-    (hasSignedInHint as jest.Mock).mockReturnValue(true);
     renderGate();
-    expect(screen.getByTestId('web-shell-skeleton')).toBeTruthy();
-    expect(screen.queryByText('HERO')).toBeNull();
-  });
-
-  it('web, Clerk loading, no hint: still shows the hero', () => {
-    loading();
-    renderGate();
+    expect(screen.getByTestId('home-hero')).toBeTruthy();
     expect(screen.getByText('HERO')).toBeTruthy();
-    expect(screen.queryByTestId('web-shell-skeleton')).toBeNull();
+    expect(screen.getByTestId('home-returning-skeleton')).toBeTruthy();
+    expect(screen.getByTestId('web-shell-skeleton')).toBeTruthy();
   });
 
-  it('the server render and first client render still show the hero even with the hint, so hydration matches', () => {
-    loading();
-    (hasSignedInHint as jest.Mock).mockReturnValue(true);
+  it('server render has both, so the static HTML can show either before JS runs', () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    mockAuth.isLoaded = false;
+    mockAuth.isSignedIn = undefined;
     const html = renderToStaticMarkup(
       <HeroGate>
         <span>HERO</span>
       </HeroGate>,
     );
     expect(html).toContain('HERO');
+    expect(html).toContain('home-returning-skeleton');
   });
 
-  it('web, loaded and signed in: remembers it for next time and shows no hero or skeleton', () => {
+  it('web, loaded and signed in: remembers it for next time and renders neither hero nor skeleton', () => {
     jest.replaceProperty(Platform, 'OS', 'web');
     mockAuth.isLoaded = true;
     mockAuth.isSignedIn = true;
     renderGate();
     expect(setSignedInHint).toHaveBeenCalled();
     expect(screen.queryByText('HERO')).toBeNull();
-    expect(screen.queryByTestId('web-shell-skeleton')).toBeNull();
+    expect(screen.queryByTestId('home-returning-skeleton')).toBeNull();
   });
 
-  it('web, loaded and signed out: forgets the hint and shows the hero', () => {
+  it('web, loaded and signed out: forgets the hint, drops data-returning so the hero shows again', () => {
     jest.replaceProperty(Platform, 'OS', 'web');
     mockAuth.isLoaded = true;
     mockAuth.isSignedIn = false;
     renderGate();
     expect(clearSignedInHint).toHaveBeenCalled();
+    expect(removeAttribute).toHaveBeenCalledWith('data-returning');
     expect(screen.getByText('HERO')).toBeTruthy();
   });
 
-  it('native: never touches the hint', () => {
+  it('web, Clerk still loading: leaves data-returning alone', () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    mockAuth.isLoaded = false;
+    mockAuth.isSignedIn = undefined;
+    renderGate();
+    expect(removeAttribute).not.toHaveBeenCalled();
+    expect(clearSignedInHint).not.toHaveBeenCalled();
+  });
+
+  it('native: no wrappers, never touches the hint', () => {
     jest.replaceProperty(Platform, 'OS', 'ios');
     mockAuth.isLoaded = true;
-    mockAuth.isSignedIn = true;
+    mockAuth.isSignedIn = false;
     renderGate();
-    expect(hasSignedInHint).not.toHaveBeenCalled();
+    expect(screen.getByText('HERO')).toBeTruthy();
+    expect(screen.queryByTestId('home-hero')).toBeNull();
     expect(setSignedInHint).not.toHaveBeenCalled();
     expect(clearSignedInHint).not.toHaveBeenCalled();
   });

@@ -10,6 +10,8 @@ import fs from 'fs';
 import path from 'path';
 import { Colors } from '@/constants/theme';
 import { FRAUNCES_500_ASCII_BASE64 } from '@/constants/fraunces500Ascii';
+import { SIGNED_IN_HINT_KEY } from '@/src/lib/signedInHint';
+import vm from 'vm';
 
 import Root from '../+html';
 
@@ -127,5 +129,50 @@ describe('web document fonts', () => {
     expect(preloads[0]).toContain('href="/fonts/fraunces-400-v1.woff2"');
     expect(preloads[0]).toContain('type="font/woff2"');
     expect(preloads[0]).toContain('crossorigin=""');
+  });
+});
+
+describe('web document returning-visitor hint', () => {
+  // A visitor who was signed in last time shouldn't see the marketing hero flash before the feed.
+  // This script runs before first paint and marks <html>; the CSS below swaps hero for skeleton.
+  const script = markup.match(/<script id="returning-hint">([\s\S]*?)<\/script>/)?.[1] ?? '';
+
+  const run = (localStorage: unknown) => {
+    const attrs: Record<string, string> = {};
+    const document = { documentElement: { setAttribute: (k: string, v: string) => (attrs[k] = v) } };
+    vm.runInNewContext(script, { document, localStorage });
+    return attrs;
+  };
+
+  it('is an inline script in the head, before the styles', () => {
+    expect(script).not.toBe('');
+    expect(markup.indexOf('id="returning-hint"')).toBeLessThan(markup.indexOf('id="critical-theme"'));
+  });
+
+  it('marks <html data-returning> when the signed-in hint is set', () => {
+    const store = { getItem: (k: string) => (k === SIGNED_IN_HINT_KEY ? '1' : null) };
+    expect(run(store)).toEqual({ 'data-returning': '' });
+  });
+
+  it('does nothing without the hint', () => {
+    expect(run({ getItem: () => null })).toEqual({});
+  });
+
+  it('does not throw when storage is unavailable or throws', () => {
+    expect(() => run(undefined)).not.toThrow();
+    expect(() =>
+      run({
+        getItem: () => {
+          throw new Error('blocked');
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  it('CSS: skeleton hidden by default, and for a returning visitor the hero hides and the skeleton shows', () => {
+    const css = markup.match(/<style id="critical-theme">([\s\S]*?)<\/style>/)?.[1] ?? '';
+    expect(css).toContain('[data-testid="home-returning-skeleton"]{display:none}');
+    expect(css).toContain('html[data-returning] [data-testid="home-returning-skeleton"]{display:flex}');
+    expect(css).toContain('html[data-returning] [data-testid="home-hero"]{display:none}');
   });
 });

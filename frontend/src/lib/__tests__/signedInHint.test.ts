@@ -3,7 +3,7 @@
  * feed skeleton (not the marketing hero) while Clerk loads. It is only a hint: Clerk decides.
  * Storage can be missing or throw (private windows, blocked site data), and must never break.
  */
-import { clearSignedInHint, hasSignedInHint, setSignedInHint } from '../signedInHint';
+import { SIGNED_IN_HINT_KEY, clearSignedInHint, setSignedInHint } from '../signedInHint';
 
 type Store = Record<string, string>;
 
@@ -29,29 +29,22 @@ afterEach(() => {
 });
 
 describe('signedInHint', () => {
-  it('is absent by default', () => {
-    installStorage();
-    expect(hasSignedInHint()).toBe(false);
-  });
-
-  it('is present after set and gone after clear', () => {
-    installStorage();
-    setSignedInHint();
-    expect(hasSignedInHint()).toBe(true);
-    clearSignedInHint();
-    expect(hasSignedInHint()).toBe(false);
-  });
-
-  it('stores nothing about the user, only a flag', () => {
+  it('stores a flag under the shared key (the inline script in +html reads the same key)', () => {
     const data = installStorage();
     setSignedInHint();
-    expect(Object.values(data)).toEqual(['1']);
+    expect(data).toEqual({ [SIGNED_IN_HINT_KEY]: '1' });
+  });
+
+  it('is gone after clear', () => {
+    const data = installStorage();
+    setSignedInHint();
+    clearSignedInHint();
+    expect(data).toEqual({});
   });
 
   it('does not throw and reports no hint when storage is missing', () => {
     expect(() => setSignedInHint()).not.toThrow();
     expect(() => clearSignedInHint()).not.toThrow();
-    expect(hasSignedInHint()).toBe(false);
   });
 
   it('does not throw when storage throws', () => {
@@ -63,6 +56,5 @@ describe('signedInHint', () => {
     });
     expect(() => setSignedInHint()).not.toThrow();
     expect(() => clearSignedInHint()).not.toThrow();
-    expect(hasSignedInHint()).toBe(false);
   });
 });
