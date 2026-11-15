@@ -40,7 +40,7 @@ counts only go up.
 ### Checkpoint A
 - [ ] Gates green, no new tsc/lint errors vs baseline
 - [ ] Manual 1-3 above pass (same Django user; new-user status confirmed; cancel clean)
-- [ ] Google `image_url` shows up as `Profile.imageUrl` for the returning user (spec assumption 5)
+- [x] Google `image_url` shows up as `Profile.imageUrl` (spec assumption 5). 2026-11-15: confirmed on the live site (web) with a new test-user account; Hillary reports the Google photo is used
 - [ ] **Human review before Phase 2**
 
 ---
@@ -89,7 +89,7 @@ counts only go up.
 ### T6: Production setup + beta checklist (Hillary)  (DEPLOY.md written; dashboard + smoke test pending)
 - [ ] Follow "Google Cloud / Clerk setup" in the spec: Google Cloud Web OAuth client (consent screen External + Testing), add test users, paste Client ID/Secret into the Clerk **production** Google connection, add redirect URLs
 - [x] Add a "Google sign-in" section to `DEPLOY.md` (or `SPEC.md` if `DEPLOY.md` doesn't exist yet) listing those steps and the "add each tester to Google Test users" invite step
-- [~] Smoke test on the deployed Render frontend with one test-user account. 2026-11-15: deployed `v2` (needed the obsolete expo-modules-jsi patch removed, `40e5b53`); Hillary reports login works on the live site. Still to confirm: new-user username flow and an unlisted account getting Google's "access blocked"
+- [~] Smoke test on the deployed Render frontend with one test-user account. 2026-11-15: deployed `v2` (needed the obsolete expo-modules-jsi patch removed, `40e5b53`); Hillary reports login works on the live site. 2026-11-15: a new test-user Google account signed up on the live site (web) and got its Google photo. Still to confirm: that the username screen was shown, and an unlisted account getting Google's "access blocked"
 - Acceptance: a listed test user can sign up and log in on the production site; an unlisted account gets Google's "access blocked" page (expected)
 - Files: `DEPLOY.md` or `SPEC.md` · Scope: S (mostly manual)
 
