@@ -14,6 +14,13 @@ const mockSignUp = {
 };
 jest.mock('@clerk/clerk-expo', () => ({
   useSignUp: () => ({ isLoaded: true, signUp: mockSignUp, setActive: jest.fn() }),
+  useSSO: () => ({ startSSOFlow: jest.fn() }),
+}));
+
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+  warmUpAsync: jest.fn().mockResolvedValue(undefined),
+  coolDownAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('expo-router', () => ({

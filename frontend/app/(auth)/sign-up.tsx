@@ -5,6 +5,7 @@ import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
+import GoogleButton from '@/src/components/GoogleButton'
 import { useUsernameAvailability } from '@/src/hooks/useUsernameAvailability'
 
 export default function Page() {
@@ -145,6 +146,7 @@ export default function Page() {
           <ThemedText style={styles.errorText}>{errors}</ThemedText>
         </View>
       ) : null}
+      <GoogleButton />
       <ThemedText style = {styles.label}>First Name</ThemedText>
       <TextInput
         style={styles.input}

@@ -62,9 +62,9 @@ counts only go up.
 - Verify: `npx jest "app/(auth)" src/components`, full gates; **manual (web):** brand-new Google account → pick taken name (see suggestions) → pick free name → lands on `/`; check Django `Profile.display_username` equals it and the user appears in People search; repeat and Cancel → no `User` row for that sub
 - Files: `app/(auth)/choose-username.tsx`, `src/components/GoogleButton.tsx`, tests for both · Scope: M
 
-### T4: Button on `sign-up`
-- [ ] Render `GoogleButton` above the form with the same "or" divider; test that it renders on sign-up and the email form still works (`signup-submit` etc.)
-- Acceptance: existing `sign-up.test.tsx` still passes untouched; button placement matches sign-in
+### T4: Button on `sign-up`  ✅ CODE DONE
+- [x] Render `GoogleButton` above the form with the same "or" divider; test that it renders on sign-up and the email form still works (`signup-submit` etc.)
+- Acceptance: existing `sign-up.test.tsx` still passes (its assertions are untouched; it needed `useSSO` and `expo-web-browser` mocks added, since the button now calls them); button placement matches sign-in
 - Verify: `npx jest "app/(auth)"`, full gates
 - Files: `app/(auth)/sign-up.tsx`, `app/(auth)/__tests__/` (new test file) · Scope: S
 
