@@ -115,6 +115,53 @@ The beta intentionally runs on Clerk's **development** instance
    publishable key.
 5. Once all traffic has cut over, remove `CLERK_ISSUER_LEGACY`.
 
+### Google sign-in ("Continue with Google")
+
+Spec: `SPEC-google-signin.md`. Nothing in the repo or in Render holds a Google
+secret: the Google Client ID/Secret live **only** in the Clerk dashboard, and the
+app and backend never see them. No backend env var changes.
+
+**Why custom credentials, even on the dev instance.** Clerk's shared dev
+credentials sent the Google redirect to `clerk.shared.lcl.dev`, which doesn't
+resolve, so sign-in never reached Google. The dev instance needs its own Google
+OAuth client.
+
+One-time setup (already done for `splendid-sunbird-55`; repeat for any new Clerk
+instance):
+1. **Clerk Dashboard** → SSO connections → Google → turn on **Use custom
+   credentials**. Copy the **Authorized Redirect URI** it shows.
+2. **Google Cloud Console** → Google Auth Platform:
+   - Audience: user type **External**, publishing status **Testing**.
+   - Clients → Create client → type **Web application** (one client is enough;
+     iOS/Android client IDs are not used, sign-in runs in the system browser and
+     returns through Clerk).
+   - **Authorized redirect URIs:** the value copied from Clerk, pasted unchanged
+     with `https://` in front if Clerk shows it without the scheme.
+   - **Authorized JavaScript origins:** `http://localhost:8081` and the deployed
+     web origin (`https://videoessay-web.onrender.com`).
+3. Paste the Client ID and Client Secret into the Clerk Google connection and
+   save. Never commit them or put them in any `.env`.
+4. If Clerk rejects a redirect, add the web origin's `/sso-callback` and the
+   native `frontend://sso-callback` to the instance's allowed redirect URLs.
+
+**Beta invite checklist: Testing mode.** While the Google OAuth app is in
+**Testing**, only accounts listed under Google Cloud → Google Auth Platform →
+Audience → **Test users** can sign in (max 100). Anyone else gets Google's
+"access blocked" page, which is expected, not an app bug.
+- Add each beta tester's Google address to **Test users** before inviting them.
+- They must sign in with that exact Google account.
+- Moving to "In production" later needs Google's app verification (name, logo,
+  privacy policy, scopes).
+
+Behaviour to know:
+- A Google email that matches an existing Clerk account with a verified email is
+  linked to it automatically (same user, no duplicate).
+- A Google account Clerk has never seen is asked for a **username** on the
+  "Pick a username" screen; no session or Django user exists until it's saved,
+  and Cancel discards the attempt.
+- Native (iOS/Android) needs a dev build (`npx expo run:ios` / `run:android`);
+  Expo Go can't do the OAuth redirect. Android has not been verified yet.
+
 ## 5. Redeploying
 
 Render auto-deploys on every push to the connected branch (`autoDeploy: yes`
@@ -202,6 +249,10 @@ URLs before telling beta testers to use the app:
    token returns `200`.
 6. Backend response headers show `Strict-Transport-Security` and a specific
    (non-wildcard) `Access-Control-Allow-Origin` — never `*`.
+7. **Google sign-in:** on the live web URL, a Google account listed under
+   Google's **Test users** can sign in, and a brand-new one is asked for a
+   username before reaching the app. An unlisted account getting Google's
+   "access blocked" page is expected.
 
 ## 10. Cache, background jobs, and file storage (added, not yet provisioned)
 

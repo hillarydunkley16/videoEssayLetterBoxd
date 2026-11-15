@@ -86,9 +86,9 @@ counts only go up.
 - Verify: manual on simulators/devices + full gates + `expo export --platform web` still builds
 - Files: `app.json` (only if needed), `src/components/GoogleButton.tsx` · Scope: S
 
-### T6: Production setup + beta checklist (Hillary)
+### T6: Production setup + beta checklist (Hillary)  (DEPLOY.md written; dashboard + smoke test pending)
 - [ ] Follow "Google Cloud / Clerk setup" in the spec: Google Cloud Web OAuth client (consent screen External + Testing), add test users, paste Client ID/Secret into the Clerk **production** Google connection, add redirect URLs
-- [ ] Add a "Google sign-in" section to `DEPLOY.md` (or `SPEC.md` if `DEPLOY.md` doesn't exist yet) listing those steps and the "add each tester to Google Test users" invite step
+- [x] Add a "Google sign-in" section to `DEPLOY.md` (or `SPEC.md` if `DEPLOY.md` doesn't exist yet) listing those steps and the "add each tester to Google Test users" invite step
 - [ ] Smoke test on the deployed Render frontend with one test-user account
 - Acceptance: a listed test user can sign up and log in on the production site; an unlisted account gets Google's "access blocked" page (expected)
 - Files: `DEPLOY.md` or `SPEC.md` · Scope: S (mostly manual)
