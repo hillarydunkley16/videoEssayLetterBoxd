@@ -47,9 +47,9 @@ counts only go up.
 
 ## Phase 2 — New users
 
-### T2: Extract `useUsernameAvailability` (refactor only)
-- [ ] Move the debounce + stale-response guard + suggestions + fail-open logic out of `sign-up.tsx` into `src/hooks/useUsernameAvailability.ts` returning `{ checking, available, suggestions }`
-- [ ] `sign-up.tsx` uses the hook; markup and behaviour identical
+### T2: Extract `useUsernameAvailability` (refactor only)  ✅ DONE
+- [x] Move the debounce + stale-response guard + suggestions + fail-open logic out of `sign-up.tsx` into `src/hooks/useUsernameAvailability.ts` returning `{ checking, available, suggestions }`
+- [x] `sign-up.tsx` uses the hook; markup and behaviour identical
 - Acceptance: `app/(auth)/__tests__/sign-up.test.tsx` passes **with zero edits**; no behaviour change
 - Verify: `npx jest "app/(auth)"`, full gates vs baseline. If the existing test needs changes: STOP and ask.
 - Files: `src/hooks/useUsernameAvailability.ts`, `app/(auth)/sign-up.tsx` · Scope: S

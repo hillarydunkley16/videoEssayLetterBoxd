@@ -5,13 +5,7 @@ import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
-import { checkUsernameAvailability } from '@/src/api/users'
-
-// Matches the backend's USERNAME_MIN_LENGTH (movie_csv/views/api.py) — under this, there's
-// nothing meaningful to check yet, so we don't fire a request.
-const USERNAME_MIN_LENGTH = 3
-// Wait this long after the last keystroke so typing doesn't fire a request per character.
-const DEBOUNCE_MS = 250
+import { useUsernameAvailability } from '@/src/hooks/useUsernameAvailability'
 
 export default function Page() {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -26,46 +20,11 @@ export default function Page() {
   const [pendingVerification, setPendingVerification] = React.useState(false)
   const [code, setCode] = React.useState('')
 
-  // Live username availability. `null` means "unknown" (too short, not checked yet, or the
-  // check errored) — submit is only blocked when we positively know the name is taken, never
-  // just because we're unsure; Clerk is still the final authority on submit either way.
-  const [checkingUsername, setCheckingUsername] = React.useState(false)
-  const [usernameAvailable, setUsernameAvailable] = React.useState<boolean | null>(null)
-  const [usernameSuggestions, setUsernameSuggestions] = React.useState<string[]>([])
-  // Bumped on every keystroke, so a slow answer to an earlier candidate can't overwrite a
-  // newer one's result.
-  const usernameCheckId = React.useRef(0)
-
-  React.useEffect(() => {
-    const candidate = username.trim()
-    const mine = ++usernameCheckId.current
-
-    if (candidate.length < USERNAME_MIN_LENGTH) {
-      setCheckingUsername(false)
-      setUsernameAvailable(null)
-      setUsernameSuggestions([])
-      return
-    }
-
-    setCheckingUsername(true)
-    const handle = setTimeout(async () => {
-      try {
-        const result = await checkUsernameAvailability(candidate)
-        if (mine !== usernameCheckId.current) return
-        setUsernameAvailable(result.available)
-        setUsernameSuggestions(result.available ? [] : result.suggestions)
-      } catch (err) {
-        if (mine !== usernameCheckId.current) return
-        // Fail open: a network hiccup shouldn't block sign-up. Clerk checks again on submit.
-        setUsernameAvailable(null)
-        setUsernameSuggestions([])
-      } finally {
-        if (mine === usernameCheckId.current) setCheckingUsername(false)
-      }
-    }, DEBOUNCE_MS)
-
-    return () => clearTimeout(handle)
-  }, [username])
+  const {
+    checking: checkingUsername,
+    available: usernameAvailable,
+    suggestions: usernameSuggestions,
+  } = useUsernameAvailability(username)
 
   // Handle submission of sign-up form
   const onSignUpPress = async () => {
