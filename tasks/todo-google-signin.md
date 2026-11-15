@@ -81,9 +81,8 @@ counts only go up.
 ### T5: Native verification (iOS + Android dev builds)
 - [ ] `npx expo run:ios` and `run:android`; walk the new-user, returning-user, cancel and quit-on-username flows
 - [ ] Fix anything native-specific (redirect URL / scheme `frontend`, `expo-web-browser` options) in `app.json` or the button; add `frontend://sso-callback` to Clerk's allowed redirect URLs if the dashboard requires it
-- Progress 2026-11-15: iOS simulator builds (needed Expo package update, `76bb9e6`); Google sign-in from the sign-in page works. 2026-11-15: new user created on the iOS simulator via Google (Hillary): the "Pick a username" screen appeared and the Google photo was used. 2026-11-15: cancelling the Google picker on iOS works fine (Hillary). Cancel on "Pick a username" on iOS is fine (Hillary). Going to the home screen on "Pick a username" is fine too (Hillary; this is backgrounding, not a confirmed force-quit, and what happened on return was not stated). 2026-11-15: a true force-quit (swiping the app away) on "Pick a username" reopens to the landing page (Hillary; whether Google sign-in worked afterward was not stated). All iOS flows are now checked. Android SKIPPED by Hillary for now (no emulator set up): not verified, tracked as a known gap for Checkpoint C.
-- DECISION 2026-11-15 (Hillary): ship verified on web + iOS only. Android is not verified and is an accepted, known gap, not a blocker for Checkpoint C.
-- Acceptance: all four flows pass on web and iOS (Android deferred, see DECISION above)
+- Progress 2026-11-15: iOS simulator builds (needed Expo package update, `76bb9e6`); Google sign-in from the sign-in page works. 2026-11-15: new user created on the iOS simulator via Google (Hillary): the "Pick a username" screen appeared and the Google photo was used. 2026-11-15: cancelling the Google picker on iOS works fine (Hillary). Cancel on "Pick a username" on iOS is fine (Hillary). Going to the home screen on "Pick a username" is fine too (Hillary; this is backgrounding, not a confirmed force-quit, and what happened on return was not stated). 2026-11-15: a true force-quit (swiping the app away) on "Pick a username" reopens to the landing page (Hillary; whether Google sign-in worked afterward was not stated). All iOS flows are now checked. Android: the emulator (`ShareToApp`) was set up on 2026-11-15 (the dev client showed a black screen until reopened with the Metro URL; typing needed the emulator keyboard). 2026-11-16: new user created on the Android emulator via Google (Hillary; whether the username screen appeared and the Google photo was used not stated). Still to confirm on Android: cancel the picker, cancel and force-quit on the username screen. This supersedes the earlier "ship web + iOS only" decision (`dff9c2d`), which Hillary reversed by running Android.
+- Acceptance: all four flows pass on web, iOS and Android
 - Verify: manual on simulators/devices + full gates + `expo export --platform web` still builds
 - Files: `app.json` (only if needed), `src/components/GoogleButton.tsx` · Scope: S
 
@@ -95,6 +94,6 @@ counts only go up.
 - Files: `DEPLOY.md` or `SPEC.md` · Scope: S (mostly manual)
 
 ### Checkpoint C — done
-- [ ] Spec success criteria 1-6 all met on web and iOS (Android not verified: accepted gap, decided 2026-11-15)
+- [ ] Spec success criteria 1-6 all met on web, iOS, Android
 - [ ] Temporary logging removed; no Google/Clerk secrets in the repo
 - [ ] Ready for review / PR
