@@ -68,7 +68,7 @@ counts only go up.
 - Verify: `npx jest "app/(auth)"`, full gates
 - Files: `app/(auth)/sign-up.tsx`, `app/(auth)/__tests__/` (new test file) · Scope: S
 
-### Checkpoint B
+### Checkpoint B  ✅ APPROVED 2026-11-15 (username flow worked on web)
 - [ ] Gates green; test count up; no new tsc/lint errors
 - [ ] Spec success criteria 1-5 verified on web
 - [ ] Email/password sign-up and sign-in still work end to end
