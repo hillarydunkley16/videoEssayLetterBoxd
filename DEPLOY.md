@@ -144,12 +144,15 @@ instance):
 4. If Clerk rejects a redirect, add the web origin's `/sso-callback` and the
    native `frontend://sso-callback` to the instance's allowed redirect URLs.
 
-**Beta invite checklist: Testing mode.** While the Google OAuth app is in
-**Testing**, only accounts listed under Google Cloud → Google Auth Platform →
-Audience → **Test users** can sign in (max 100). Anyone else gets Google's
-"access blocked" page, which is expected, not an app bug.
-- Add each beta tester's Google address to **Test users** before inviting them.
-- They must sign in with that exact Google account.
+**Who can sign in: currently anyone.** The Google OAuth app is set to
+**Testing** with the Test users list, but in practice that list did **not**
+block anyone: accounts removed from it, and a throwaway account that had never
+used the app, all signed in on the live site (checked 2026-11-15; cause
+unknown). Treat Google's Test users list as **not** a gate. The beta is
+effectively open to any Google account.
+- If you need to limit sign-ups, do it in Clerk Dashboard → Configure →
+  Restrictions (allowlist or restricted sign-up mode), then test it once with
+  an unlisted account on the live site. Not set up yet.
 - Moving to "In production" later needs Google's app verification (name, logo,
   privacy policy, scopes).
 
@@ -249,10 +252,10 @@ URLs before telling beta testers to use the app:
    token returns `200`.
 6. Backend response headers show `Strict-Transport-Security` and a specific
    (non-wildcard) `Access-Control-Allow-Origin` — never `*`.
-7. **Google sign-in:** on the live web URL, a Google account listed under
-   Google's **Test users** can sign in, and a brand-new one is asked for a
-   username before reaching the app. An unlisted account getting Google's
-   "access blocked" page is expected.
+7. **Google sign-in:** on the live web URL, "Continue with Google" signs in an
+   existing account, and a brand-new Google account is asked for a username
+   before reaching the app and gets its Google photo. Google does not block
+   unlisted accounts (see section 4); don't expect an "access blocked" page.
 
 ## 10. Cache, background jobs, and file storage (added, not yet provisioned)
 
