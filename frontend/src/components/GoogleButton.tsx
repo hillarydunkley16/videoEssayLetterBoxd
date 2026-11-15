@@ -35,15 +35,18 @@ export default function GoogleButton() {
     inFlight.current = true
     setError('')
     try {
-      const { createdSessionId, setActive, authSessionResult } = await startSSOFlow({
+      const { createdSessionId, setActive, signUp, authSessionResult } = await startSSOFlow({
         strategy: 'oauth_google',
       })
       if (createdSessionId) {
         await setActive!({ session: createdSessionId })
         router.replace('/')
-      } else if (authSessionResult?.type === 'success') {
-        // New Google user (signUp.status === 'missing_requirements', missingFields ['username'],
-        // confirmed against the dev instance). TODO T3: router.replace('/choose-username').
+      } else if (
+        authSessionResult?.type === 'success' &&
+        signUp?.status === 'missing_requirements'
+      ) {
+        // New Google user: Clerk still needs a username before it will issue a session.
+        router.replace('/choose-username')
       }
       // Anything else is a cancel/dismiss: stay put, no error.
     } catch (err) {

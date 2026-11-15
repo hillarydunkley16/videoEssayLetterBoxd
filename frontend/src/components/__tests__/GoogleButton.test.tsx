@@ -74,6 +74,33 @@ describe('GoogleButton', () => {
     expect(screen.queryByTestId('google-error')).toBeNull();
   });
 
+  it('sends a brand-new Google user to choose-username without a session', async () => {
+    const setActive = jest.fn();
+    mockStartSSOFlow.mockResolvedValue({
+      createdSessionId: null,
+      setActive,
+      signUp: { status: 'missing_requirements' },
+      authSessionResult: { type: 'success' },
+    });
+    render(<GoogleButton />);
+    press();
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/choose-username'));
+    expect(setActive).not.toHaveBeenCalled();
+  });
+
+  it('does not go to choose-username when the user cancelled mid-flow', async () => {
+    mockStartSSOFlow.mockResolvedValue({
+      createdSessionId: null,
+      signUp: { status: 'missing_requirements' },
+      authSessionResult: { type: 'dismiss' },
+    });
+    render(<GoogleButton />);
+    press();
+    await waitFor(() => expect(mockStartSSOFlow).toHaveBeenCalled());
+    await act(async () => {});
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
   it('shows the Clerk error message when the flow throws', async () => {
     mockStartSSOFlow.mockRejectedValue({
       errors: [{ code: 'x', longMessage: 'Google is unavailable right now.' }],

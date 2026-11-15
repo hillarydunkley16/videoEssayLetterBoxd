@@ -54,10 +54,10 @@ counts only go up.
 - Verify: `npx jest "app/(auth)"`, full gates vs baseline. If the existing test needs changes: STOP and ask.
 - Files: `src/hooks/useUsernameAvailability.ts`, `app/(auth)/sign-up.tsx` · Scope: S
 
-### T3: `choose-username` screen + new-user branch
-- [ ] Tests first: submit disabled while checking or known-taken; available → `signUp.update({ username })` then `setActive({ session: createdSessionId })` then `router.replace('/')`; Clerk error (e.g. taken at submit) shown inline via `getClerkErrorMessage`; **Cancel** goes to `/sign-in` without calling `setActive` or `update`; taken name shows suggestions that fill the field; no `missing_requirements` sign-up in progress → redirect to `/sign-in`
-- [ ] `app/(auth)/choose-username.tsx` using `useUsernameAvailability`; styles matching sign-up
-- [ ] `GoogleButton`: replace the T1 stub with `router.replace('/choose-username')` when `authSessionResult.type === 'success'` **and** `!createdSessionId` **and** `signUp.status === 'missing_requirements'`
+### T3: `choose-username` screen + new-user branch  ✅ CODE DONE (manual pending)
+- [x] Tests first: submit disabled while checking or known-taken; available → `signUp.update({ username })` then `setActive({ session: createdSessionId })` then `router.replace('/')`; Clerk error (e.g. taken at submit) shown inline via `getClerkErrorMessage`; **Cancel** goes to `/sign-in` without calling `setActive` or `update`; taken name shows suggestions that fill the field; no `missing_requirements` sign-up in progress → redirect to `/sign-in`
+- [x] `app/(auth)/choose-username.tsx` using `useUsernameAvailability`; styles matching sign-up
+- [x] `GoogleButton`: replace the T1 stub with `router.replace('/choose-username')` when `authSessionResult.type === 'success'` **and** `!createdSessionId` **and** `signUp.status === 'missing_requirements'`
 - Acceptance: new Google user cannot reach the app without a username; quitting leaves no session and no Django user
 - Verify: `npx jest "app/(auth)" src/components`, full gates; **manual (web):** brand-new Google account → pick taken name (see suggestions) → pick free name → lands on `/`; check Django `Profile.display_username` equals it and the user appears in People search; repeat and Cancel → no `User` row for that sub
 - Files: `app/(auth)/choose-username.tsx`, `src/components/GoogleButton.tsx`, tests for both · Scope: M
