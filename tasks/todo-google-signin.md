@@ -23,11 +23,11 @@ counts only go up.
 | `npm run lint` | 0 errors, 231 warnings |
 | `expo export --platform web` | succeeds |
 
-### T1: Shared Google button + web callback, on `sign-in`
-- [ ] Tests first (mock `@clerk/clerk-expo` `useSSO`, `expo-router`): button calls `startSSOFlow({ strategy: 'oauth_google' })` with no `redirectUrl`; `createdSessionId` → `setActive` then `router.replace('/')`; `authSessionResult.type !== 'success'` (cancel) → no navigation, no error; thrown error → `getClerkErrorMessage` text shown; two quick taps start one flow; button renders above the email form with an "or" divider
-- [ ] `src/components/GoogleButton.tsx`: owns the SSO call and the three branches (returning / new / cancel). New-user branch is a stub here (`TODO T3`); log `signUp.status` and `signUp.missingFields` **temporarily**
-- [ ] `app/sso-callback.tsx` (web popup landing route) calling `WebBrowser.maybeCompleteAuthSession()`; module-level call also in the button file; `warmUpAsync` on native only
-- [ ] Render the button on `app/(auth)/sign-in.tsx` above the form with an "or" divider
+### T1: Shared Google button + web callback, on `sign-in`  ✅ CODE DONE (manual 1-4 pending)
+- [x] Tests first (mock `@clerk/clerk-expo` `useSSO`, `expo-router`): button calls `startSSOFlow({ strategy: 'oauth_google' })` with no `redirectUrl`; `createdSessionId` → `setActive` then `router.replace('/')`; `authSessionResult.type !== 'success'` (cancel) → no navigation, no error; thrown error → `getClerkErrorMessage` text shown; two quick taps start one flow; button renders above the email form with an "or" divider
+- [x] `src/components/GoogleButton.tsx`: owns the SSO call and the three branches (returning / new / cancel). New-user branch is a stub here (`TODO T3`); log `signUp.status` and `signUp.missingFields` **temporarily**
+- [x] `app/sso-callback.tsx` (web popup landing route) calling `WebBrowser.maybeCompleteAuthSession()`; module-level call also in the button file; `warmUpAsync` on native only
+- [x] Render the button on `app/(auth)/sign-in.tsx` above the form with an "or" divider
 - Acceptance: unit tests pass; existing sign-in behaviour unchanged; `startSSOFlow` is invoked synchronously from the press handler (no `await` before it, popup blockers)
 - Verify: `npx jest "app/(auth)"` then full gates vs T0 baseline
 - Files: `src/components/GoogleButton.tsx`, `app/sso-callback.tsx`, `app/(auth)/sign-in.tsx`, `src/components/__tests__/GoogleButton.test.tsx` · Scope: M

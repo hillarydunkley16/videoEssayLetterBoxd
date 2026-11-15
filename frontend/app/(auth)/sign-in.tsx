@@ -6,6 +6,7 @@ import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
+import GoogleButton from '@/src/components/GoogleButton'
 
 export default function Page() {
   const { signIn, setActive, isLoaded } = useSignIn()
@@ -153,6 +154,7 @@ export default function Page() {
             <ThemedText style = {styles.errorText}>{errors}</ThemedText>
           </View>
         ): null}
+        <GoogleButton />
         <ThemedText style={styles.label}>Email address</ThemedText>
         <TextInput
           style={styles.input}
