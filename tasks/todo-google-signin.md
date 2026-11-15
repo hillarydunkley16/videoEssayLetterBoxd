@@ -32,10 +32,10 @@ counts only go up.
 - Verify: `npx jest "app/(auth)"` then full gates vs T0 baseline
 - Files: `src/components/GoogleButton.tsx`, `app/sso-callback.tsx`, `app/(auth)/sign-in.tsx`, `src/components/__tests__/GoogleButton.test.tsx` · Scope: M
 - **Manual (Hillary, `expo start --web`, dev Clerk instance):**
-  1. [ ] Google account that **already has** an email/password account → signs in; note Django `User.id` before/after (same user, no second row). If it creates a duplicate: STOP and ask.
-  2. [ ] A Google account **never seen** by Clerk → note the logged `status` and `missingFields`. Expect `missing_requirements` and `username` in `missingFields`. If not: STOP, revise plan.
+  1. [~] Google account that **already has** an email/password account → signs in; (returning Clerk user signed in and landed on `/`; still to confirm: same Django `User.id`, no second row) note Django `User.id` before/after (same user, no second row). If it creates a duplicate: STOP and ask.
+  2. [x] A Google account **never seen** by Clerk → note the logged `status` and `missingFields`. **Confirmed 2026-11-15:** `missing_requirements`, `['username']`. Expect `missing_requirements` and `username` in `missingFields`. If not: STOP, revise plan.
   3. [ ] Cancel the Google window → stays on sign-in, no error.
-  4. [ ] Remove the temporary logging once confirmed.
+  4. [x] Remove the temporary logging once confirmed.
 
 ### Checkpoint A
 - [ ] Gates green, no new tsc/lint errors vs baseline
