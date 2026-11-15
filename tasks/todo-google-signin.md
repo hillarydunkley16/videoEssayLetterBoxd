@@ -81,6 +81,7 @@ counts only go up.
 ### T5: Native verification (iOS + Android dev builds)
 - [ ] `npx expo run:ios` and `run:android`; walk the new-user, returning-user, cancel and quit-on-username flows
 - [ ] Fix anything native-specific (redirect URL / scheme `frontend`, `expo-web-browser` options) in `app.json` or the button; add `frontend://sso-callback` to Clerk's allowed redirect URLs if the dashboard requires it
+- Progress 2026-11-15: iOS simulator builds (needed Expo package update, `76bb9e6`); Google sign-in from the sign-in page works. Still to confirm on iOS: new user, cancel, quit-on-username. Android not started.
 - Acceptance: all four flows pass on both platforms
 - Verify: manual on simulators/devices + full gates + `expo export --platform web` still builds
 - Files: `app.json` (only if needed), `src/components/GoogleButton.tsx` · Scope: S
