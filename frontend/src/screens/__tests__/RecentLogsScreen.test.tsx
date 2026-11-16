@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { act, render, screen } from '@testing-library/react-native';
+import { FlatList } from 'react-native';
 
 const mockGetToken = jest.fn();
 
@@ -24,7 +25,7 @@ jest.mock('../../api/videos', () => ({
 }));
 
 import RecentLogsScreen from '../RecentLogsScreen';
-import { fetchLogs } from '../../api/logs';
+import { fetchLogs, fetchLogsPage } from '../../api/logs';
 import { fetchPopularVideoEssays, fetchPopularVideoEssaysPublic } from '../../api/videos';
 
 jest.setTimeout(20000);
@@ -118,5 +119,38 @@ describe('RecentLogsScreen initial load', () => {
 
     expect(await screen.findByText('LOG l1')).toBeTruthy();
     expect(console.error).toHaveBeenCalled();
+  });
+});
+
+// The feed is paged and new logs land at the top while it is open (for example the log a new
+// visitor's replay creates right as the home screen loads). That pushes the last row of page 1
+// onto page 2, so the next page repeats a row already shown. Two rows with one public_id is a
+// duplicate React key, which the web dev overlay reports as an error.
+describe('RecentLogsScreen paging', () => {
+  it('shows a row once when the next page repeats it', async () => {
+    (fetchPopularVideoEssaysPublic as jest.Mock).mockResolvedValue(page([]));
+    (fetchLogs as jest.Mock).mockResolvedValue({
+      count: 3,
+      next: 'http://api.test/logList/?page=2',
+      previous: null,
+      results: [{ public_id: 'l1' }, { public_id: 'l2' }],
+    });
+    (fetchLogsPage as jest.Mock).mockResolvedValue({
+      count: 3,
+      next: null,
+      previous: null,
+      results: [{ public_id: 'l2' }, { public_id: 'l3' }],
+    });
+
+    render(<RecentLogsScreen />);
+    await screen.findByText('LOG l1');
+    await act(async () => {
+      await screen.UNSAFE_getAllByType(FlatList)[0].props.onEndReached();
+    });
+
+    expect(await screen.findByText('LOG l3')).toBeTruthy();
+    expect(screen.getAllByText('LOG l1')).toHaveLength(1);
+    expect(screen.getAllByText('LOG l2')).toHaveLength(1);
+    expect(console.error).not.toHaveBeenCalledWith(expect.stringContaining('same key'));
   });
 });

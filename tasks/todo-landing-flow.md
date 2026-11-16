@@ -106,13 +106,15 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [x] Real search works: `POST /api/search/` returned 200 with real results and thumbnails for "visual comedy" (SerpAPI key is set in dev).
 - [x] Rating, then Log it, opened the account sheet; `watchd:pending-log` in localStorage held `{youtubeId, rating: 5, reviewText: "", savedAt}` and nothing else.
 - [x] The pending log survived a page reload (storage unchanged, sheet closed, landing rendered).
-- [ ] Google sign-in redirect, then the log appears in the diary (needs the real Google account; started in the browser, not finished)
+- [x] Google sign-in redirect on web, then the replay: `POST /api/logList/` returned 201 with rating 5 and the placeholder review (after the review_text fix below). Not yet confirmed: that the pending log was cleared and the diary row looks right
 - [ ] Email sign-up and verification code
 - [ ] Android emulator run
 - [ ] 31 searches in a minute shows the rate-limit message (covered by component tests only)
 - [ ] 24h expiry by hand, offline replay, LCP vs `tasks/plan-lcp.md`
 
 **Bug found during the Google run (fixed):** the replay's `POST /api/logList/` returned 400 `review_text: This field is required`. `Log.review_text` is a required `CharField(max_length=200)` with no `blank=True`, and the hook omitted it for rating-only logs. Replay now sends the same placeholder quickLog uses (`"Blank review text for quick log"`), and the review is capped at 200 characters in the sheet and in `pendingLog`. Follow-up for you to decide: that placeholder shows up as the review text in `logInfo` (existing quickLog behavior); the clean fix is `blank=True` plus a migration, which is a schema change.
+
+**Second bug found in the same run (fixed):** the home feed (`RecentLogsScreen`) threw "Encountered two children with the same key" right after the replay. A log added while the feed is open pushes the last row of page 1 onto page 2, so `loadMore` appended a row already shown. `loadMore` now skips rows it already has. `FollowingFeedScreen` has the identical `[...current, ...page.results]` pattern and is not changed here. Also: the new log does not appear in the global feed until a refresh.
 
 **Findings for T9**
 - Search input shows the browser's default focus outline as a second box inside the rounded field. Move the focus ring to the field.

@@ -59,7 +59,12 @@ export default function RecentLogsScreen() {
       const token = await getToken();
       if (!token) return;
       const page = await fetchLogsPage(nextUrl, token);
-      setLogs((current) => [...current, ...page.results]);
+      // The next page can repeat a row already shown when a log was added while the feed was
+      // open (it pushes the last row of the page before onto this one). Skip rows we have.
+      setLogs((current) => {
+        const seen = new Set(current.map((log) => log.public_id));
+        return [...current, ...page.results.filter((log) => !seen.has(log.public_id))];
+      });
       setNextUrl(page.next);
     } catch (error) {
       console.error("Failed to load more logs:", error);
