@@ -51,14 +51,15 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [x] `npx expo export --platform web` succeeds
 - [ ] Review with you before building UI
 
-### T5: RatingSheet and AccountSheet components
-- [ ] `RatingSheet`: essay title, channel, tappable stars (`TappableRatingDots`), optional review field, **Log it** disabled until a rating, Cancel
-- [ ] `AccountSheet`: shows the pending log (thumbnail, title, stars), `GoogleButton`, "Create account with email" (to `/sign-up`), "Log in" (to `/sign-in`), Back to rating
-- [ ] Both are RN `Modal`s with `accessibilityViewIsModal`, Escape closes on web, focus ring visible
-- [ ] **Log it** is double-tap safe (one `onSubmit` call)
-- [ ] Colors and fonts from `constants/theme.ts`; spacing on the 4px scale
+### T5: RatingSheet and AccountSheet components — done
+- [x] `RatingSheet`: essay title, channel, tappable stars (`TappableRatingDots`), optional review field, **Log it** disabled until a rating, Cancel
+- [x] `AccountSheet`: shows the pending log (thumbnail, title, stars), `GoogleButton`, "Create account with email" (to `/sign-up`), "Log in" (to `/sign-in`), Back to rating
+- [x] Both are RN `Modal`s with `accessibilityViewIsModal`, Escape closes on web, focus ring visible
+- [x] **Log it** is double-tap safe (one `onSubmit` call)
+- [x] Colors and fonts from `constants/theme.ts`; spacing on the 4px scale
 - Acceptance: component tests pass; rating required; double tap fires once; Back returns to rating without losing it
 - Verify: `npx jest src/components/__tests__/RatingSheet.test.tsx src/components/__tests__/AccountSheet.test.tsx`
+- Note: both share a small `BottomSheet` (RN `Modal`, scrim, 480px max width). Not yet mounted anywhere, so the web export does not exercise them until T6. Escape-to-close on web and the visual result are unchecked until T6/T8.
 - Files: `frontend/src/components/RatingSheet.tsx`, `AccountSheet.tsx` (new) and tests (new) · Scope: M
 
 ### T6: Rewrite SignedOutHomeScreen as search-first
