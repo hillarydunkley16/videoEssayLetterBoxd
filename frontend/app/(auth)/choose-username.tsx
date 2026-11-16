@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
+import AgeConfirmation from '@/src/components/AgeConfirmation'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
 import { useUsernameAvailability } from '@/src/hooks/useUsernameAvailability'
 import { useSignUp } from '@clerk/clerk-expo'
@@ -18,6 +19,8 @@ export default function Page() {
   const [username, setUsername] = React.useState('')
   const [errors, setErrors] = React.useState('')
   const [submitting, setSubmitting] = React.useState(false)
+  // Always starts unchecked: a new Google account is only created from this screen once it is ticked.
+  const [ageConfirmed, setAgeConfirmed] = React.useState(false)
   const {
     checking: checkingUsername,
     available: usernameAvailable,
@@ -30,7 +33,7 @@ export default function Page() {
   }
 
   const onSubmit = async () => {
-    if (!isLoaded || submitting) return
+    if (!isLoaded || submitting || !ageConfirmed) return
     setSubmitting(true)
     try {
       const result = await signUp.update({ username: username.trim() })
@@ -49,7 +52,7 @@ export default function Page() {
   }
 
   const submitDisabled =
-    !username.trim() || checkingUsername || usernameAvailable === false || submitting
+    !ageConfirmed || !username.trim() || checkingUsername || usernameAvailable === false || submitting
 
   return (
     <ThemedView style={styles.container}>
@@ -95,6 +98,7 @@ export default function Page() {
             </View>
           </View>
         ) : null}
+        <AgeConfirmation checked={ageConfirmed} onChange={setAgeConfirmed} />
         <Pressable
           testID="choose-username-submit"
           style={({ pressed }) => [

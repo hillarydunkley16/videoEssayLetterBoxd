@@ -160,3 +160,5 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [ ] Confirm the account sheet uses buttons into the existing sign-up and sign-in screens instead of inline email fields (plan, Key Decisions)
 - [ ] Popular list size for signed-out users (mockup shows 6)
 - [ ] Duplicate log behavior: replay creates a second log if the essay was already logged (default, since `rewatch` exists)
+
+- [x] T13: Age confirmation on `app/(auth)/choose-username.tsx` (new Google accounts from `/sign-in`). Box starts unchecked, Continue off until ticked; reported via `useAgeConfirmationSync`. Closes the T12 Google-on-sign-in gap.

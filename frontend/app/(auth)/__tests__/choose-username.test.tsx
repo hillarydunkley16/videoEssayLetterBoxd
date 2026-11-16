@@ -30,6 +30,7 @@ jest.mock('@/src/api/users', () => ({
 
 const type = (text: string) => fireEvent.changeText(screen.getByPlaceholderText('Enter username'), text);
 const submit = () => screen.getByTestId('choose-username-submit');
+const tick = () => fireEvent.press(screen.getByRole('checkbox', { name: 'I confirm I am 16 or older' }));
 const wait = () => act(async () => { await new Promise((r) => setTimeout(r, 400)); });
 
 describe('choose-username', () => {
@@ -75,6 +76,7 @@ describe('choose-username', () => {
     render(<Page />);
     type('janedoe');
     await screen.findByText(/available/i);
+    tick();
     fireEvent.press(submit());
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
     expect(mockUpdate).toHaveBeenCalledWith({ username: 'janedoe' });
@@ -87,6 +89,7 @@ describe('choose-username', () => {
     render(<Page />);
     type('janedoe');
     await screen.findByText(/available/i);
+    tick();
     fireEvent.press(submit());
     expect(await screen.findByText('That username is taken.')).toBeTruthy();
     expect(mockSetActive).not.toHaveBeenCalled();
@@ -98,11 +101,27 @@ describe('choose-username', () => {
     render(<Page />);
     type('janedoe');
     await screen.findByText(/available/i);
+    tick();
     fireEvent.press(submit());
     await wait();
     expect(mockSetActive).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalledWith('/');
     expect(screen.getByText(/couldn.t finish/i)).toBeTruthy();
+  });
+
+  it('asks for the age confirmation, unchecked, and keeps Continue off until it is ticked', async () => {
+    render(<Page />);
+    expect(screen.getByRole('checkbox', { name: 'I confirm I am 16 or older' }).props.accessibilityState.checked).toBe(false);
+    type('janedoe');
+    await screen.findByText(/available/i);
+    expect(submit().props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(submit());
+    expect(mockUpdate).not.toHaveBeenCalled();
+
+    tick();
+    expect(submit().props.accessibilityState?.disabled).toBe(false);
+    tick();
+    expect(submit().props.accessibilityState?.disabled).toBe(true);
   });
 
   it('Cancel goes to sign-in without saving or activating anything', () => {
