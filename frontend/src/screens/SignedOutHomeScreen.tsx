@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, TextStyle, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -106,6 +106,7 @@ export default function SignedOutHomeScreen() {
 
   const searching = query.trim().length >= MIN_QUERY_LENGTH;
   const list = searching ? rows : popular;
+  const [focused, setFocused] = useState(false);
 
   const openRating = (row: Row) => {
     setPick(row);
@@ -145,7 +146,13 @@ export default function SignedOutHomeScreen() {
             Rate it now and make an account at the end, so your first log is saved
           </Text>
 
-          <View style={[styles.search, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View
+            style={[
+              styles.search,
+              { backgroundColor: theme.surface, borderColor: focused ? theme.accent : theme.border },
+              focused && styles.searchFocused,
+            ]}
+          >
             <View style={styles.searchIcon}>
               <MaterialCommunityIcons name="magnify" size={20} color={theme.muted} />
             </View>
@@ -159,14 +166,18 @@ export default function SignedOutHomeScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="search"
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
             />
           </View>
 
-          <View style={styles.listHeader}>
-            <Text style={[styles.listTitle, { color: theme.muted, fontFamily: Fonts?.sansSemiBold }]}>
-              {searching ? "Results" : "Popular this week"}
-            </Text>
-          </View>
+          {searching || popular.length > 0 ? (
+            <View style={styles.listHeader}>
+              <Text style={[styles.listTitle, { color: theme.muted, fontFamily: Fonts?.sansSemiBold }]}>
+                {searching ? "Results" : "Popular this week"}
+              </Text>
+            </View>
+          ) : null}
 
           {state === "loading" ? (
             <Text style={[styles.note, { color: theme.muted, fontFamily: Fonts?.sans }]}>Searching</Text>
@@ -201,7 +212,11 @@ export default function SignedOutHomeScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Log ${row.title}`}
               onPress={() => openRating(row)}
-              style={[styles.row, { borderColor: theme.border }]}
+              style={({ pressed }) => [
+                styles.row,
+                { borderColor: theme.border },
+                pressed && { backgroundColor: theme.surface },
+              ]}
             >
               <View style={[styles.thumb, { backgroundColor: theme.surface }]}>
                 {row.thumbnail ? (
@@ -265,7 +280,9 @@ const styles = StyleSheet.create({
   },
   // The icon renders nothing until its font loads; reserve its size so the field doesn't shift.
   searchIcon: { width: 20, height: 20 },
-  searchInput: { flex: 1, minWidth: 0, paddingVertical: 12, fontSize: 16 },
+  // Web draws its own outline on the inner input; the ring is drawn on the field instead.
+  searchFocused: { borderWidth: 2, paddingHorizontal: 11 },
+  searchInput: { flex: 1, minWidth: 0, paddingVertical: 12, fontSize: 16, outlineStyle: "none" } as unknown as TextStyle,
   listHeader: { marginTop: 32, marginBottom: 8 },
   listTitle: { fontSize: 14 },
   note: { fontSize: 14, lineHeight: 20, paddingVertical: 12 },
@@ -287,6 +304,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   rowBody: { flex: 1, minWidth: 0, gap: 4 },
-  rowTitle: { fontSize: 16, lineHeight: 20 },
-  rowChannel: { fontSize: 14 },
+  rowTitle: { fontSize: 16, lineHeight: 20, textAlign: "left", writingDirection: "auto" },
+  rowChannel: { fontSize: 14, textAlign: "left", writingDirection: "auto" },
 });

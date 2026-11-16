@@ -123,7 +123,9 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - `GoogleButton` is a bright white block in the dark sheet (hardcoded `#fff`/`#ccc`).
 - SerpAPI rows have no runtime, so the mono runtime stamp only shows on stored essays.
 
-### T9: Polish pass (optional)
+### T9: Polish pass (optional) — fixes 1–5 done
+- Done: focus ring on the field (cobalt, 2px), heading hidden when no popular rows, left-pinned title and channel, `GoogleButton` themed (surface, border, text), pressed state on rows. Tests for heading and alignment written first.
+- Not done: runtime stamp on SerpAPI rows (needs the backend to return a duration). Light-mode web was checked in Chrome; the dark account sheet and Android were not.
 - [ ] Apply the `/unslop` findings: sentence-case labels instead of uppercase tracked, no italic emphasis, 4px spacing, line icons instead of glyphs, plain focus ring, real thumbnails
 - Acceptance: no item left on the unslop audit list for this screen
 - Verify: screenshot web and Android at phone width, light and dark

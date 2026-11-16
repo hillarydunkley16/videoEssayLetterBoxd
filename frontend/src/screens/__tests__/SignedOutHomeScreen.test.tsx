@@ -3,6 +3,7 @@
  * and only then is asked to make an account. The rated log is kept (pendingLog) so it can be
  * saved after sign-up.
  */
+import { StyleSheet } from 'react-native';
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
@@ -79,6 +80,19 @@ describe('SignedOutHomeScreen', () => {
     expect(await screen.findByText('Line Goes Up')).toBeTruthy();
     expect(screen.getByText('Popular this week')).toBeTruthy();
     expect(screen.queryByText('Create account')).toBeNull();
+  });
+
+  it('hides the popular heading when there are no popular essays', async () => {
+    mockPopular.mockResolvedValue({ count: 0, next: null, previous: null, results: [] });
+    render(<SignedOutHomeScreen />);
+    await act(async () => {});
+    expect(screen.queryByText('Popular this week')).toBeNull();
+  });
+
+  it('pins title and channel to the left so right-to-left names do not flip the row', async () => {
+    render(<SignedOutHomeScreen />);
+    const title = await screen.findByText('Line Goes Up');
+    expect(StyleSheet.flatten(title.props.style).textAlign).toBe('left');
   });
 
   it('makes no request for fewer than 3 characters', async () => {

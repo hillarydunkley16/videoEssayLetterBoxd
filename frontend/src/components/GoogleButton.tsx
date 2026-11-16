@@ -1,6 +1,8 @@
 import { ThemedText } from '@/components/themed-text'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
 import { useSSO } from '@clerk/clerk-expo'
+import { Colors } from '@/constants/theme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import * as React from 'react'
@@ -15,6 +17,7 @@ WebBrowser.maybeCompleteAuthSession()
  */
 export default function GoogleButton() {
   const { startSSOFlow } = useSSO()
+  const theme = Colors[useColorScheme()]
   const router = useRouter()
   const [error, setError] = React.useState('')
   // A ref, not state: a second tap can land before a state update re-renders.
@@ -64,16 +67,20 @@ export default function GoogleButton() {
         </View>
       ) : null}
       <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+        style={({ pressed }) => [
+          styles.button,
+          { borderColor: theme.border, backgroundColor: theme.surface },
+          pressed && styles.buttonPressed,
+        ]}
         onPress={onGooglePress}
         accessibilityRole="button"
       >
-        <ThemedText style={styles.buttonText}>Continue with Google</ThemedText>
+        <ThemedText style={[styles.buttonText, { color: theme.text }]}>Continue with Google</ThemedText>
       </Pressable>
       <View style={styles.divider}>
-        <View style={styles.line} />
+        <View style={[styles.line, { backgroundColor: theme.border }]} />
         <ThemedText style={styles.dividerText}>or</ThemedText>
-        <View style={styles.line} />
+        <View style={[styles.line, { backgroundColor: theme.border }]} />
       </View>
     </View>
   )
