@@ -14,6 +14,13 @@ const mockSignUp = {
 };
 jest.mock('@clerk/clerk-expo', () => ({
   useSignUp: () => ({ isLoaded: true, signUp: mockSignUp, setActive: jest.fn() }),
+  useSSO: () => ({ startSSOFlow: jest.fn() }),
+}));
+
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+  warmUpAsync: jest.fn().mockResolvedValue(undefined),
+  coolDownAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('expo-router', () => ({
@@ -28,11 +35,15 @@ jest.mock('@/src/api/users', () => ({
 
 import Page from '../sign-up';
 
+const AGE = 'I confirm I am 16 or older';
+
 function fillRequiredFieldsExceptUsername() {
+  const box = screen.getByRole('checkbox', { name: AGE });
+  if (!box.props.accessibilityState.checked) fireEvent.press(box);
   fireEvent.changeText(screen.getByPlaceholderText('Enter first name'), 'Jane');
   fireEvent.changeText(screen.getByPlaceholderText('Enter last name'), 'Doe');
   fireEvent.changeText(screen.getByPlaceholderText('Enter email'), 'jane@example.com');
-  fireEvent.changeText(screen.getByPlaceholderText('Enter password'), 'hunter22');
+  fireEvent.changeText(screen.getByPlaceholderText('Enter password'), 'hunter22!');
 }
 
 describe('sign-up username live check', () => {
@@ -187,5 +198,80 @@ describe('sign-up username live check', () => {
         expect.objectContaining({ username: 'janedoe' }),
       ),
     );
+  });
+});
+
+describe('sign-up bot protection', () => {
+  it('renders the clerk-captcha mount point so Clerk can show its Smart CAPTCHA widget', () => {
+    // Custom flows must provide this element, or Clerk logs an error and falls back to the
+    // invisible widget, which flags more real visitors as bots.
+    render(<Page />);
+    expect(screen.UNSAFE_root.findAllByProps({ nativeID: 'clerk-captcha' }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('sign-up password rules', () => {
+  const submitDisabled = () => screen.getByTestId('signup-submit').props.accessibilityState?.disabled;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCheckUsernameAvailability.mockResolvedValue({ available: true, suggestions: [] });
+  });
+
+  async function fillAllWithPassword(password: string) {
+    render(<Page />);
+    fillRequiredFieldsExceptUsername();
+    fireEvent.changeText(screen.getByPlaceholderText('Enter username'), 'janedoe');
+    await screen.findByText(/available/i);
+    fireEvent.changeText(screen.getByPlaceholderText('Enter password'), password);
+  }
+
+  it('keeps Continue off for a password with no number', async () => {
+    await fillAllWithPassword('hunter!!!');
+    expect(submitDisabled()).toBe(true);
+  });
+
+  it('keeps Continue off for a password with no special character', async () => {
+    await fillAllWithPassword('hunter22');
+    expect(submitDisabled()).toBe(true);
+  });
+
+  it('lets Continue through once the password has a number and a special character', async () => {
+    await fillAllWithPassword('hunter22!');
+    expect(submitDisabled()).toBe(false);
+  });
+
+  it('lists both rules under the password field', async () => {
+    await fillAllWithPassword('hunter');
+    expect(screen.getByText('Includes a number')).toBeTruthy();
+    expect(screen.getByText('Includes a special character')).toBeTruthy();
+  });
+});
+
+describe('sign-up age confirmation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCheckUsernameAvailability.mockResolvedValue({ available: true, suggestions: [] });
+  });
+
+  it('keeps Continue off until the visitor confirms they are 16 or older', async () => {
+    render(<Page />);
+    fillRequiredFieldsExceptUsername();
+    fireEvent.changeText(screen.getByPlaceholderText('Enter username'), 'janedoe');
+    await screen.findByText(/available/i);
+    const submit = () => screen.getByTestId('signup-submit').props.accessibilityState?.disabled;
+    expect(submit()).toBe(false);
+
+    fireEvent.press(screen.getByRole('checkbox', { name: AGE })); // untick
+    expect(submit()).toBe(true);
+  });
+
+  it('starts unchecked and holds back Google until it is ticked', () => {
+    render(<Page />);
+    const box = screen.getByRole('checkbox', { name: AGE });
+    expect(box.props.accessibilityState.checked).toBe(false);
+    expect(screen.getByRole('button', { name: 'Continue with Google' }).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(box);
+    expect(screen.getByRole('button', { name: 'Continue with Google' }).props.accessibilityState.disabled).toBe(false);
   });
 });

@@ -727,19 +727,47 @@ SerpAPI quota, backup note).
 
 ---
 
-## Task 16: Merge `v2` → `main`
+## Task 16: Merge `v2` → `main`  ✅ DONE (one live check outstanding)
 
 **Description:** Once beta is verified live, merge `v2` into `main`. Point Render
 Blueprint auto-deploy at `main`.
 
 **Acceptance criteria:**
-- [ ] `v2` merged to `main` (no force-push, no history rewrite)
-- [ ] Render deploys from `main` and stays green
-- [ ] `SPEC.md`, `tasks/`, `DEPLOY.md` all on `main`
+- [x] `v2` merged to `main` (no force-push, no history rewrite) — the merge
+      commit `60158e0` landed `v2` on `main`; later commits fast-forwarded
+      `main` and `v2` together, both at `2ce9152` as of 2026-10-28
+- [x] Render deploys from `main` and stays green — both services have
+      `branch: main`, auto-deploy on commit; backend deploy of `2ce9152`
+      went `live` (migrate ran clean, gunicorn up)
+- [x] `SPEC.md`, `tasks/`, `DEPLOY.md` all on `main`
 
 **Verification:**
-- [ ] `git log main -1` shows the merge; CI/Render build on `main` succeeds
-- [ ] Deployed URLs still serve after the `main` deploy
+- [x] `main` and `v2` point at the same commit; Render build on `main` succeeds
+- [ ] Deployed URLs still serve after the `main` deploy — backend boot confirmed
+      from logs; **a real `/api/search/` request (and a repeat to confirm the
+      cache) against the deployed app has not been run yet**
+
+**Notes:**
+- 2026-10-27: backend returned DB errors (`FATAL: (ENOTFOUND) tenant/user
+  postgres.<ref> not found`) because the **Supabase free project had paused**
+  after inactivity. Fixed by restoring it in the Supabase dashboard. This will
+  recur; see "Open follow-ups" below.
+- 2026-10-28: added optional Redis cache / Celery search task / S3 storage
+  plumbing (`2ce9152`; DEPLOY.md §10). Everything degrades to a free default
+  with no env vars set, so the beta is unchanged. Celery runs **eagerly**
+  (inline, no worker) in prod; the only gain with a broker would be retries,
+  since the search view still waits on the result. Not provisioned.
+- 2026-10-28: `test_render_blueprint` updated for the Supabase setup
+  (`DATABASE_URL` is a dashboard secret; no Render-managed DB).
+- README rewritten; old free-form notes are in git history (`18ec789^:README.md`).
+
+**Open follow-ups:**
+- [ ] Keep Supabase from pausing (scheduled ping to an endpoint that queries the
+      DB, or upgrade to Pro).
+- [ ] Verify the rate limiter's client IP on Render: it uses the last
+      `X-Forwarded-For` entry, which may be a shared proxy address (would put
+      all users in one 30/min bucket).
+- [ ] Decide whether to keep the Celery/Redis plumbing or remove it.
 
 **Dependencies:** 14
 
@@ -752,4 +780,5 @@ Blueprint auto-deploy at `main`.
 ### CHECKPOINT D — complete
 - [ ] All `SPEC.md` Success Criteria met
 - [ ] Full flow works on deployed web URL, data persists
-- [ ] `DEPLOY.md` accurate; `v2` merged to `main`; ready to invite testers
+- [ ] `DEPLOY.md` accurate (human read-through still pending); `v2` merged to
+      `main` ✅; ready to invite testers

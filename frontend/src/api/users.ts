@@ -92,3 +92,9 @@ export async function checkUsernameAvailability(candidate: string): Promise<User
     );
     return response.data;
 }
+
+// Tells the server the signed-in user confirmed they are 16 or older. The server records its own
+// receive time on the first call and ignores repeats, so retrying is safe.
+export async function recordAgeConfirmation(token: string): Promise<{ age_confirmed_at: string }> {
+    return authFetch("/users/age-confirmation/", { method: "POST", body: JSON.stringify({}) }, token);
+}

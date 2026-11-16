@@ -10,7 +10,7 @@ import {
   Inter_600SemiBold,
 } from '@expo-google-fonts/inter';
 
-// Web loads Fraunces/Inter via the <link> in app/+html.tsx instead — this
+// Web loads Fraunces/Inter via the self-hosted @font-face in app/+html.tsx instead — this
 // hook's `loaded`/`error` are only meaningful on native.
 export function useAppFonts() {
   const [loaded, error] = useFonts({

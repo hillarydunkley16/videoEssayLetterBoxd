@@ -60,6 +60,54 @@ export async function getOrCreateVideoEssayByYoutubeId(youtubeId: string, token:
 //     console.log("response:", response);
 //    return response;
 // }
+/** Maps the `search/` response to the rows the search UI renders. */
+const toSearchResults = (data: YouTubeSearchResponse | undefined): SearchResult[] =>
+  (data?.video_results ?? []).map((v) => ({
+    source: "api",
+    video: {
+      youtube_url: v.link,
+      title: v.title,
+      thumbnail: v.thumbnail?.static,
+      channel_name: v.channel?.name,
+      views: v.views,
+      channel_url: v.channel?.link,
+      duration: v.length,
+    },
+  }))
+
+export type YoutubeSearchStatus = "ok" | "rate_limited" | "unavailable" | "cancelled" | "error";
+
+/**
+ * Same request as fetchYoutubeResults, but says why it returned nothing so the signed-out
+ * landing page can tell "slow down" (429) from "search is off" (503) from a network failure.
+ * "cancelled" means the caller's AbortSignal fired because a newer query replaced this one.
+ */
+export const searchYoutube = async (
+  query: string,
+  signal?: AbortSignal,
+  location = 'us',
+  language = 'en',
+): Promise<{ results: SearchResult[]; status: YoutubeSearchStatus }> => {
+  try {
+    // `signal` is cast because the stale @types/axios 0.9 stub in devDependencies shadows
+    // axios 1.x's own types and predates AbortSignal support.
+    const response = await axios.post<YouTubeSearchResponse>(
+      `${API_BASE_URL}/search/`,
+      { q: query, location, language },
+      { signal } as object,
+    );
+    return { results: toSearchResults(response.data), status: "ok" };
+  } catch (error) {
+    // Checked by shape, not axios.isCancel/isAxiosError, which those stale types don't declare.
+    const failure = error as { code?: string; response?: { status?: number } };
+    if (failure?.code === "ERR_CANCELED") return { results: [], status: "cancelled" };
+    const httpStatus = failure?.response?.status;
+    if (httpStatus === 429) return { results: [], status: "rate_limited" };
+    if (httpStatus === 503) return { results: [], status: "unavailable" };
+    return { results: [], status: "error" };
+  }
+};
+
 /** 
  * fetch youtube results
  * does axios post for search
@@ -77,19 +125,7 @@ export const fetchYoutubeResults = async(query: string, location='us', language=
               "language": language,
           }
       );
-      const videoResults = response.data?.video_results ?? [];
-      const results: SearchResult[] = videoResults.map((v) => ({
-        source : "api",
-        video: {
-          youtube_url: v.link,
-          title: v.title,
-          thumbnail: v.thumbnail?.static,
-          channel_name: v.channel?.name,
-          views: v.views,
-          channel_url: v.channel?.link,
-        },
-      }))
-      return results
+      return toSearchResults(response.data)
 
   } catch(error){
       console.error("Error fetching Youtube data: ", error);
@@ -120,6 +156,19 @@ export const searchDataBase = async (
       return []
   }
 }
+// Same search, unauthenticated: VideoEssays is AllowAny for GET. The signed-out landing page
+// falls back to this when external search is switched off (503).
+export const searchDataBasePublic = async (query: string): Promise<SearchResult[]> => {
+  try {
+    const response = await axios.get<PaginatedResponse<VideoEssay>>(
+      `${API_BASE_URL}/VideoEssays/?search=${encodeURIComponent(query)}`,
+    );
+    return response.data.results.map((v) => ({ source: "database", video: v }));
+  } catch (error) {
+    console.error("Error searching database: ", error);
+    return [];
+  }
+};
 export const callSerpAPI = async (query: string) => {
   
   // const lastID = Number(response.results[response.count-1].id);

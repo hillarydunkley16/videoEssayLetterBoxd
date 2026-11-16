@@ -5,13 +5,11 @@ import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
-import { checkUsernameAvailability } from '@/src/api/users'
-
-// Matches the backend's USERNAME_MIN_LENGTH (movie_csv/views/api.py) — under this, there's
-// nothing meaningful to check yet, so we don't fire a request.
-const USERNAME_MIN_LENGTH = 3
-// Wait this long after the last keystroke so typing doesn't fire a request per character.
-const DEBOUNCE_MS = 250
+import GoogleButton from '@/src/components/GoogleButton'
+import AgeConfirmation from '@/src/components/AgeConfirmation'
+import PasswordRules from '@/src/components/PasswordRules'
+import { passwordMeetsRules } from '@/src/helpers/passwordRules'
+import { useUsernameAvailability } from '@/src/hooks/useUsernameAvailability'
 
 export default function Page() {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -23,49 +21,15 @@ export default function Page() {
   const [firstName, setFirstName] = React.useState('')
   const [lastName, setLastName] = React.useState('')
   const [username, setUsername] = React.useState('')
+  const [ageConfirmed, setAgeConfirmed] = React.useState(false)
   const [pendingVerification, setPendingVerification] = React.useState(false)
   const [code, setCode] = React.useState('')
 
-  // Live username availability. `null` means "unknown" (too short, not checked yet, or the
-  // check errored) — submit is only blocked when we positively know the name is taken, never
-  // just because we're unsure; Clerk is still the final authority on submit either way.
-  const [checkingUsername, setCheckingUsername] = React.useState(false)
-  const [usernameAvailable, setUsernameAvailable] = React.useState<boolean | null>(null)
-  const [usernameSuggestions, setUsernameSuggestions] = React.useState<string[]>([])
-  // Bumped on every keystroke, so a slow answer to an earlier candidate can't overwrite a
-  // newer one's result.
-  const usernameCheckId = React.useRef(0)
-
-  React.useEffect(() => {
-    const candidate = username.trim()
-    const mine = ++usernameCheckId.current
-
-    if (candidate.length < USERNAME_MIN_LENGTH) {
-      setCheckingUsername(false)
-      setUsernameAvailable(null)
-      setUsernameSuggestions([])
-      return
-    }
-
-    setCheckingUsername(true)
-    const handle = setTimeout(async () => {
-      try {
-        const result = await checkUsernameAvailability(candidate)
-        if (mine !== usernameCheckId.current) return
-        setUsernameAvailable(result.available)
-        setUsernameSuggestions(result.available ? [] : result.suggestions)
-      } catch (err) {
-        if (mine !== usernameCheckId.current) return
-        // Fail open: a network hiccup shouldn't block sign-up. Clerk checks again on submit.
-        setUsernameAvailable(null)
-        setUsernameSuggestions([])
-      } finally {
-        if (mine === usernameCheckId.current) setCheckingUsername(false)
-      }
-    }, DEBOUNCE_MS)
-
-    return () => clearTimeout(handle)
-  }, [username])
+  const {
+    checking: checkingUsername,
+    available: usernameAvailable,
+    suggestions: usernameSuggestions,
+  } = useUsernameAvailability(username)
 
   // Handle submission of sign-up form
   const onSignUpPress = async () => {
@@ -136,7 +100,7 @@ export default function Page() {
   // Blocked on empty/still-checking/known-taken only — never on `usernameAvailable === null`
   // (unchecked, too short, or the check errored), since Clerk still validates on submit.
   const submitDisabled =
-    !emailAddress || !password || !username || checkingUsername || usernameAvailable === false
+    !ageConfirmed || !emailAddress || !passwordMeetsRules(password) || !username || checkingUsername || usernameAvailable === false
 
   if (pendingVerification) {
     return (
@@ -186,6 +150,8 @@ export default function Page() {
           <ThemedText style={styles.errorText}>{errors}</ThemedText>
         </View>
       ) : null}
+      <AgeConfirmation checked={ageConfirmed} onChange={setAgeConfirmed} />
+      <GoogleButton disabled={!ageConfirmed} />
       <ThemedText style = {styles.label}>First Name</ThemedText>
       <TextInput
         style={styles.input}
@@ -251,6 +217,9 @@ export default function Page() {
         secureTextEntry={true}
         onChangeText={(password) => setPassword(password)}
       />
+      <PasswordRules password={password} />
+      {/* Clerk mounts its CAPTCHA here on web; custom flows must provide it. */}
+      <View nativeID="clerk-captcha" />
       <Pressable
         testID="signup-submit"
         style={({ pressed }) => [
@@ -307,6 +276,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#fff',
+    color: '#111',
   },
   usernameHint: {
     fontSize: 13,

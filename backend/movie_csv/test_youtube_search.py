@@ -7,12 +7,14 @@ actual SerpAPI call now happens inside movie_csv.tasks.run_youtube_search
 gets mocked rather than movie_csv.views.api.requests.get directly.
 """
 import json
+import threading
 from unittest import mock
 
 import requests
+from celery._state import _set_task_join_will_block
 from celery.exceptions import TimeoutError as CeleryTimeoutError
 from django.core.cache import cache
-from django.test import SimpleTestCase
+from django.test import Client, SimpleTestCase
 
 URL = "/api/search/"
 
@@ -80,6 +82,63 @@ class YoutubeSearchViewTests(SimpleTestCase):
             json=lambda: {"error": "Invalid API key"},
         )
         self.assertEqual(_post(self.client, {"q": "essay"}).status_code, 502)
+
+    @mock.patch("movie_csv.views.api.os.getenv", return_value="test-key")
+    @mock.patch("movie_csv.tasks.requests.get")
+    def test_signed_out_search_is_allowed_even_with_a_stale_token(self, mget, _getenv):
+        # The signed-out landing page searches with no credentials, and a visitor whose Clerk
+        # session just expired may still send an old Bearer token. Neither may get a 401/403.
+        mget.return_value = mock.Mock(status_code=200, json=lambda: {"video_results": []})
+        anonymous = _post(self.client, {"q": "essay"})
+        stale = self.client.post(
+            URL,
+            data=json.dumps({"q": "essay again"}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer expired.or.invalid",
+        )
+        self.assertEqual((anonymous.status_code, stale.status_code), (200, 200))
+
+    @mock.patch("movie_csv.views.api.os.getenv", return_value="test-key")
+    @mock.patch("movie_csv.tasks.requests.get")
+    def test_overlapping_searches_do_not_wedge_later_searches(self, mget, _getenv):
+        # Celery's eager path marks "a task is running" in a process-wide flag (not per
+        # thread) and restores the value it saw on entry. When two requests overlap and
+        # the first one leaves before the second, the flag is restored to True and stays
+        # there, so every later result.get() raised "Never call result.get() within a
+        # task!" (a 500) until the process restarted. The landing page makes overlap
+        # likely: each new keystroke abandons the previous request, but the server keeps
+        # running it. Order matters, so the test forces A to finish before B.
+        both_inside = threading.Barrier(2)
+        a_done = threading.Event()
+
+        def slow_get(*args, **kwargs):
+            both_inside.wait(timeout=5)
+            if threading.current_thread().name == "B":
+                a_done.wait(timeout=5)
+            return mock.Mock(status_code=200, json=lambda: {"video_results": []})
+
+        mget.side_effect = slow_get
+        codes = {}
+
+        def search(name):
+            codes[name] = _post(Client(), {"q": f"overlap {name}"}).status_code
+            if name == "A":
+                a_done.set()
+
+        threads = [threading.Thread(target=search, args=(n,), name=n) for n in ("A", "B")]
+        try:
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(timeout=10)
+            mget.side_effect = None
+            mget.return_value = mock.Mock(status_code=200, json=lambda: {"video_results": []})
+            later = _post(self.client, {"q": "after the overlap"}).status_code
+        finally:
+            _set_task_join_will_block(False)  # don't leak a stuck flag into other tests
+
+        self.assertEqual(codes, {"A": 200, "B": 200})
+        self.assertEqual(later, 200)
 
     def test_get_not_allowed(self):
         self.assertEqual(self.client.get(URL).status_code, 405)

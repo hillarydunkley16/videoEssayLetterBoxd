@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Image, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet, Text } from "react-native";
 import { fetchLogs, fetchLogsPage } from "../api/logs";
-import { fetchPopularVideoEssays } from "../api/videos";
+import { fetchPopularVideoEssaysPublic } from "../api/videos";
 import { Log } from "../types/log";
 import { VideoEssay } from "../types/videoEssay";
 import { ThemedText } from "@/components/themed-text";
@@ -29,19 +29,20 @@ export default function RecentLogsScreen() {
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     async function loadInitial() {
+      // The "popular this week" strip is secondary and its endpoint is public, so it neither
+      // waits for the token nor blocks the feed rows (the authenticated call also pays the
+      // backend's per-request auth work). It fills in whenever it arrives.
+      fetchPopularVideoEssaysPublic()
+        .then((popularPage) => setPopular(popularPage.results))
+        .catch((error) => {
+          console.error("Failed to load popular essays:", error);
+        });
       try {
         const token = await getToken();
         if (!token) return;
-        const [logsPage, popularPage] = await Promise.all([
-          fetchLogs(token),
-          fetchPopularVideoEssays(token).catch((error) => {
-            console.error("Failed to load popular essays:", error);
-            return null;
-          }),
-        ]);
+        const logsPage = await fetchLogs(token);
         setLogs(logsPage.results);
         setNextUrl(logsPage.next);
-        if (popularPage) setPopular(popularPage.results);
       } catch (error) {
         console.error("Failed to load recent logs:", error);
       } finally {
@@ -58,7 +59,12 @@ export default function RecentLogsScreen() {
       const token = await getToken();
       if (!token) return;
       const page = await fetchLogsPage(nextUrl, token);
-      setLogs((current) => [...current, ...page.results]);
+      // The next page can repeat a row already shown when a log was added while the feed was
+      // open (it pushes the last row of the page before onto this one). Skip rows we have.
+      setLogs((current) => {
+        const seen = new Set(current.map((log) => log.public_id));
+        return [...current, ...page.results.filter((log) => !seen.has(log.public_id))];
+      });
       setNextUrl(page.next);
     } catch (error) {
       console.error("Failed to load more logs:", error);

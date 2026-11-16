@@ -1,7 +1,8 @@
 import { SignOutButton } from '../components/sign-out-button'
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
-import { SignedIn, SignedOut, useSession, useUser } from '@clerk/clerk-expo'
+import { SignedIn, useSession, useUser } from '@clerk/clerk-expo'
+import { HeroGate } from '@/components/ui/HeroGate'
 import { Link } from 'expo-router'
 import { useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native'
@@ -33,9 +34,9 @@ export default function Page() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1, width: '100%' }}>
         
-        <SignedOut>
+        <HeroGate>
           <SignedOutHomeScreen />
-        </SignedOut>
+        </HeroGate>
         <SignedIn>
           {/* <ThemedText>Hello {user?.username}</ThemedText> */}
            <UsernameGateBanner />

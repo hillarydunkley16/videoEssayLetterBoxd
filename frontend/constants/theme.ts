@@ -60,7 +60,7 @@ export const Colors = {
 // Display type (titles/headings) is Fraunces; body/UI type is Inter.
 // Native font family names must match the @expo-google-fonts asset names
 // loaded via useFonts (see app/hooks/use-app-fonts.ts); web falls back to
-// the Google Fonts stylesheet linked in app/+html.tsx.
+// the self-hosted @font-face rules in app/+html.tsx (files in public/fonts).
 export const Fonts = Platform.select({
   web: {
     display: "'Fraunces', Georgia, 'Times New Roman', serif",
