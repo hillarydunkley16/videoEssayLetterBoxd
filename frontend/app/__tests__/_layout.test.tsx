@@ -39,6 +39,7 @@ jest.mock('../hooks/use-app-fonts', () => ({ useAppFonts: () => mockFonts }));
 jest.mock('@/hooks/use-color-scheme', () => ({ useColorScheme: () => 'light' }));
 jest.mock('@/src/hooks/useShareIntentRouter', () => ({ useShareIntentRouter: () => {} }));
 jest.mock('@/src/hooks/usePendingLogReplay', () => ({ usePendingLogReplay: () => {} }));
+jest.mock('@/src/hooks/useAgeConfirmationSync', () => ({ useAgeConfirmationSync: () => {} }));
 jest.mock('@/components/ui/Toast', () => ({ Toast: () => null }));
 jest.mock('../../components/ui/WebNav', () => {
   const { Text } = require('react-native');

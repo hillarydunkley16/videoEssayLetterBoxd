@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useAppFonts } from './hooks/use-app-fonts'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import { useShareIntentRouter } from '@/src/hooks/useShareIntentRouter'
+import { useAgeConfirmationSync } from '@/src/hooks/useAgeConfirmationSync'
 import { usePendingLogReplay } from '@/src/hooks/usePendingLogReplay'
 import { Colors } from '@/constants/theme'
 import { Toast } from '@/components/ui/Toast'
@@ -23,6 +24,7 @@ function RootLayoutNav() {
   const theme = Colors[useColorScheme()];
   useShareIntentRouter();
   usePendingLogReplay();
+  useAgeConfirmationSync();
   const pathname = usePathname();
   const isWeb = Platform.OS === 'web';
   // Web loads Fraunces/Inter via the self-hosted @font-face in app/+html.tsx, not expo-font,

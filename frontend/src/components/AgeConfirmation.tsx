@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { clearAgeConfirmation, saveAgeConfirmation } from "@/src/lib/ageConfirmation";
 
 export const AGE_CONFIRMATION_LABEL = "I confirm I am 16 or older";
 
@@ -20,7 +21,12 @@ export default function AgeConfirmation({
       accessibilityRole="checkbox"
       accessibilityLabel={AGE_CONFIRMATION_LABEL}
       accessibilityState={{ checked }}
-      onPress={() => onChange(!checked)}
+      onPress={() => {
+        // Held in storage too: the Google redirect reloads the page, and the server is told
+        // only once the visitor is signed in (useAgeConfirmationSync).
+        void (checked ? clearAgeConfirmation() : saveAgeConfirmation());
+        onChange(!checked);
+      }}
       style={styles.row}
     >
       <MaterialCommunityIcons
