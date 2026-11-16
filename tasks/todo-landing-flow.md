@@ -62,16 +62,17 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - Note: both share a small `BottomSheet` (RN `Modal`, scrim, 480px max width). Not yet mounted anywhere, so the web export does not exercise them until T6. Escape-to-close on web and the visual result are unchecked until T6/T8.
 - Files: `frontend/src/components/RatingSheet.tsx`, `AccountSheet.tsx` (new) and tests (new) · Scope: M
 
-### T6: Rewrite SignedOutHomeScreen as search-first
-- [ ] Headline + one-line pitch + search box as the hero; feature list and hero "Create account" button removed
-- [ ] Search: 400ms debounce, 3-character minimum, abort previous request, uses `searchYoutube`
-- [ ] Empty query shows popular essays (`fetchPopularVideoEssaysPublic`), fetched after first paint
-- [ ] Messages: `rate_limited` → "Too many searches. Try again in a minute"; `unavailable` → falls back to DB-only results; `error` → retry link
-- [ ] Tap a result opens `RatingSheet`; **Log it** saves the pending log (T2) then opens `AccountSheet`; Cancel discards it
-- [ ] No storage or `Modal` access during render (static web export safe)
-- [ ] Update `SignedOutHomeScreen.test.tsx` (the feature-icon test is obsolete and is replaced, not skipped)
+### T6: Rewrite SignedOutHomeScreen as search-first — done
+- [x] Headline + one-line pitch + search box as the hero; feature list and hero "Create account" button removed
+- [x] Search: 400ms debounce, 3-character minimum, abort previous request, uses `searchYoutube`
+- [x] Empty query shows popular essays (`fetchPopularVideoEssaysPublic`), fetched after first paint
+- [x] Messages: `rate_limited` → "Too many searches. Try again in a minute"; `unavailable` → falls back to DB-only results; `error` → retry link
+- [x] Tap a result opens `RatingSheet`; **Log it** saves the pending log (T2) then opens `AccountSheet`; Cancel discards it
+- [x] No storage or `Modal` access during render (static web export safe)
+- [x] Update `SignedOutHomeScreen.test.tsx` (the feature-icon test is obsolete and is replaced, not skipped)
 - Acceptance: all UI success criteria in the spec pass in component tests; `HeroGate` still renders it on web
 - Verify: `npx jest src/screens/__tests__/SignedOutHomeScreen.test.tsx "app/(home)/__tests__/index.test.tsx"`
+- Notes: `unavailable` (503) falls back to a new `searchDataBasePublic` (GET `VideoEssays/?search=`, AllowAny). `RatingSheet` gained `initialRating`/`initialReview` so Back from the account sheet keeps the visitor's answer. Result links go through `extractYoutubeId` from `shareIntent.ts`, so there is one parser (spec Open Question 5). The exported `dist/index.html` contains the new headline and search box. Visual check and the LCP comparison are still T8.
 - Files: `frontend/src/screens/SignedOutHomeScreen.tsx`, its test · Scope: M
 
 ### T7: Log in button on the native top bar

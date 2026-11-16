@@ -11,12 +11,18 @@ export default function RatingSheet({
   visible,
   title,
   channel,
+  initialRating = 0,
+  initialReview = "",
   onSubmit,
   onCancel,
 }: {
   visible: boolean;
   title: string;
   channel?: string;
+  // What the sheet opens with. Defaults to blank; the landing page passes the visitor's
+  // earlier answer when they come Back from the account sheet.
+  initialRating?: number;
+  initialReview?: string;
   onSubmit: (rating: number, reviewText: string) => void;
   onCancel: () => void;
 }) {
@@ -29,10 +35,12 @@ export default function RatingSheet({
 
   useEffect(() => {
     if (!visible) return;
-    setRating(0);
-    setReview("");
-    setShowReview(false);
+    setRating(initialRating);
+    setReview(initialReview);
+    setShowReview(initialReview !== "");
     submitted.current = false;
+    // Only reset when the sheet opens; the initial values are read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const canSubmit = rating > 0;

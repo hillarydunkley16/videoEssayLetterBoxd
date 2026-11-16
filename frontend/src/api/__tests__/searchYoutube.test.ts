@@ -4,7 +4,7 @@
  */
 import axios from 'axios';
 
-import { fetchYoutubeResults, searchYoutube } from '../videos';
+import { fetchYoutubeResults, searchDataBasePublic, searchYoutube } from '../videos';
 
 jest.mock('axios');
 jest.mock('expo-crypto', () => ({}));
@@ -13,6 +13,7 @@ jest.mock('../client', () => ({ authFetch: jest.fn(), API_BASE_URL: 'http://api.
 jest.mock('../authPost', () => ({ useAuthPost: jest.fn() }));
 
 const post = axios.post as unknown as jest.Mock;
+const get = axios.get as unknown as jest.Mock;
 
 const apiRow = {
   link: 'https://www.youtube.com/watch?v=abc12345678',
@@ -98,5 +99,23 @@ describe('fetchYoutubeResults (existing callers)', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     post.mockRejectedValue(httpError(429));
     await expect(fetchYoutubeResults('q')).resolves.toEqual([]);
+  });
+});
+
+describe('searchDataBasePublic', () => {
+  it('searches the essays table without a token and tags rows as database results', async () => {
+    const essay = { id: 1, public_id: 'p1', title: 'Line Goes Up' };
+    get.mockResolvedValue({ data: { results: [essay] } });
+
+    const rows = await searchDataBasePublic('line goes & up');
+
+    expect(get).toHaveBeenCalledWith('http://api.test/VideoEssays/?search=line%20goes%20%26%20up');
+    expect(rows).toEqual([{ source: 'database', video: essay }]);
+  });
+
+  it('returns [] on failure', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    get.mockRejectedValue(new Error('down'));
+    await expect(searchDataBasePublic('q')).resolves.toEqual([]);
   });
 });

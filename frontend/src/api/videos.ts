@@ -155,6 +155,19 @@ export const searchDataBase = async (
       return []
   }
 }
+// Same search, unauthenticated: VideoEssays is AllowAny for GET. The signed-out landing page
+// falls back to this when external search is switched off (503).
+export const searchDataBasePublic = async (query: string): Promise<SearchResult[]> => {
+  try {
+    const response = await axios.get<PaginatedResponse<VideoEssay>>(
+      `${API_BASE_URL}/VideoEssays/?search=${encodeURIComponent(query)}`,
+    );
+    return response.data.results.map((v) => ({ source: "database", video: v }));
+  } catch (error) {
+    console.error("Error searching database: ", error);
+    return [];
+  }
+};
 export const callSerpAPI = async (query: string) => {
   
   // const lastID = Number(response.results[response.count-1].id);

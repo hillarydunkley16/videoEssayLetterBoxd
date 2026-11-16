@@ -30,7 +30,7 @@ describe('RatingSheet', () => {
 
   it('disables Log it until a rating is chosen', () => {
     const { onSubmit } = setup();
-    expect(screen.getByRole('button', { name: 'Log it' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Log it' }).props.accessibilityState.disabled).toBe(true);
     fireEvent.press(screen.getByRole('button', { name: 'Log it' }));
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -38,7 +38,7 @@ describe('RatingSheet', () => {
   it('submits the chosen rating with an empty review', () => {
     const { onSubmit } = setup();
     fireEvent.press(screen.getByLabelText('Rate 4 out of 5'));
-    expect(screen.getByRole('button', { name: 'Log it' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Log it' }).props.accessibilityState.disabled).toBe(false);
     fireEvent.press(screen.getByRole('button', { name: 'Log it' }));
     expect(onSubmit).toHaveBeenCalledWith(4, '');
   });
@@ -79,10 +79,18 @@ describe('RatingSheet', () => {
     rerender(<RatingSheet visible={false} {...essay} onSubmit={onSubmit} onCancel={jest.fn()} />);
     rerender(<RatingSheet visible {...essay} onSubmit={onSubmit} onCancel={jest.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Log it' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Log it' }).props.accessibilityState.disabled).toBe(true);
     fireEvent.press(screen.getByLabelText('Rate 2 out of 5'));
     fireEvent.press(screen.getByRole('button', { name: 'Log it' }));
     expect(onSubmit).toHaveBeenCalledTimes(2);
     expect(onSubmit).toHaveBeenLastCalledWith(2, '');
+  });
+
+  it('can reopen with the rating and review the visitor already gave (Back from the account sheet)', () => {
+    const { onSubmit } = setup({ initialRating: 4, initialReview: 'Sharp and funny' });
+    expect(screen.getByRole('button', { name: 'Log it' }).props.accessibilityState.disabled).toBe(false);
+    expect(screen.getByDisplayValue('Sharp and funny')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Log it' }));
+    expect(onSubmit).toHaveBeenCalledWith(4, 'Sharp and funny');
   });
 });
