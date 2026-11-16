@@ -140,6 +140,14 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - Verify: `npx jest src/api src/screens/__tests__/SignedOutHomeScreen.test.tsx`
 - Files: `frontend/src/api/videos.ts`, `frontend/src/api/__tests__/searchYoutube.test.ts`, `SignedOutHomeScreen.test.tsx` · Scope: XS
 
+### T11: Email sign-up inside the account sheet — built, needs your run
+- Mockup: https://claude.ai/artifact/NrdUQ2Wo6NWxd7hpSTrBuj
+- [x] Tests first (9 failed before the build, 15 pass now): Create account with email opens the form in the same sheet; Back returns to the choices; Continue stays off until fields are filled and the username is not taken; taken username offers suggestions; Clerk create then email-code prepare shows the verify step; Clerk errors show and keep the step; correct code activates the session and closes the sheet; wrong code keeps it open; Back from verify keeps the typed fields; reopening starts from the choices
+- [x] `src/components/EmailSignUpSteps.tsx` (new) holds the Clerk calls, same as `app/(auth)/sign-up.tsx`; `AccountSheet` switches between choices and the email form. `/sign-up` stays for people who start there. Google and Log in unchanged
+- [x] Web check: sheet opens the form on `/`, CAPTCHA mount point present, pending log saved, no new console errors. Not run: a real sign-up through the new form
+- [ ] You: complete a real email sign-up through the sheet (code, toast, diary row, storage cleared)
+- Files: `frontend/src/components/EmailSignUpSteps.tsx`, `AccountSheet.tsx`, `__tests__/AccountSheet.test.tsx` · Scope: M
+
 ## Open items to settle before or during the work
 - [ ] Confirm the account sheet uses buttons into the existing sign-up and sign-in screens instead of inline email fields (plan, Key Decisions)
 - [ ] Popular list size for signed-out users (mockup shows 6)

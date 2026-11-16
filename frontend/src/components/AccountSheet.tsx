@@ -1,14 +1,16 @@
+import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { RatingDots } from "@/components/ui/RatingDots";
 import BottomSheet from "./BottomSheet";
+import EmailSignUpSteps from "./EmailSignUpSteps";
 import GoogleButton from "./GoogleButton";
 
 // Asks a visitor to make an account once they have rated an essay. It shows the log that is
-// waiting and hands off to the existing Clerk screens (Google, /sign-up, /sign-in) rather than
-// rebuilding them. The pending log is already saved by the caller, so leaving the page is safe.
+// waiting. Google and Log in hand off to the existing Clerk flows; email sign-up happens inside
+// this sheet (EmailSignUpSteps) so the visitor never leaves the landing page. The pending log is already saved by the caller, so leaving the page is safe.
 export default function AccountSheet({
   visible,
   title,
@@ -25,12 +27,40 @@ export default function AccountSheet({
   onDismiss: () => void;
 }) {
   const theme = Colors[useColorScheme()];
+  const [step, setStep] = useState<"choose" | "email">("choose");
+
+  // A reopened sheet starts from the choices again.
+  useEffect(() => {
+    if (!visible) setStep("choose");
+  }, [visible]);
 
   // Close first so the modal is not left open over the auth screen.
-  const goTo = (href: "/(auth)/sign-up" | "/(auth)/sign-in") => {
+  const goToSignIn = () => {
     onDismiss();
-    router.push(href);
+    router.push("/(auth)/sign-in");
   };
+
+  const summary = (
+    <View style={[styles.pending, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      {thumbnail ? <Image source={{ uri: thumbnail }} style={styles.thumb} accessibilityIgnoresInvertColors /> : null}
+      <View style={styles.pendingText}>
+        <Text style={[styles.pendingTitle, { color: theme.text, fontFamily: Fonts?.displayMedium }]} numberOfLines={2}>
+          {title}
+        </Text>
+        <View accessible accessibilityLabel={`Rated ${rating} out of 5`}>
+          <RatingDots value={rating} size={14} />
+        </View>
+      </View>
+    </View>
+  );
+
+  if (step === "email") {
+    return (
+      <BottomSheet visible={visible} onClose={onDismiss}>
+        <EmailSignUpSteps summary={summary} onBack={() => setStep("choose")} onComplete={onDismiss} />
+      </BottomSheet>
+    );
+  }
 
   return (
     <BottomSheet visible={visible} onClose={onDismiss}>
@@ -38,24 +68,14 @@ export default function AccountSheet({
         Create an account to save it
       </Text>
 
-      <View style={[styles.pending, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        {thumbnail ? <Image source={{ uri: thumbnail }} style={styles.thumb} accessibilityIgnoresInvertColors /> : null}
-        <View style={styles.pendingText}>
-          <Text style={[styles.pendingTitle, { color: theme.text, fontFamily: Fonts?.displayMedium }]} numberOfLines={2}>
-            {title}
-          </Text>
-          <View accessible accessibilityLabel={`Rated ${rating} out of 5`}>
-            <RatingDots value={rating} size={14} />
-          </View>
-        </View>
-      </View>
+      {summary}
 
       <GoogleButton />
 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Create account with email"
-        onPress={() => goTo("/(auth)/sign-up")}
+        onPress={() => setStep("email")}
         style={[styles.primary, { backgroundColor: theme.accent }]}
       >
         <Text style={[styles.primaryText, { fontFamily: Fonts?.sansSemiBold }]}>Create account with email</Text>
@@ -63,7 +83,7 @@ export default function AccountSheet({
 
       <View style={styles.alt}>
         <Text style={[styles.altText, { color: theme.muted, fontFamily: Fonts?.sans }]}>Already have an account?</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Log in" onPress={() => goTo("/(auth)/sign-in")}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Log in" onPress={goToSignIn}>
           <Text style={[styles.altText, { color: theme.accent, fontFamily: Fonts?.sansSemiBold }]}>Log in</Text>
         </Pressable>
       </View>
