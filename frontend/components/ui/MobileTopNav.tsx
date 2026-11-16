@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { SignedIn } from '@clerk/clerk-expo'
+import { SignedIn, SignedOut } from '@clerk/clerk-expo'
 import { router, usePathname } from 'expo-router'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Colors, Fonts } from '@/constants/theme'
@@ -12,32 +12,54 @@ import { SearchField } from './SearchField'
 // they sit in their own thin bar above the stack content. Only shown when
 // signed in, matching MobileNav. Hidden on Profile and the single-log page,
 // where a search entry point doesn't make sense.
+// Signed out, the bar shows the app name and a Log in button at the right (web gets its Log
+// in from WebNav). It is hidden on the auth screens, where the button would point at the
+// screen you are already on.
+const AUTH_ROUTES = ['/sign-in', '/sign-up', '/choose-username', '/sso-callback']
+
 export function MobileTopNav() {
   const theme = Colors[useColorScheme()]
   const pathname = usePathname()
   const hideSearch = pathname === '/profile' || pathname === '/singleLog'
   const onSearchPage = pathname.includes('search')
 
-  if (hideSearch) return null
-
   return (
-    <SignedIn>
-      <View style={[styles.nav, { borderColor: theme.border, backgroundColor: theme.background }]}>
-        <Text style={[styles.brand, { color: theme.text, fontFamily: Fonts?.display }]}>watchd</Text>
-        {onSearchPage ? (
-          <SearchField theme={theme} style={styles.searchContainer} />
-        ) : (
-          <Pressable
-            style={[styles.searchButton, { backgroundColor: theme.accent }]}
-            onPress={() => router.push('/(tabs)/search')}
-            accessibilityRole="button"
-            accessibilityLabel="Search"
-          >
-            <MaterialCommunityIcons name="magnify" size={20} color="#fff" />
-          </Pressable>
+    <>
+      <SignedIn>
+        {hideSearch ? null : (
+          <View style={[styles.nav, { borderColor: theme.border, backgroundColor: theme.background }]}>
+            <Text style={[styles.brand, { color: theme.text, fontFamily: Fonts?.display }]}>watchd</Text>
+            {onSearchPage ? (
+              <SearchField theme={theme} style={styles.searchContainer} />
+            ) : (
+              <Pressable
+                style={[styles.searchButton, { backgroundColor: theme.accent }]}
+                onPress={() => router.push('/(tabs)/search')}
+                accessibilityRole="button"
+                accessibilityLabel="Search"
+              >
+                <MaterialCommunityIcons name="magnify" size={20} color="#fff" />
+              </Pressable>
+            )}
+          </View>
         )}
-      </View>
-    </SignedIn>
+      </SignedIn>
+      <SignedOut>
+        {AUTH_ROUTES.some((route) => pathname.includes(route)) ? null : (
+          <View style={[styles.nav, { borderColor: theme.border, backgroundColor: theme.background }]}>
+            <Text style={[styles.brand, { color: theme.text, fontFamily: Fonts?.display }]}>watchd</Text>
+            <Pressable
+              onPress={() => router.push('/(auth)/sign-in')}
+              accessibilityRole="button"
+              accessibilityLabel="Log in"
+              hitSlop={8}
+            >
+              <Text style={[styles.login, { color: theme.accent, fontFamily: Fonts?.sansSemiBold }]}>Log in</Text>
+            </Pressable>
+          </View>
+        )}
+      </SignedOut>
+    </>
   )
 }
 
@@ -53,6 +75,9 @@ const styles = StyleSheet.create({
   },
   brand: {
     fontSize: 17,
+  },
+  login: {
+    fontSize: 15,
   },
   searchContainer: {
     flex: 1,

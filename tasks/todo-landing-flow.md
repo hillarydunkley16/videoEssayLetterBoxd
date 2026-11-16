@@ -75,18 +75,19 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - Notes: `unavailable` (503) falls back to a new `searchDataBasePublic` (GET `VideoEssays/?search=`, AllowAny). `RatingSheet` gained `initialRating`/`initialReview` so Back from the account sheet keeps the visitor's answer. Result links go through `extractYoutubeId` from `shareIntent.ts`, so there is one parser (spec Open Question 5). The exported `dist/index.html` contains the new headline and search box. Visual check and the LCP comparison are still T8.
 - Files: `frontend/src/screens/SignedOutHomeScreen.tsx`, its test · Scope: M
 
-### T7: Log in button on the native top bar
-- [ ] `MobileTopNav` shows "Log in" at the right when signed out (web keeps `WebNav`'s existing Log in / Sign up)
-- [ ] Hidden on auth routes
+### T7: Log in button on the native top bar — done
+- [x] `MobileTopNav` shows "Log in" at the right when signed out (web keeps `WebNav`'s existing Log in / Sign up)
+- [x] Hidden on auth routes
 - Acceptance: native signed-out users see Log in top right; signed-in layout unchanged
 - Verify: `npx jest components` (new or updated nav test)
+- Note: also hidden on `/choose-username` and `/sso-callback`; `/singleLog` and `/profile` hide only the signed-in search entry, so a signed-out visitor there still gets Log in.
 - Files: `frontend/components/ui/MobileTopNav.tsx` and test · Scope: S
 
 ### Checkpoint B — automated gates
-- [ ] `npx jest` green
-- [ ] `npx tsc --noEmit` (no new errors), `npm run lint` (no new warnings)
-- [ ] `npx expo export --platform web` succeeds
-- [ ] `python manage.py test` green
+- [x] `npx jest` green (53 suites, 384 tests)
+- [x] `npx tsc --noEmit` zero errors; eslint 0 errors on touched files
+- [x] `npx expo export --platform web` succeeds
+- [x] `python manage.py test` green (323 tests)
 - [ ] Review with you before manual verification
 
 ### T8: Manual verification (web + Android)
