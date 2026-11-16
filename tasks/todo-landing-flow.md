@@ -32,21 +32,23 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - Verify: `npx jest src/api` (new test file with axios mocked)
 - Files: `frontend/src/api/videos.ts`, `frontend/src/api/__tests__/searchYoutube.test.ts` (new) · Scope: S
 
-### T4: usePendingLogReplay + mount in root layout
-- [ ] **Prove-It test first:** two simultaneous sign-in signals create exactly one log
-- [ ] `src/hooks/usePendingLogReplay.ts`: when signed in and a pending log exists, call `getOrCreateVideoEssayByYoutubeId`, then `createLog` with `{essay, date: today, rating, review_text}`
-- [ ] Clear the pending log only after `createLog` succeeds; in-flight guard prevents a second run
-- [ ] On 422 or network failure: keep the pending log and show a toast with the reason (no retry loop)
-- [ ] Does nothing when signed out or when no pending log exists
-- [ ] Mounted in `app/_layout.tsx` next to `useShareIntentRouter()`
+### T4: usePendingLogReplay + mount in root layout — done
+- [x] **Prove-It test first:** two simultaneous sign-in signals create exactly one log
+- [x] `src/hooks/usePendingLogReplay.ts`: when signed in and a pending log exists, call `getOrCreateVideoEssayByYoutubeId`, then `createLog` with `{essay, date: today, rating, review_text}`
+- [x] Clear the pending log only after `createLog` succeeds; in-flight guard prevents a second run
+- [x] On 422 or network failure: keep the pending log and show a toast (no retry loop: a failed pending log is skipped until the app is reopened, but a newer one still replays)
+- [x] Does nothing when signed out or when no pending log exists
+- [x] Mounted in `app/_layout.tsx` next to `useShareIntentRouter()`
 - Acceptance: signed in + pending log → one resolve call, one create call, pending cleared, success toast; failure leaves pending in place
 - Verify: `npx jest src/hooks/__tests__/usePendingLogReplay.test.ts`
+- Note: `app/__tests__/_layout.test.tsx` now mocks the hook, like it already does for `useShareIntentRouter`.
 - Files: `frontend/src/hooks/usePendingLogReplay.ts` (new), its test (new), `frontend/app/_layout.tsx` · Scope: M
 
 ### Checkpoint A — logic verified, no UI yet
-- [ ] `npx jest` green
-- [ ] `npx tsc --noEmit` shows no new errors
-- [ ] `python manage.py test movie_csv.test_youtube_search` green
+- [x] `npx jest` green (50 suites, 349 tests)
+- [x] `npx tsc --noEmit` shows no new errors in touched files
+- [x] `python manage.py test movie_csv.test_youtube_search` green (12 tests)
+- [x] `npx expo export --platform web` succeeds
 - [ ] Review with you before building UI
 
 ### T5: RatingSheet and AccountSheet components
