@@ -101,6 +101,24 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [ ] LCP on Slow 4G compared with the numbers in `tasks/plan-lcp.md`
 - Record results in this file under each box.
 
+**Web run, dev servers (Expo on 8081, Django on 8000), Chrome at 430px wide, dark theme**
+- [x] Landing renders: headline, search, Log in / Sign up top right (WebNav). Static HTML check passed at T6.
+- [x] Real search works: `POST /api/search/` returned 200 with real results and thumbnails for "visual comedy" (SerpAPI key is set in dev).
+- [x] Rating, then Log it, opened the account sheet; `watchd:pending-log` in localStorage held `{youtubeId, rating: 5, reviewText: "", savedAt}` and nothing else.
+- [x] The pending log survived a page reload (storage unchanged, sheet closed, landing rendered).
+- [ ] Google sign-in redirect, then the log appears in the diary (needs the real Google account; started in the browser, not finished)
+- [ ] Email sign-up and verification code
+- [ ] Android emulator run
+- [ ] 31 searches in a minute shows the rate-limit message (covered by component tests only)
+- [ ] 24h expiry by hand, offline replay, LCP vs `tasks/plan-lcp.md`
+
+**Findings for T9**
+- Search input shows the browser's default focus outline as a second box inside the rounded field. Move the focus ring to the field.
+- "Popular this week" heading shows with nothing under it when the endpoint returns no rows (dev DB has 0). Hide the heading when there is nothing to list.
+- A channel name in Hebrew renders right-aligned in a left-to-right row. Pin the text alignment.
+- `GoogleButton` is a bright white block in the dark sheet (hardcoded `#fff`/`#ccc`).
+- SerpAPI rows have no runtime, so the mono runtime stamp only shows on stored essays.
+
 ### T9: Polish pass (optional)
 - [ ] Apply the `/unslop` findings: sentence-case labels instead of uppercase tracked, no italic emphasis, 4px spacing, line icons instead of glyphs, plain focus ring, real thumbnails
 - Acceptance: no item left on the unslop audit list for this screen
