@@ -1,5 +1,4 @@
 export interface EnvironmentVariables {
-    SERPAPI_KEY: string;
     EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: string;
     // Deployed backend root URL, e.g. https://videoessay-backend.onrender.com
     // Unset -> src/api/client.ts falls back to local-network discovery.
