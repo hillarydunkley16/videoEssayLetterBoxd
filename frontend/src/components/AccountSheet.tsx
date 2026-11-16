@@ -5,6 +5,7 @@ import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { RatingDots } from "@/components/ui/RatingDots";
 import BottomSheet from "./BottomSheet";
+import AgeConfirmation from "./AgeConfirmation";
 import EmailSignUpSteps from "./EmailSignUpSteps";
 import GoogleButton from "./GoogleButton";
 
@@ -28,10 +29,14 @@ export default function AccountSheet({
 }) {
   const theme = Colors[useColorScheme()];
   const [step, setStep] = useState<"choose" | "email">("choose");
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   // A reopened sheet starts from the choices again.
   useEffect(() => {
-    if (!visible) setStep("choose");
+    if (!visible) {
+      setStep("choose");
+      setAgeConfirmed(false);
+    }
   }, [visible]);
 
   // Close first so the modal is not left open over the auth screen.
@@ -70,13 +75,17 @@ export default function AccountSheet({
 
       {summary}
 
-      <GoogleButton />
+      <AgeConfirmation checked={ageConfirmed} onChange={setAgeConfirmed} />
+
+      <GoogleButton disabled={!ageConfirmed} />
 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Create account with email"
+        accessibilityState={{ disabled: !ageConfirmed }}
+        disabled={!ageConfirmed}
         onPress={() => setStep("email")}
-        style={[styles.primary, { backgroundColor: theme.accent }]}
+        style={[styles.primary, { backgroundColor: theme.accent }, !ageConfirmed && styles.disabled]}
       >
         <Text style={[styles.primaryText, { fontFamily: Fonts?.sansSemiBold }]}>Create account with email</Text>
       </Pressable>
@@ -105,5 +114,6 @@ const styles = StyleSheet.create({
   primaryText: { color: "#fff", fontSize: 16 },
   alt: { flexDirection: "row", justifyContent: "center", gap: 4, marginTop: 16 },
   altText: { fontSize: 14 },
+  disabled: { opacity: 0.4 },
   back: { paddingVertical: 12, alignItems: "center" },
 });

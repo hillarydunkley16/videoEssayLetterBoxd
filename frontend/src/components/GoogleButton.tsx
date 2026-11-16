@@ -15,7 +15,7 @@ WebBrowser.maybeCompleteAuthSession()
  * "Continue with Google" plus the "or" divider that separates it from the email form.
  * Owns the whole SSO call so sign-in and sign-up can't drift. See SPEC-google-signin.md.
  */
-export default function GoogleButton() {
+export default function GoogleButton({ disabled = false }: { disabled?: boolean }) {
   const { startSSOFlow } = useSSO()
   const theme = Colors[useColorScheme()]
   const router = useRouter()
@@ -34,7 +34,7 @@ export default function GoogleButton() {
   // No `await` before startSSOFlow: web opens a popup, which browsers block if it isn't
   // opened straight from the tap.
   const onGooglePress = async () => {
-    if (inFlight.current) return
+    if (disabled || inFlight.current) return
     inFlight.current = true
     setError('')
     try {
@@ -71,9 +71,12 @@ export default function GoogleButton() {
           styles.button,
           { borderColor: theme.border, backgroundColor: theme.surface },
           pressed && styles.buttonPressed,
+          disabled && styles.buttonDisabled,
         ]}
         onPress={onGooglePress}
+        disabled={disabled}
         accessibilityRole="button"
+        accessibilityState={{ disabled }}
       >
         <ThemedText style={[styles.buttonText, { color: theme.text }]}>Continue with Google</ThemedText>
       </Pressable>
@@ -101,6 +104,9 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.7,
+  },
+  buttonDisabled: {
+    opacity: 0.4,
   },
   buttonText: {
     color: '#111',

@@ -6,6 +6,7 @@ import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
 import GoogleButton from '@/src/components/GoogleButton'
+import AgeConfirmation from '@/src/components/AgeConfirmation'
 import PasswordRules from '@/src/components/PasswordRules'
 import { passwordMeetsRules } from '@/src/helpers/passwordRules'
 import { useUsernameAvailability } from '@/src/hooks/useUsernameAvailability'
@@ -20,6 +21,7 @@ export default function Page() {
   const [firstName, setFirstName] = React.useState('')
   const [lastName, setLastName] = React.useState('')
   const [username, setUsername] = React.useState('')
+  const [ageConfirmed, setAgeConfirmed] = React.useState(false)
   const [pendingVerification, setPendingVerification] = React.useState(false)
   const [code, setCode] = React.useState('')
 
@@ -98,7 +100,7 @@ export default function Page() {
   // Blocked on empty/still-checking/known-taken only — never on `usernameAvailable === null`
   // (unchecked, too short, or the check errored), since Clerk still validates on submit.
   const submitDisabled =
-    !emailAddress || !passwordMeetsRules(password) || !username || checkingUsername || usernameAvailable === false
+    !ageConfirmed || !emailAddress || !passwordMeetsRules(password) || !username || checkingUsername || usernameAvailable === false
 
   if (pendingVerification) {
     return (
@@ -148,7 +150,8 @@ export default function Page() {
           <ThemedText style={styles.errorText}>{errors}</ThemedText>
         </View>
       ) : null}
-      <GoogleButton />
+      <AgeConfirmation checked={ageConfirmed} onChange={setAgeConfirmed} />
+      <GoogleButton disabled={!ageConfirmed} />
       <ThemedText style = {styles.label}>First Name</ThemedText>
       <TextInput
         style={styles.input}

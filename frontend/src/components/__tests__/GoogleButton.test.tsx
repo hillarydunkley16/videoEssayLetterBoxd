@@ -39,6 +39,13 @@ describe('GoogleButton', () => {
     expect(mockStartSSOFlow).toHaveBeenCalledWith({ strategy: 'oauth_google' });
   });
 
+  it('does nothing when disabled, and says so to screen readers', () => {
+    render(<GoogleButton disabled />);
+    press();
+    expect(mockStartSSOFlow).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Continue with Google' }).props.accessibilityState.disabled).toBe(true);
+  });
+
   it('calls startSSOFlow synchronously from the press (popup blockers)', () => {
     mockStartSSOFlow.mockReturnValue(new Promise(() => {}));
     render(<GoogleButton />);

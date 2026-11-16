@@ -148,6 +148,12 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [ ] You: complete a real email sign-up through the sheet (code, toast, diary row, storage cleared)
 - Files: `frontend/src/components/EmailSignUpSteps.tsx`, `AccountSheet.tsx`, `__tests__/AccountSheet.test.tsx` · Scope: M
 
+### T12: Passwords and age confirmation on sign-up — built
+- [x] Password needs a number and a special character (`src/helpers/passwordRules.ts`, `PasswordRules.tsx`), on the account sheet and `/sign-up`. Clerk's own rules (default minimum 8) still apply; to enforce these two server-side too, set them in the Clerk dashboard
+- [x] "I confirm I am 16 or older" checkbox (`AgeConfirmation.tsx`), unchecked by default. In the sheet it holds back Google and Create account with email; on `/sign-up` it holds back Google and Continue. Log in is not held back. The sheet clears the tick when it closes
+- Gap to decide: the tick is a UI gate only. It is not stored, and Google on `/sign-in` can still create a new account without it
+- [ ] You: look at the checkbox in the sheet and on `/sign-up`
+
 ## Open items to settle before or during the work
 - [ ] Confirm the account sheet uses buttons into the existing sign-up and sign-in screens instead of inline email fields (plan, Key Decisions)
 - [ ] Popular list size for signed-out users (mockup shows 6)

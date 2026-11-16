@@ -31,7 +31,7 @@ jest.mock('@/src/hooks/useUsernameAvailability', () => ({
 }));
 jest.mock('../GoogleButton', () => {
   const { Text } = require('react-native');
-  return { __esModule: true, default: () => <Text>GOOGLE</Text> };
+  return { __esModule: true, default: ({ disabled }: { disabled?: boolean }) => <Text>{disabled ? 'GOOGLE OFF' : 'GOOGLE'}</Text> };
 });
 
 const log = { title: 'How to Do Visual Comedy', thumbnail: 'https://img.test/t.jpg', rating: 4 };
@@ -53,7 +53,11 @@ beforeEach(() => {
   mockSetActive.mockResolvedValue(undefined);
 });
 
+const AGE = 'I confirm I am 16 or older';
+const confirmAge = () => fireEvent.press(screen.getByRole('checkbox', { name: AGE }));
+
 function openEmailForm() {
+  confirmAge();
   fireEvent.press(screen.getByRole('button', { name: 'Create account with email' }));
 }
 
@@ -73,9 +77,31 @@ describe('AccountSheet', () => {
     expect(screen.getByLabelText('Rated 4 out of 5')).toBeTruthy();
   });
 
-  it('offers Google sign-in', () => {
+  it('offers Google sign-in once the visitor confirms they are 16 or older', () => {
     setup();
+    expect(screen.getByText('GOOGLE OFF')).toBeTruthy();
+    confirmAge();
     expect(screen.getByText('GOOGLE')).toBeTruthy();
+  });
+
+  it('asks for the age confirmation, unchecked, and holds back email sign-up until it is ticked', () => {
+    setup();
+    const box = screen.getByRole('checkbox', { name: AGE });
+    expect(box.props.accessibilityState.checked).toBe(false);
+    const email = () => screen.getByRole('button', { name: 'Create account with email' });
+    expect(email().props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(email());
+    expect(screen.queryByText('Create your account')).toBeNull();
+
+    confirmAge();
+    expect(screen.getByRole('checkbox', { name: AGE }).props.accessibilityState.checked).toBe(true);
+    expect(email().props.accessibilityState.disabled).toBe(false);
+  });
+
+  it('does not hold back Log in, which is for people who already have an account', () => {
+    setup();
+    fireEvent.press(screen.getByRole('button', { name: 'Log in' }));
+    expect(mockPush).toHaveBeenCalledWith('/(auth)/sign-in');
   });
 
   it('renders nothing when not visible', () => {
@@ -209,10 +235,13 @@ describe('AccountSheet', () => {
 
   it('starts from the choices again when the sheet is reopened', () => {
     const { rerender } = render(<AccountSheet visible {...log} onBack={jest.fn()} onDismiss={jest.fn()} />);
+    confirmAge();
     fireEvent.press(screen.getByRole('button', { name: 'Create account with email' }));
     rerender(<AccountSheet visible={false} {...log} onBack={jest.fn()} onDismiss={jest.fn()} />);
     rerender(<AccountSheet visible {...log} onBack={jest.fn()} onDismiss={jest.fn()} />);
     expect(screen.getByText('Create an account to save it')).toBeTruthy();
+    // The tick is not carried over to the next visitor.
+    expect(screen.getByRole('checkbox', { name: AGE }).props.accessibilityState.checked).toBe(false);
   });
 
   it('closes itself, then opens the existing sign-in screen for Log in', () => {

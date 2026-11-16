@@ -35,7 +35,11 @@ jest.mock('@/src/api/users', () => ({
 
 import Page from '../sign-up';
 
+const AGE = 'I confirm I am 16 or older';
+
 function fillRequiredFieldsExceptUsername() {
+  const box = screen.getByRole('checkbox', { name: AGE });
+  if (!box.props.accessibilityState.checked) fireEvent.press(box);
   fireEvent.changeText(screen.getByPlaceholderText('Enter first name'), 'Jane');
   fireEvent.changeText(screen.getByPlaceholderText('Enter last name'), 'Doe');
   fireEvent.changeText(screen.getByPlaceholderText('Enter email'), 'jane@example.com');
@@ -241,5 +245,33 @@ describe('sign-up password rules', () => {
     await fillAllWithPassword('hunter');
     expect(screen.getByText('Includes a number')).toBeTruthy();
     expect(screen.getByText('Includes a special character')).toBeTruthy();
+  });
+});
+
+describe('sign-up age confirmation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCheckUsernameAvailability.mockResolvedValue({ available: true, suggestions: [] });
+  });
+
+  it('keeps Continue off until the visitor confirms they are 16 or older', async () => {
+    render(<Page />);
+    fillRequiredFieldsExceptUsername();
+    fireEvent.changeText(screen.getByPlaceholderText('Enter username'), 'janedoe');
+    await screen.findByText(/available/i);
+    const submit = () => screen.getByTestId('signup-submit').props.accessibilityState?.disabled;
+    expect(submit()).toBe(false);
+
+    fireEvent.press(screen.getByRole('checkbox', { name: AGE })); // untick
+    expect(submit()).toBe(true);
+  });
+
+  it('starts unchecked and holds back Google until it is ticked', () => {
+    render(<Page />);
+    const box = screen.getByRole('checkbox', { name: AGE });
+    expect(box.props.accessibilityState.checked).toBe(false);
+    expect(screen.getByRole('button', { name: 'Continue with Google' }).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(box);
+    expect(screen.getByRole('button', { name: 'Continue with Google' }).props.accessibilityState.disabled).toBe(false);
   });
 });
