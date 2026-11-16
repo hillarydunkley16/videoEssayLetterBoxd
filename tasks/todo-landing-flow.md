@@ -154,7 +154,7 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [x] The tick is recorded: `Profile.age_confirmed_at` (migration `users/0013`), set by `POST /api/users/age-confirmation/` with the server's own time, first report only, never exposed on profile responses. The app holds the tick in storage (`watchd:age-confirmed`, 24h) and reports it after sign-in (`useAgeConfirmationSync`), so it survives the Google redirect
 - Gap to decide: Google on `/sign-in` can still create a new account without seeing the checkbox, so that account has no recorded confirmation. Accounts made before this change also have none
 - Deploy note: the migration must run on production (`python manage.py migrate`) before the new frontend ships
-- [ ] You: look at the checkbox in the sheet and on `/sign-up`
+- [x] Checked by you: Google on `/sign-in` still works, and on sign-up the Google button stays off until the box is ticked. Still unchecked by anyone: the `age_confirmed_at` date landing in the database after a real sign-up
 
 ## Open items to settle before or during the work
 - [ ] Confirm the account sheet uses buttons into the existing sign-up and sign-in screens instead of inline email fields (plan, Key Decisions)
