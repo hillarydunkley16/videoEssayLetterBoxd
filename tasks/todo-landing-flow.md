@@ -131,6 +131,14 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - Verify: screenshot web and Android at phone width, light and dark
 - Files: the files touched in T5 and T6 · Scope: S
 
+### T10: Runtime stamp on search results — not started
+- Why: the mono runtime stamp (the screen's signature detail) only shows on stored essays, because `toSearchResults` in `src/api/videos.ts` never sets `duration` and `YouTubeSearchResponse` has no length field.
+- Likely frontend-only: the backend passes SerpAPI's JSON through unchanged, and SerpAPI's YouTube results normally carry a `length` string such as "11:13". Not yet confirmed against a live response; check one `POST /api/search/` response first. If `length` is missing, this becomes a backend task.
+- [ ] Test first: a search result with `length: "11:13"` maps to `video.duration === "11:13"` and the row shows the stamp; a result with no `length` shows none
+- [ ] Add `length?: string` to the response type and map it in `toSearchResults`
+- Verify: `npx jest src/api src/screens/__tests__/SignedOutHomeScreen.test.tsx`
+- Files: `frontend/src/api/videos.ts`, `frontend/src/api/__tests__/searchYoutube.test.ts`, `SignedOutHomeScreen.test.tsx` · Scope: XS
+
 ## Open items to settle before or during the work
 - [ ] Confirm the account sheet uses buttons into the existing sign-up and sign-in screens instead of inline email fields (plan, Key Decisions)
 - [ ] Popular list size for signed-out users (mockup shows 6)
