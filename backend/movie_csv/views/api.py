@@ -460,8 +460,12 @@ def youtube_search(request):
     # Runs inline today (CELERY_TASK_ALWAYS_EAGER, no REDIS_URL). With a broker
     # configured the task runs on a worker and retries transient failures, but
     # this request still waits on the result, so it doesn't free the web process.
+    # disable_sync_subtasks=False: that guard stops a task from waiting on another task
+    # (a worker deadlock). This is a web request, not a task. In eager mode Celery's own
+    # "a task is running" flag is process-wide, so overlapping requests on a threaded
+    # server can leave it stuck on, and the guard then rejects every later search.
     try:
-        results = run_youtube_search.delay(params).get(timeout=30)
+        results = run_youtube_search.delay(params).get(timeout=30, disable_sync_subtasks=False)
     except (requests.exceptions.Timeout, CeleryTimeoutError):
         logger.warning("SerpAPI request timed out")
         return JsonResponse({"error": "search provider timed out"}, status=504)
