@@ -6,6 +6,8 @@ import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
 import GoogleButton from '@/src/components/GoogleButton'
+import PasswordRules from '@/src/components/PasswordRules'
+import { passwordMeetsRules } from '@/src/helpers/passwordRules'
 import { useUsernameAvailability } from '@/src/hooks/useUsernameAvailability'
 
 export default function Page() {
@@ -96,7 +98,7 @@ export default function Page() {
   // Blocked on empty/still-checking/known-taken only — never on `usernameAvailable === null`
   // (unchecked, too short, or the check errored), since Clerk still validates on submit.
   const submitDisabled =
-    !emailAddress || !password || !username || checkingUsername || usernameAvailable === false
+    !emailAddress || !passwordMeetsRules(password) || !username || checkingUsername || usernameAvailable === false
 
   if (pendingVerification) {
     return (
@@ -212,6 +214,7 @@ export default function Page() {
         secureTextEntry={true}
         onChangeText={(password) => setPassword(password)}
       />
+      <PasswordRules password={password} />
       {/* Clerk mounts its CAPTCHA here on web; custom flows must provide it. */}
       <View nativeID="clerk-captcha" />
       <Pressable

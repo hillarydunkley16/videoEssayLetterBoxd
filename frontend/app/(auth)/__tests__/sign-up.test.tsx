@@ -39,7 +39,7 @@ function fillRequiredFieldsExceptUsername() {
   fireEvent.changeText(screen.getByPlaceholderText('Enter first name'), 'Jane');
   fireEvent.changeText(screen.getByPlaceholderText('Enter last name'), 'Doe');
   fireEvent.changeText(screen.getByPlaceholderText('Enter email'), 'jane@example.com');
-  fireEvent.changeText(screen.getByPlaceholderText('Enter password'), 'hunter22');
+  fireEvent.changeText(screen.getByPlaceholderText('Enter password'), 'hunter22!');
 }
 
 describe('sign-up username live check', () => {
@@ -203,5 +203,43 @@ describe('sign-up bot protection', () => {
     // invisible widget, which flags more real visitors as bots.
     render(<Page />);
     expect(screen.UNSAFE_root.findAllByProps({ nativeID: 'clerk-captcha' }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('sign-up password rules', () => {
+  const submitDisabled = () => screen.getByTestId('signup-submit').props.accessibilityState?.disabled;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCheckUsernameAvailability.mockResolvedValue({ available: true, suggestions: [] });
+  });
+
+  async function fillAllWithPassword(password: string) {
+    render(<Page />);
+    fillRequiredFieldsExceptUsername();
+    fireEvent.changeText(screen.getByPlaceholderText('Enter username'), 'janedoe');
+    await screen.findByText(/available/i);
+    fireEvent.changeText(screen.getByPlaceholderText('Enter password'), password);
+  }
+
+  it('keeps Continue off for a password with no number', async () => {
+    await fillAllWithPassword('hunter!!!');
+    expect(submitDisabled()).toBe(true);
+  });
+
+  it('keeps Continue off for a password with no special character', async () => {
+    await fillAllWithPassword('hunter22');
+    expect(submitDisabled()).toBe(true);
+  });
+
+  it('lets Continue through once the password has a number and a special character', async () => {
+    await fillAllWithPassword('hunter22!');
+    expect(submitDisabled()).toBe(false);
+  });
+
+  it('lists both rules under the password field', async () => {
+    await fillAllWithPassword('hunter');
+    expect(screen.getByText('Includes a number')).toBeTruthy();
+    expect(screen.getByText('Includes a special character')).toBeTruthy();
   });
 });

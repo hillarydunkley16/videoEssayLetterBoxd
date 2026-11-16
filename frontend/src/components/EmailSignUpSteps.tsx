@@ -4,7 +4,10 @@ import { useSignUp } from "@clerk/clerk-expo";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getClerkErrorMessage } from "@/src/helpers/clerkErrors";
+import { passwordMeetsRules } from "@/src/helpers/passwordRules";
 import { useUsernameAvailability } from "@/src/hooks/useUsernameAvailability";
+
+import PasswordRules from "./PasswordRules";
 
 type Theme = (typeof Colors)["light"];
 
@@ -61,7 +64,7 @@ export default function EmailSignUpSteps({
   const { checking, available, suggestions } = useUsernameAvailability(username);
 
   // Blocked on empty, still checking or known taken. Never on "unknown": Clerk checks on submit.
-  const detailsDisabled = busy || !emailAddress || !password || !username || checking || available === false;
+  const detailsDisabled = busy || !emailAddress || !passwordMeetsRules(password) || !username || checking || available === false;
 
   const submitDetails = async () => {
     if (!isLoaded || busy) return;
@@ -159,6 +162,7 @@ export default function EmailSignUpSteps({
           ) : null}
           <Field theme={theme} label="Email address" value={emailAddress} onChangeText={setEmailAddress} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
           <Field theme={theme} label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
+          <PasswordRules password={password} />
           {/* Clerk mounts its CAPTCHA here on web; custom flows must provide it. */}
           <View nativeID="clerk-captcha" />
           <Pressable

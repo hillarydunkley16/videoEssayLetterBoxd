@@ -62,7 +62,7 @@ function fillDetails() {
   fireEvent.changeText(screen.getByLabelText('Last name'), 'Dunkley');
   fireEvent.changeText(screen.getByLabelText('Username'), 'hillary4');
   fireEvent.changeText(screen.getByLabelText('Email address'), 'h@example.com');
-  fireEvent.changeText(screen.getByLabelText('Password'), 'hunter2hunter2');
+  fireEvent.changeText(screen.getByLabelText('Password'), 'hunter2hunter2!');
 }
 
 describe('AccountSheet', () => {
@@ -109,6 +109,26 @@ describe('AccountSheet', () => {
     expect(disabled()).toBe(false);
   });
 
+  it('keeps Continue off until the password has a number and a special character', () => {
+    setup();
+    openEmailForm();
+    fillDetails();
+    const disabled = () => screen.getByRole('button', { name: 'Continue' }).props.accessibilityState.disabled;
+    fireEvent.changeText(screen.getByLabelText('Password'), 'hunterhunter!');
+    expect(disabled()).toBe(true);
+    fireEvent.changeText(screen.getByLabelText('Password'), 'hunter2hunter');
+    expect(disabled()).toBe(true);
+    fireEvent.changeText(screen.getByLabelText('Password'), 'hunter2hunter!');
+    expect(disabled()).toBe(false);
+  });
+
+  it('lists the password rules under the password field', () => {
+    setup();
+    openEmailForm();
+    expect(screen.getByText('Includes a number')).toBeTruthy();
+    expect(screen.getByText('Includes a special character')).toBeTruthy();
+  });
+
   it('blocks Continue when the username is known to be taken, and offers suggestions', () => {
     mockUsername = { checking: false, available: false, suggestions: ['hillary5'] };
     setup();
@@ -128,7 +148,7 @@ describe('AccountSheet', () => {
     await screen.findByText('Check your email');
     expect(mockCreate).toHaveBeenCalledWith({
       emailAddress: 'h@example.com',
-      password: 'hunter2hunter2',
+      password: 'hunter2hunter2!',
       firstName: 'Hillary',
       lastName: 'Dunkley',
       username: 'hillary4',
