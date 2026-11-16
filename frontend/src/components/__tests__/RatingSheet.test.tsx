@@ -93,4 +93,10 @@ describe('RatingSheet', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Log it' }));
     expect(onSubmit).toHaveBeenCalledWith(4, 'Sharp and funny');
   });
+
+  it('limits the review to the 200 characters the backend accepts', () => {
+    setup();
+    fireEvent.press(screen.getByRole('button', { name: 'Add a review' }));
+    expect(screen.getByPlaceholderText('Write the review you would send a friend').props.maxLength).toBe(200);
+  });
 });

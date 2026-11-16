@@ -14,6 +14,10 @@ let replayInFlight = false;
 // (no retry loop), but a newer pending log has a different savedAt and still replays.
 let failedSavedAt: number | null = null;
 
+// Log.review_text is required and may not be blank, so a rating-only log needs some text.
+// This is the same placeholder quickLog.tsx sends for its rating-only logs.
+const RATING_ONLY_REVIEW = "Blank review text for quick log";
+
 export function __resetPendingLogReplayForTests() {
   replayInFlight = false;
   failedSavedAt = null;
@@ -47,7 +51,7 @@ export function usePendingLogReplay() {
           essay: essay.public_id,
           date: new Date().toISOString().split("T")[0],
           rating: pending.rating,
-          ...(pending.reviewText ? { review_text: pending.reviewText } : {}),
+          review_text: pending.reviewText || RATING_ONLY_REVIEW,
         });
         await clearPendingLog();
         showToast("Log saved");

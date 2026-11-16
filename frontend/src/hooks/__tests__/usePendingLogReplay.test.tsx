@@ -78,11 +78,14 @@ it('resolves the essay, creates the log, clears the pending log and says so', as
   expect(mockShowToast).toHaveBeenCalledWith('Log saved');
 });
 
-it('omits review_text when the visitor wrote no review', async () => {
+// The backend's Log.review_text is a required CharField (no blank=True), so a log with no review
+// is rejected with 400 "This field is required" if the field is missing, or "may not be blank" if
+// empty. quickLog works around that with a placeholder for rating-only logs; replay does the same.
+it('sends the quick-log placeholder as review_text when the visitor wrote no review', async () => {
   await savePendingLog({ ...pending, reviewText: '' });
   renderHook(() => usePendingLogReplay());
   await waitFor(() => expect(mockCreateLog).toHaveBeenCalled());
-  expect(mockCreateLog.mock.calls[0][1]).not.toHaveProperty('review_text');
+  expect(mockCreateLog.mock.calls[0][1]).toMatchObject({ review_text: 'Blank review text for quick log' });
 });
 
 it('creates exactly one log when two auth signals fire at once (Prove-It)', async () => {

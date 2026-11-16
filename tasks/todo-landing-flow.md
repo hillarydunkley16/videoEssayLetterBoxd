@@ -112,6 +112,8 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [ ] 31 searches in a minute shows the rate-limit message (covered by component tests only)
 - [ ] 24h expiry by hand, offline replay, LCP vs `tasks/plan-lcp.md`
 
+**Bug found during the Google run (fixed):** the replay's `POST /api/logList/` returned 400 `review_text: This field is required`. `Log.review_text` is a required `CharField(max_length=200)` with no `blank=True`, and the hook omitted it for rating-only logs. Replay now sends the same placeholder quickLog uses (`"Blank review text for quick log"`), and the review is capped at 200 characters in the sheet and in `pendingLog`. Follow-up for you to decide: that placeholder shows up as the review text in `logInfo` (existing quickLog behavior); the clean fix is `blank=True` plus a migration, which is a schema change.
+
 **Findings for T9**
 - Search input shows the browser's default focus outline as a second box inside the rounded field. Move the focus ring to the field.
 - "Popular this week" heading shows with nothing under it when the endpoint returns no rows (dev DB has 0). Hide the heading when there is nothing to list.

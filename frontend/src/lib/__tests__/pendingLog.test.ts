@@ -4,8 +4,8 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { MAX_REVIEW_LENGTH } from '../reviewLimit';
 import {
-  MAX_REVIEW_LENGTH,
   PENDING_LOG_KEY,
   PENDING_LOG_TTL_MS,
   clearPendingLog,
@@ -72,10 +72,11 @@ describe('pendingLog', () => {
     await expect(AsyncStorage.getItem(PENDING_LOG_KEY)).resolves.toBeNull();
   });
 
-  it('clamps the rating to 1-5 and caps the review length when saving', async () => {
+  it('clamps the rating to 1-5 and caps the review at the backend limit of 200 when saving', async () => {
     await savePendingLog({ youtubeId: 'abc', rating: 12, reviewText: 'x'.repeat(MAX_REVIEW_LENGTH + 50) });
     const log = await readPendingLog();
     expect(log?.rating).toBe(5);
+    expect(MAX_REVIEW_LENGTH).toBe(200);
     expect(log?.reviewText).toHaveLength(MAX_REVIEW_LENGTH);
   });
 

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MAX_REVIEW_LENGTH } from './reviewLimit';
 
 // The log a signed-out visitor made on the landing page, held until they have an account.
 // It is persisted (not kept in memory) because the Google sign-in redirect reloads the web
@@ -7,7 +8,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // guarded: the worst case is that the log is not kept across a reload.
 export const PENDING_LOG_KEY = 'watchd:pending-log';
 export const PENDING_LOG_TTL_MS = 24 * 60 * 60 * 1000;
-export const MAX_REVIEW_LENGTH = 2000;
 
 export type PendingLog = {
   youtubeId: string;

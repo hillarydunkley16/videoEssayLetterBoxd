@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Colors, Fonts } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { TappableRatingDots } from "@/components/ui/RatingDots";
+import { MAX_REVIEW_LENGTH } from "@/src/lib/reviewLimit";
 import BottomSheet from "./BottomSheet";
 
 // Where a signed-out visitor rates the essay they picked. A rating is required, the review
@@ -72,6 +73,7 @@ export default function RatingSheet({
           placeholder="Write the review you would send a friend"
           placeholderTextColor={theme.muted}
           multiline
+          maxLength={MAX_REVIEW_LENGTH}
         />
       ) : (
         <Pressable accessibilityRole="button" accessibilityLabel="Add a review" onPress={() => setShowReview(true)}>
