@@ -212,6 +212,8 @@ export default function Page() {
         secureTextEntry={true}
         onChangeText={(password) => setPassword(password)}
       />
+      {/* Clerk mounts its CAPTCHA here on web; custom flows must provide it. */}
+      <View nativeID="clerk-captcha" />
       <Pressable
         testID="signup-submit"
         style={({ pressed }) => [

@@ -196,3 +196,12 @@ describe('sign-up username live check', () => {
     );
   });
 });
+
+describe('sign-up bot protection', () => {
+  it('renders the clerk-captcha mount point so Clerk can show its Smart CAPTCHA widget', () => {
+    // Custom flows must provide this element, or Clerk logs an error and falls back to the
+    // invisible widget, which flags more real visitors as bots.
+    render(<Page />);
+    expect(screen.UNSAFE_root.findAllByProps({ nativeID: 'clerk-captcha' }).length).toBeGreaterThan(0);
+  });
+});
