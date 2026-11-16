@@ -842,6 +842,25 @@ def suggest_usernames(base, count=3):
     return suggestions
 
 
+class AgeConfirmation(APIView):
+    """POST /api/users/age-confirmation/
+
+    Records that the signed-in user confirmed they are 16 or older. The tick happens on the
+    sign-up form, before the account exists, so the app reports it right after sign-in. The
+    stored value is the server's own receive time, kept from the first report: a repeat is
+    accepted and changes nothing, so a retry or a second device can't move the date."""
+
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        if profile.age_confirmed_at is None:
+            profile.age_confirmed_at = timezone.now()
+            profile.save(update_fields=["age_confirmed_at"])
+        return Response({"age_confirmed_at": profile.age_confirmed_at}, status=status.HTTP_200_OK)
+
+
 class UsernameAvailability(APIView):
     """GET /api/users/username-available/?u=<candidate>
 

@@ -41,6 +41,7 @@ urlpatterns = [
     path("VideoEssays/from-youtube-id/", VideoEssayFromYoutubeId.as_view(), name="video-essay-from-youtube-id"),
     path("users/suggestions/", SuggestedUsers.as_view(), name="suggested-users"),
     path("users/search/", UserSearch.as_view(), name="user-search"),
+    path("users/age-confirmation/", AgeConfirmation.as_view(), name="age-confirmation"),
     path("users/username-available/", UsernameAvailability.as_view(), name="username-available"),
     path("users/<int:user_id>/follow/", FollowUser.as_view(), name="follow-user"),
     path("users/<int:user_id>/followers/", FollowersList.as_view(), name="followers-list"),

@@ -27,6 +27,10 @@ class Profile(models.Model):
     # ClerkAuthentication). Deliberately not unique: Clerk enforces uniqueness, and a DB
     # constraint could turn a cross-instance collision into a login-blocking IntegrityError.
     display_username = models.CharField(max_length=150, blank=True, null=True, default=None)
+    # When the server first heard "I confirm I am 16 or older" from this user (see
+    # AgeConfirmation). Server time, set once, never taken from the client. Null means no
+    # confirmation was received, for example an account made before the checkbox existed.
+    age_confirmed_at = models.DateTimeField(blank=True, null=True, default=None)
     def __str__(self):
         return f'{self.user.username} Profile' #show how we want it to be displayed
      # Override the save method of the model
