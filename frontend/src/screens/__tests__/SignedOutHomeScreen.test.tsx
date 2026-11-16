@@ -55,7 +55,7 @@ const apiRow = (id: string, title: string) => ({
   },
 });
 
-const SEARCH_BOX = 'Search video essays';
+const SEARCH_BOX = 'Search videos';
 
 async function typeAndWait(text: string) {
   fireEvent.changeText(screen.getByLabelText(SEARCH_BOX), text);

@@ -136,14 +136,11 @@ export default function SignedOutHomeScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.column}>
-          <Text style={[styles.eyebrow, { color: theme.accent2, fontFamily: Fonts?.sansSemiBold }]}>
-            Bootleg Letterboxd for video essays
-          </Text>
           <Text style={[styles.headline, { color: theme.text, fontFamily: Fonts?.display }]}>
-            Find an essay you watched, then log it
+            YouTube videos, logged
           </Text>
           <Text style={[styles.subhead, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-            Rate it now and make an account at the end, so your first log is saved
+            Log your favorite video and make an account to save it
           </Text>
 
           <View
@@ -160,9 +157,9 @@ export default function SignedOutHomeScreen() {
               style={[styles.searchInput, { color: theme.text, fontFamily: Fonts?.sans }]}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search video essays"
+              placeholder="Search videos"
               placeholderTextColor={theme.muted}
-              accessibilityLabel="Search video essays"
+              accessibilityLabel="Search videos"
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="search"
@@ -267,7 +264,6 @@ export default function SignedOutHomeScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingBottom: 40 },
   column: { width: "100%", maxWidth: 640, alignSelf: "center", paddingHorizontal: 16, paddingTop: 32 },
-  eyebrow: { fontSize: 13, marginBottom: 8 },
   headline: { fontSize: 32, lineHeight: 36, marginBottom: 12 },
   subhead: { fontSize: 16, lineHeight: 24, marginBottom: 24, maxWidth: 480 },
   search: {
