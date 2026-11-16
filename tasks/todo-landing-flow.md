@@ -106,8 +106,8 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - [x] Real search works: `POST /api/search/` returned 200 with real results and thumbnails for "visual comedy" (SerpAPI key is set in dev).
 - [x] Rating, then Log it, opened the account sheet; `watchd:pending-log` in localStorage held `{youtubeId, rating: 5, reviewText: "", savedAt}` and nothing else.
 - [x] The pending log survived a page reload (storage unchanged, sheet closed, landing rendered).
-- [x] Google sign-in redirect on web, then the replay: `POST /api/logList/` returned 201 with rating 5 and the placeholder review (after the review_text fix below). Not yet confirmed: that the pending log was cleared and the diary row looks right
-- [ ] Email sign-up and verification code
+- [x] Google sign-in redirect on web, then the replay: `POST /api/logList/` returned 201 with rating 5 and the placeholder review (after the review_text fix below). Pending-log cleanup and the diary row were confirmed in the email run below
+- [x] Email sign-up and verification code: passed (user-run). Log saved toast shown, log in the diary with the right video and rating, `watchd:pending-log` cleared afterwards. Also fixed the Clerk CAPTCHA console error on the sign-up form (`1ff7ebd`)
 - [ ] Android emulator run
 - [ ] 31 searches in a minute shows the rate-limit message (covered by component tests only)
 - [ ] 24h expiry by hand, offline replay, LCP vs `tasks/plan-lcp.md`
