@@ -81,6 +81,21 @@ class YoutubeSearchViewTests(SimpleTestCase):
         )
         self.assertEqual(_post(self.client, {"q": "essay"}).status_code, 502)
 
+    @mock.patch("movie_csv.views.api.os.getenv", return_value="test-key")
+    @mock.patch("movie_csv.tasks.requests.get")
+    def test_signed_out_search_is_allowed_even_with_a_stale_token(self, mget, _getenv):
+        # The signed-out landing page searches with no credentials, and a visitor whose Clerk
+        # session just expired may still send an old Bearer token. Neither may get a 401/403.
+        mget.return_value = mock.Mock(status_code=200, json=lambda: {"video_results": []})
+        anonymous = _post(self.client, {"q": "essay"})
+        stale = self.client.post(
+            URL,
+            data=json.dumps({"q": "essay again"}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Bearer expired.or.invalid",
+        )
+        self.assertEqual((anonymous.status_code, stale.status_code), (200, 200))
+
     def test_get_not_allowed(self):
         self.assertEqual(self.client.get(URL).status_code, 405)
 
