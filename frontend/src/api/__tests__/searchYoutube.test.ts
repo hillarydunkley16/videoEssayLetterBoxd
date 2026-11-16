@@ -59,6 +59,16 @@ describe('searchYoutube', () => {
     ]);
   });
 
+  it('carries the result length through as the duration, and leaves it out when absent', async () => {
+    post.mockResolvedValue({
+      data: { video_results: [{ ...apiRow, length: '11:13' }, { ...apiRow, link: 'https://www.youtube.com/watch?v=zzz12345678' }] },
+    });
+
+    const out = await searchYoutube('visual comedy');
+
+    expect(out.results.map((r) => r.video.duration)).toEqual(['11:13', undefined]);
+  });
+
   it('returns ok with no results when the response has none', async () => {
     post.mockResolvedValue({ data: {} });
     await expect(searchYoutube('nothing')).resolves.toEqual({ results: [], status: 'ok' });

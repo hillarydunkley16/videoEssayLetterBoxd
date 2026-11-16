@@ -71,6 +71,7 @@ const toSearchResults = (data: YouTubeSearchResponse | undefined): SearchResult[
       channel_name: v.channel?.name,
       views: v.views,
       channel_url: v.channel?.link,
+      duration: v.length,
     },
   }))
 

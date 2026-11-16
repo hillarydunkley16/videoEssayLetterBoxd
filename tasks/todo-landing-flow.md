@@ -131,11 +131,12 @@ Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
 - Verify: screenshot web and Android at phone width, light and dark
 - Files: the files touched in T5 and T6 · Scope: S
 
-### T10: Runtime stamp on search results — not started
+### T10: Runtime stamp on search results — done
 - Why: the mono runtime stamp (the screen's signature detail) only shows on stored essays, because `toSearchResults` in `src/api/videos.ts` never sets `duration` and `YouTubeSearchResponse` has no length field.
 - Likely frontend-only: the backend passes SerpAPI's JSON through unchanged, and SerpAPI's YouTube results normally carry a `length` string such as "11:13". Not yet confirmed against a live response; check one `POST /api/search/` response first. If `length` is missing, this becomes a backend task.
-- [ ] Test first: a search result with `length: "11:13"` maps to `video.duration === "11:13"` and the row shows the stamp; a result with no `length` shows none
-- [ ] Add `length?: string` to the response type and map it in `toSearchResults`
+- [x] Confirmed against a live `POST /api/search/` response: results carry `length` (e.g. "2:45"); frontend-only
+- [x] Test first: a search result with `length: "11:13"` maps to `video.duration === "11:13"` and the row shows the stamp; a result with no `length` shows none
+- [x] Add `length?: string` to the response type and map it in `toSearchResults`
 - Verify: `npx jest src/api src/screens/__tests__/SignedOutHomeScreen.test.tsx`
 - Files: `frontend/src/api/videos.ts`, `frontend/src/api/__tests__/searchYoutube.test.ts`, `SignedOutHomeScreen.test.tsx` · Scope: XS
 

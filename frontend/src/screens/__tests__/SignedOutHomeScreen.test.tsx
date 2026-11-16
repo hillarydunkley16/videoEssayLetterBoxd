@@ -95,6 +95,17 @@ describe('SignedOutHomeScreen', () => {
     expect(StyleSheet.flatten(title.props.style).textAlign).toBe('left');
   });
 
+  it('shows the runtime stamp on a search result that has a duration', async () => {
+    const row = apiRow('bbbbbbbbbbb', 'How to Do Visual Comedy');
+    mockSearch.mockResolvedValue({
+      results: [{ ...row, video: { ...row.video, duration: '11:13' } }],
+      status: 'ok',
+    });
+    render(<SignedOutHomeScreen />);
+    await typeAndWait('visual');
+    expect(await screen.findByText('11:13')).toBeTruthy();
+  });
+
   it('makes no request for fewer than 3 characters', async () => {
     render(<SignedOutHomeScreen />);
     await typeAndWait('vi');
