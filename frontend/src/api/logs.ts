@@ -13,7 +13,6 @@ import { useAuthDelete } from "./authDelete";
 import { useAuthUpdate } from "./authUpdate";
 
 export async function fetchLogs(token: string): Promise<PaginatedResponse<Log>> {
-    console.log("fetch logs functin called!!!");
   return authFetch("/logList/", {}, token);
 }
 
@@ -49,20 +48,16 @@ export type CreateCommentPayLoad = {
 }
 
 export async function commentOnLog(log: Log, authFetch: ReturnType<typeof useAuthPost>, payload: CreateCommentPayLoad): Promise<Comment>{
-    console.log('Creating comment with payload: ', payload); 
     // const id = log?.public_id
     const response = await authFetch(`/api/logList/${log?.public_id}/comment/`, payload)
-    console.log(response); 
     return response.data
 }
 export async function fetchALog(id: string, token: string): Promise<Log> {
-    console.log(`fetching log with this ID:  ${id}`)
     const data = await authFetch(`/logList/${id}/`, {}, token);
     return data.log;
 }
 
 export async function deleteLog(id: string, token: string, authFetch: ReturnType<typeof useAuthDelete>){
-    console.log(`deleting log with this ID: ${id}`); 
     const response = await authFetch(`/api/logList/${id}/delete`);
     return response; 
 }
@@ -92,10 +87,8 @@ export async function createLog(
     authFetch: ReturnType<typeof useAuthPost>,
     payload: CreateLogPayload
 ): Promise<Log> {
-    console.log('Creating log with payload:', payload);
     
     const response = await authFetch("/api/logList/", payload);
-    console.log(response)
     return response.data; // axios returns data in response.data
 }
 // export async function createLog(payload: CreateLogPayload): Promise<Log>{
