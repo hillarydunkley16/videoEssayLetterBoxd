@@ -42,7 +42,7 @@ same reason (closed beta traffic may be too low to keep it warm on its own).
    Pooler** connection string (Settings → Database → Connection string →
    "Session pooler" tab) — this is `DATABASE_URL`.
 2. In the Render dashboard: **New → Blueprint**, point it at this repo, branch
-   `v2` (or `main` after Task 16's merge). Render reads `render.yaml` at the
+   `main`. Render reads `render.yaml` at the
    repo root and provisions both resources in one pass:
    - `videoessay-backend` — Python web service, free plan
    - `videoessay-web` — static site, free plan
@@ -167,15 +167,19 @@ Behaviour to know:
 
 ## 5. Redeploying
 
-Render auto-deploys a push to the connected branch only after the GitHub CI
-checks pass (`autoDeployTrigger: checksPass` in `render.yaml`). A red or
-still-running CI means no deploy yet. If the services were created before this
-setting existed, set **Settings → Build & Deploy → Auto-Deploy → After CI
-Checks Pass** on both services, because a Blueprint sync may not change it. In
-an emergency, use Manual Deploy (below), which skips the check. To redeploy without a new commit — e.g. after
-changing an env var — use **Manual Deploy → Deploy latest commit** on the
-service, or just save the Environment tab (which triggers a redeploy on its
-own).
+Both services deploy from the `main` branch, and `main` is protected: changes
+land through a pull request whose `backend` and `frontend` checks pass. Render
+then auto-deploys the merge commit only after the GitHub CI checks pass on it
+(`autoDeployTrigger: checksPass` in `render.yaml`). The branch is set in the
+dashboard, not in `render.yaml`: **Settings → Build & Deploy → Branch** on each
+service. Likewise **Auto-Deploy → After CI Checks Pass** must be set on both
+services, since a Blueprint sync may not change it. A red or still-running CI
+means no deploy yet. In an emergency, use Manual Deploy (below), which skips
+the check.
+
+To redeploy without a new commit — e.g. after changing an env var — use
+**Manual Deploy → Deploy latest commit** on the service, or just save the
+Environment tab (which triggers a redeploy on its own).
 
 Before pushing a deploy-affecting change:
 ```
@@ -189,8 +193,8 @@ cd frontend && npx tsc --noEmit && npm run lint && npx expo export --platform we
   the last known-good deploy → **Rollback to this deploy**. This works for
   both `videoessay-backend` and `videoessay-web` independently.
 - **Via git:** revert the offending commit(s) on the deploy branch and push —
-  Render's `autoDeploy` picks it up automatically. Never force-push to rewrite
-  history on `v2` or `main` to "undo" a bad deploy; a revert commit is safer
+  Render's auto-deploy picks it up once CI passes. Never force-push to rewrite
+  history on `main` to "undo" a bad deploy; a revert commit is safer
   and keeps the audit trail.
 - **Database:** the nightly encrypted `pg_dump` (section 11) is the recovery
   path for bad data, not code rollback. The Supabase free plan has no
@@ -367,6 +371,11 @@ from `main`.
    ```
    pg_restore --no-owner --no-privileges --dbname "<scratch-uri>" dump.pgdump
    ```
+   Use `pg_restore` 17 or newer. Homebrew's `postgresql@17` is keg-only, so
+   call it by full path (`$(brew --prefix postgresql@17)/bin/pg_restore`) or
+   put that `bin` folder on your `PATH`. One error is expected on a fresh
+   Supabase project: `schema "public" already exists`. The restore skips it and
+   finishes with "errors ignored on restore: 1". Any other error is a problem.
 4. Check it: row counts on a few tables, for example
    `SELECT count(*) FROM auth_user;` and `SELECT count(*) FROM movie_csv_log;`,
    against the live database.
@@ -376,5 +385,6 @@ from `main`.
 point `DATABASE_URL` at it or load only the tables you need. Dumps cover the
 `public` schema only; Supabase's own schemas are not included.
 
-**Last restore test:** not yet done. Record the date and result here after the
-first one.
+**Last restore test:** 2026-11-25. Restored the latest `db-backup` artifact
+into a second free Supabase project. The only error was the expected
+`schema "public" already exists`. Row counts matched production.
