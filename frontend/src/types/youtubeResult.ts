@@ -27,6 +27,8 @@ export type SearchResult = databaseResult | APIResult
     }
     channel_name: string;
     views: number;
+    // Runtime as YouTube shows it, e.g. "11:13". Missing for live streams.
+    length?: string;
     channel_url: string;
     channel: {
       link: string, 

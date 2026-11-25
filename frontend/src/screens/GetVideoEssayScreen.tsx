@@ -1,4 +1,4 @@
-import { View, Text, Image, StyleSheet, ActivityIndicator, Linking, TouchableOpacity, useColorScheme } from 'react-native'
+import { View, Text, Image, StyleSheet, ActivityIndicator, Linking, TouchableOpacity } from 'react-native'
 import { getAVideoEssay } from '../api/videos'
 import { VideoEssay } from '../types/videoEssay'
 import { useEffect, useState } from 'react'
@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
 import { useAuth } from '@clerk/clerk-expo'
 import { Colors, Fonts } from '@/constants/theme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 
 type Props = {
   id: string;
@@ -20,7 +21,7 @@ export default function GetVideoEssayScreen({ id, onTitleLoaded, compact }: Prop
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { getToken } = useAuth()
-  const theme = Colors[useColorScheme() ?? 'light']
+  const theme = Colors[useColorScheme()]
 
   useEffect(() => {
     if (!id) return

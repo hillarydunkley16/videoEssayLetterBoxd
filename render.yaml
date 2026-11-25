@@ -1,12 +1,12 @@
 # Render Blueprint — closed-beta deployment (all resources on the free plan).
 # See DEPLOY.md for the dashboard steps and where each `sync: false` value comes from.
 # Docs: https://render.com/docs/blueprint-spec
-
-databases:
-  - name: videoessay-db
-    plan: free
-    databaseName: videoessay
-    user: videoessay
+#
+# DB is Supabase Postgres (not Render's managed Postgres) — migrated off the
+# free Render Postgres instance ahead of its 90-day expiry. DATABASE_URL is
+# therefore sync:false below instead of fromDatabase; set it in the dashboard
+# to the Supabase Session Pooler URI (IPv4-compatible — the direct connection
+# host is IPv6-only, which Render's network can't reach).
 
 services:
   # --- Django API (DRF + admin) ------------------------------------------
@@ -14,6 +14,7 @@ services:
     type: web
     runtime: python
     plan: free
+    autoDeployTrigger: checksPass   # wait for the GitHub CI checks (.github/workflows/ci.yml)
     rootDir: backend
     # Build = install only. migrate + collectstatic run in startCommand so they
     # execute with the full runtime env (CLERK_ISSUER etc.) present — settings.py
@@ -21,14 +22,12 @@ services:
     # build time. Free tier is a single instance, so no migration race.
     # preDeployCommand is paid-only, so it's not an option here.
     buildCommand: pip install -r requirements.txt
-    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --threads 4
     envVars:
       - key: PYTHON_VERSION      # Render ignored runtime.txt and used 3.14; pin explicitly
         value: "3.13.7"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: videoessay-db
-          property: connectionString
+      - key: DATABASE_URL   # Supabase Session Pooler URI — set in the dashboard
+        sync: false
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_DEBUG
@@ -50,11 +49,11 @@ services:
         value: "https://splendid-sunbird-55.clerk.accounts.dev"
       - key: SERPAPI_KEY   # real secret — set in the dashboard
         sync: false
-
   # --- Expo web app (static bundle) ------------------------------------
   - name: videoessay-web
     type: web
     runtime: static
+    autoDeployTrigger: checksPass
     rootDir: frontend
     buildCommand: npm ci --legacy-peer-deps && npx expo export --platform web
     staticPublishPath: dist
@@ -62,6 +61,18 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    # Hashed bundle files and versioned fonts never change; HTML must revalidate so a
+    # deploy is picked up. Bump the -vN suffix on a font to change it (see +html.tsx).
+    headers:
+      - path: /_expo/static/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /fonts/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
     envVars:
       - key: NODE_VERSION
         value: "22.11.0"

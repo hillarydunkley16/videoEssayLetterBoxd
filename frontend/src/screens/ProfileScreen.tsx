@@ -1,24 +1,29 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
+  Platform,
+  Pressable,
+  useWindowDimensions,
   StyleSheet,
   Text,
-  TouchableOpacity,
+ TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import { useAuth, useClerk, useUser } from "@clerk/clerk-expo";
+import { router, useFocusEffect } from "expo-router";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { RatingDots } from "@/components/ui/RatingDots";
-import { fetchProfile, updateProfileImageAPI } from "@/src/api/users";
+import { fetchProfile } from "@/src/api/users";
+import UsernameGateBanner from "@/src/components/UsernameGateBanner";
 import { fetchUsersCollections } from "@/src/api/collection";
 import { deleteLog } from "@/src/api/logs";
-import { useAuthUpdate } from "@/src/api/authUpdate";
+import { useChangeProfilePhoto } from "@/src/hooks/useChangeProfilePhoto";
 import { useAuthDelete } from "@/src/api/authDelete";
 import { Log } from "@/src/types/log";
 import { Profile } from "@/src/types/profile";
@@ -33,12 +38,14 @@ function formatShortDate(value: string | Date) {
 }
 
 export default function ProfileScreen() {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const { user } = useUser();
-  const { signOut } = useClerk();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const authUpdate = useAuthUpdate();
+  const { changePhoto } = useChangeProfilePhoto();
   const authDelete = useAuthDelete();
+  const { width } = useWindowDimensions();
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const isMobile = Platform.OS !== "web";
 
   const [profile, setProfile] = useState<Profile>();
   const [lists, setLists] = useState<Collection[]>([]);
@@ -69,27 +76,13 @@ export default function ProfileScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-    loadProfile();
-  }, [isLoaded, isSignedIn, loadProfile]);
-
-  async function handleChangePhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-    if (result.canceled) return;
-
-    const uri = result.assets[0].uri;
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    await user?.setProfileImage({ file: blob });
-    await user?.reload();
-    await updateProfileImageAPI(user?.imageUrl ?? "", authUpdate);
-  }
+  // Reload on every focus so counts reflect changes made in the follow list.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoaded || !isSignedIn) return;
+      loadProfile();
+    }, [isLoaded, isSignedIn, loadProfile]),
+  );
 
   async function handleDeleteLog(publicId: string) {
     try {
@@ -100,15 +93,6 @@ export default function ProfileScreen() {
       );
     } catch (error) {
       console.error("Failed to delete log:", error);
-    }
-  }
-
-  async function handleSignOut() {
-    try {
-      await signOut();
-      router.replace("/");
-    } catch (error) {
-      console.error("Failed to sign out:", error);
     }
   }
 
@@ -125,14 +109,19 @@ export default function ProfileScreen() {
     <View>
       <View style={styles.topbar}>
         <Text style={[styles.pageLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>Profile</Text>
-        <TouchableOpacity onPress={handleSignOut} accessibilityLabel="Sign out">
-          <Text style={[styles.signOut, { color: theme.muted, fontFamily: Fonts?.sansMedium }]}>Sign out</Text>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/settings")} accessibilityLabel="Settings">
+          <IconSymbol name="gearshape" size={20} color={theme.muted} />
         </TouchableOpacity>
       </View>
 
+      <UsernameGateBanner />
+
       <View style={[styles.identityRow, { paddingBottom: 22, borderColor: theme.border }]}>
         <View style={styles.idRow}>
-          <TouchableOpacity onPress={handleChangePhoto} accessibilityLabel="Change profile photo">
+          <TouchableOpacity
+            onPress={isMobile ? () => user?.imageUrl && setPhotoOpen(true) : changePhoto}
+            accessibilityLabel={isMobile ? "View profile photo" : "Change profile photo"}
+          >
             {user?.imageUrl ? (
               <Image source={{ uri: user.imageUrl }} style={[styles.avatar, { borderColor: theme.background }]} />
             ) : (
@@ -141,6 +130,15 @@ export default function ProfileScreen() {
               </View>
             )}
           </TouchableOpacity>
+          {isMobile && (
+            <Modal visible={photoOpen} transparent animationType="fade" onRequestClose={() => setPhotoOpen(false)}>
+              <Pressable style={styles.photoBackdrop} onPress={() => setPhotoOpen(false)} accessibilityLabel="Close photo">
+                {user?.imageUrl ? (
+                  <Image source={{ uri: user.imageUrl }} style={{ width: width, height: width }} resizeMode="contain" />
+                ) : null}
+              </Pressable>
+            </Modal>
+          )}
           <View style={styles.idText}>
             <Text style={[styles.displayName, { color: theme.text, fontFamily: Fonts?.displayMedium }]}>
               {user?.fullName || user?.username || "You"}
@@ -154,8 +152,19 @@ export default function ProfileScreen() {
         <View style={[styles.statsRow, { borderColor: theme.border }]}>
           <Stat n={numLogs} label="Logs" theme={theme} />
           <Stat n={numEssays} label="Essays" theme={theme} />
-          <Stat n={profile.followers.length} label="Followers" theme={theme} />
-          <Stat n={profile.following.length} label="Following" theme={theme} isLast />
+          <Stat
+            n={profile.followers_count}
+            label="Followers"
+            theme={theme}
+            onPress={() => router.push({ pathname: "/followList", params: { userId: String(profile.user.id), tab: "followers" } })}
+          />
+          <Stat
+            n={profile.following_count}
+            label="Following"
+            theme={theme}
+            isLast
+            onPress={() => router.push({ pathname: "/followList", params: { userId: String(profile.user.id), tab: "following" } })}
+          />
         </View>
       </View>
 
@@ -184,6 +193,14 @@ export default function ProfileScreen() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={<EmptyState theme={theme} text="Nothing on your watchlist yet." />}
           renderItem={({ item }) => <EssayRow essay={item} theme={theme} />}
+          ListFooterComponent={
+            <TouchableOpacity
+              style={[styles.addEssayBtn, { backgroundColor: theme.accent }]}
+              onPress={() => router.push(`/addEssayToList?publicId=${profile.watchList.public_id}`)}
+            >
+              <Text style={[styles.addEssayText, { fontFamily: Fonts?.sansSemiBold }]}>+ Add essay</Text>
+            </TouchableOpacity>
+          }
         />
       </ThemedView>
     );
@@ -209,17 +226,23 @@ function Stat({
   label,
   theme,
   isLast,
+  onPress,
 }: {
   n: number;
   label: string;
   theme: (typeof Colors)["light"];
   isLast?: boolean;
+  onPress?: () => void;
 }) {
+  const Wrapper = onPress ? TouchableOpacity : View;
   return (
-    <View style={[styles.stat, !isLast && { borderColor: theme.border, borderRightWidth: StyleSheet.hairlineWidth }]}>
+    <Wrapper
+      style={[styles.stat, !isLast && { borderColor: theme.border, borderRightWidth: StyleSheet.hairlineWidth }]}
+      {...(onPress ? { onPress } : {})}
+    >
       <Text style={[styles.statN, { color: theme.text, fontFamily: Fonts?.displayMedium }]}>{n}</Text>
       <Text style={[styles.statLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>{label}</Text>
-    </View>
+    </Wrapper>
   );
 }
 
@@ -264,6 +287,30 @@ function LogRow({
   theme: (typeof Colors)["light"];
   onDelete: (publicId: string) => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <View style={[styles.row, styles.deleteConfirmRow, { borderColor: theme.border }]}>
+        <Text style={[styles.deleteConfirmText, { color: theme.text, fontFamily: Fonts?.sans }]}>
+          Delete this log?
+        </Text>
+        <View style={styles.deleteConfirmActions}>
+          <TouchableOpacity onPress={() => setConfirming(false)} accessibilityLabel="Cancel delete log">
+            <Text style={[styles.deleteConfirmCancel, { color: theme.muted, fontFamily: Fonts?.sansMedium }]}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onDelete(log.public_id)} accessibilityLabel="Confirm delete log">
+            <Text style={[styles.deleteConfirmDelete, { color: theme.accent, fontFamily: Fonts?.sansMedium }]}>
+              Delete
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.row, { borderColor: theme.border }]}>
       <TouchableOpacity onPress={() => router.push(`/videoInfo?essayId=${log.essay_details.public_id}`)}>
@@ -307,7 +354,7 @@ function LogRow({
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => onDelete(log.public_id)}
+        onPress={() => setConfirming(true)}
         style={styles.deleteButton}
         accessibilityLabel="Delete log"
       >
@@ -366,9 +413,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  signOut: {
-    fontSize: 13,
-  },
   identityRow: {
     paddingHorizontal: 20,
     paddingTop: 12,
@@ -378,6 +422,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 16,
+  },
+  photoBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatar: {
     width: 76,
@@ -507,8 +557,39 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 2,
   },
+  addEssayBtn: {
+    alignSelf: Platform.OS === "web" ? "flex-start" : "stretch",
+    marginTop: 14,
+    marginHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 3,
+    alignItems: "center",
+  },
+  addEssayText: {
+    color: "#fff",
+    fontSize: 13,
+  },
   deleteButton: {
     paddingHorizontal: 4,
     justifyContent: "center",
+  },
+  deleteConfirmRow: {
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  deleteConfirmText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  deleteConfirmActions: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  deleteConfirmCancel: {
+    fontSize: 14,
+  },
+  deleteConfirmDelete: {
+    fontSize: 14,
   },
 });

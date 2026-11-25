@@ -1,8 +1,20 @@
 from rest_framework import serializers 
 from .models import VideoEssay, Log, Like, Comment, Collection
 from django.contrib.auth.models import User
-from users.models import Profile
+from users.models import Follow, Profile, exclude_blocked
 #a serializer defines the columns/data that will be used in the views. 
+
+ANONYMOUS = "Anonymous"
+
+
+def display_username(user):
+    """The name to show for a user: their Clerk username, never the raw Clerk id
+    that Django stores as `User.username`. Touches `user.profile`, so list views
+    should `select_related("profile")`."""
+    profile = getattr(user, "profile", None)
+    return (profile.display_username if profile else None) or ANONYMOUS
+
+
 class VideoEssaySerializer(serializers.ModelSerializer):
     # id = serializers.CharField(source = 'public_id', read_only=True)
     # Only present when the queryset annotates `log_count` (see PopularVideoEssays);
@@ -31,7 +43,15 @@ class LikeSerializer(serializers.ModelSerializer):
         model = Like
         fields = ['user', 'post']
 class CommentSerializer(serializers.ModelSerializer): 
-    user = serializers.ReadOnlyField(source = "user.username")
+    user = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+    def get_user(self, obj):
+        return display_username(obj.user)
+    def get_is_mine(self, obj):
+        # Relative to whoever is viewing; False when no request is in the context.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        return bool(viewer is not None and viewer.is_authenticated and viewer.id == obj.user_id)
     log = serializers.SlugRelatedField(
         slug_field = "public_id", 
         queryset = Log.objects.all()
@@ -41,14 +61,32 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = (
             "user", 
+            "is_mine",
             "id",
             # "date", 
             "log",
             "text"
         )
 class LogSerializer(serializers.HyperlinkedModelSerializer): 
-    owner = serializers.ReadOnlyField(source="owner.username")
+    owner = serializers.SerializerMethodField()
     owner_id = serializers.ReadOnlyField(source = "owner.id")
+    is_mine = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    def get_is_liked(self, obj):
+        # Relative to whoever is viewing. Scans `likes` in Python so a prefetch (see
+        # with_log_relations) covers it; False when no request is in the context.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        if viewer is None or not viewer.is_authenticated:
+            return False
+        return any(like.user_id == viewer.id for like in obj.likes.all())
+    def get_owner(self, obj):
+        return display_username(obj.owner)
+    def get_is_mine(self, obj):
+        # Relative to whoever is viewing; False when no request is in the context.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        return bool(viewer is not None and viewer.is_authenticated and viewer.id == obj.owner_id)
     essay = serializers.SlugRelatedField(
         slug_field='public_id',
         queryset=VideoEssay.objects.all()
@@ -80,10 +118,16 @@ class LogSerializer(serializers.HyperlinkedModelSerializer):
             "rewatch",
             "owner",
             "owner_id",
+            "is_mine",
+            "is_liked",
             "owner_image",
             "likes",
             "comments"
         )
+    def update(self, instance, validated_data):
+        # A log's essay is fixed at creation; edits only touch rating/review/date/rewatch.
+        validated_data.pop("essay", None)
+        return super().update(instance, validated_data)
     def get_likes_count(self, obj):
         return obj.likes.count()
 
@@ -92,6 +136,10 @@ class UserSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True
     )
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        return display_username(obj)
 
     class Meta:
         model = User
@@ -104,34 +152,100 @@ class ProfileSerializer(serializers.ModelSerializer):
     
     
     
+    user = serializers.SerializerMethodField()
     user_logs = serializers.SerializerMethodField()
-    followers = serializers.SerializerMethodField()
-    following = serializers.SerializerMethodField()
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
     watchList = serializers.SerializerMethodField()
-    def get_watchList(self, obj): 
-        watchList, created = Collection.objects.get_or_create(
-        name=f"{obj.user.username}'s Watchlist", 
-        owner=obj.user
-        )
-        return CollectionSerializer(watchList).data
+    has_username = serializers.SerializerMethodField()
+    def get_watchList(self, obj):
+        # Found by flag, not by name: the name used to embed the Clerk id (see migration 0011).
+        watchList = Collection.watchlist_for(obj.user)
+        return CollectionSerializer(watchList, context=self.context).data
+    def get_user(self, obj):
+        # The frontend's Profile type expects the user as an object, not a bare pk.
+        return {"id": obj.user_id, "username": obj.display_username or ANONYMOUS, "imageUrl": obj.imageUrl}
+    def get_has_username(self, obj):
+        # `user.username` above already collapses a missing display_username into
+        # "Anonymous", so callers need this separately to tell "no username set" apart
+        # from an actual user named Anonymous (see SPEC-username-onboarding.md).
+        return bool(obj.display_username)
+    def _viewer(self):
+        # Whoever is viewing, or None when there is no request in the context.
+        request = self.context.get("request")
+        return getattr(request, "user", None)
     def get_user_logs(self, obj): 
-       
-        logs = Log.objects.filter(owner = obj.user)
+        # Imported here: views.api imports this module.
+        from .views.api import with_log_relations
+        logs = with_log_relations(Log.objects.filter(owner = obj.user), self._viewer())
         return LogSerializer(logs, many = True, context = self.context).data
-    def get_followers(self, obj):
-        followers = obj.followers.all()
-        return UserSerializer(followers, many=True, context=self.context).data
-    def get_following(self, obj):
-        following = obj.following.all()
-        return UserSerializer(following, many=True, context=self.context).data
+    # Counts are per viewer: follows involving a user blocked either way don't count.
+    def get_followers_count(self, obj):
+        return exclude_blocked(Follow.objects.filter(followee=obj.user), self._viewer(), "follower").count()
+    def get_following_count(self, obj):
+        return exclude_blocked(Follow.objects.filter(follower=obj.user), self._viewer(), "followee").count()
+    def get_is_following(self, obj):
+        # Relative to whoever is viewing; never true for your own profile.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        if viewer is None or not viewer.is_authenticated or viewer.id == obj.user_id:
+            return False
+        return Follow.objects.filter(follower=viewer, followee=obj.user).exists()
     
     class Meta: 
         model = Profile
-        fields = ("user", "imageUrl", "user_logs", "followers", "following", "watchList")
+        fields = ("user", "imageUrl", "user_logs", "followers_count", "following_count", "is_following", "watchList", "has_username")
+
+class FollowListUserSerializer(serializers.ModelSerializer):
+    """Row for followers/following lists. `is_following` is an annotation set by the view."""
+    imageUrl = serializers.CharField(source="profile.imageUrl", read_only=True, allow_null=True, default=None)
+    is_following = serializers.BooleanField(read_only=True)
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        return display_username(obj)
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "imageUrl", "is_following")
+
+
+class BlockedUserSerializer(serializers.ModelSerializer):
+    """Row for the caller's blocked-users list."""
+    imageUrl = serializers.CharField(source="profile.imageUrl", read_only=True, allow_null=True, default=None)
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        return display_username(obj)
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "imageUrl")
+
 
 class CollectionSerializer(serializers.ModelSerializer):
-    owner = serializers.ReadOnlyField(source="owner.username")
+    owner = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
+    def get_owner(self, obj):
+        return display_username(obj.owner)
+    def get_is_owner(self, obj):
+        # Relative to whoever is viewing; False when no request is in the context.
+        # The frontend can't compare `owner` to the Clerk id any more, so we say it here.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        return bool(viewer is not None and viewer.is_authenticated and viewer.id == obj.owner_id)
     essays = VideoEssaySerializer(many=True, read_only=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.is_watchlist:
+            # Stored names may be the legacy "<clerk id>'s Watchlist"; never show them.
+            profile = getattr(instance.owner, "profile", None)
+            username = profile.display_username if profile else None
+            data["name"] = f"{username}'s Watchlist" if username else "Watchlist"
+        return data
+
     class Meta:
         model = Collection
         fields = (
@@ -140,6 +254,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "owner",
+            "is_owner",
             "essays",
             "is_watchlist",
         )

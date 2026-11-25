@@ -6,6 +6,7 @@ import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
+import GoogleButton from '@/src/components/GoogleButton'
 
 export default function Page() {
   const { signIn, setActive, isLoaded } = useSignIn()
@@ -153,6 +154,7 @@ export default function Page() {
             <ThemedText style = {styles.errorText}>{errors}</ThemedText>
           </View>
         ): null}
+        <GoogleButton />
         <ThemedText style={styles.label}>Email address</ThemedText>
         <TextInput
           style={styles.input}
@@ -190,7 +192,7 @@ export default function Page() {
           <ThemedText style={styles.buttonText}>Sign in</ThemedText>
         </Pressable>
         <View style={styles.linkContainer}>
-          <ThemedText>Don't have an account? </ThemedText>
+          <ThemedText>Don&apos;t have an account? </ThemedText>
           <Link href="/sign-up">
             <ThemedText type="link">Sign up</ThemedText>
           </Link>
@@ -231,6 +233,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#fff',
+    color: '#111',
   },
   button: {
     backgroundColor: '#0a7ea4',

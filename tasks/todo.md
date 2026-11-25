@@ -484,10 +484,11 @@ once Render has assigned `videoessay-web.onrender.com`.
 
 ---
 
-### CHECKPOINT C — backend live  ✅ (headers + token-auth deferred to Task 14)
+### CHECKPOINT C — backend live  ✅ (token-auth still deferred to Task 14)
 - [x] Backend reachable at `https://videoessay-backend.onrender.com`; `/admin/` renders, CSS serves
-- [x] Auth: no token → 403 on `/api/logList/`. Clerk-token → 200 verified end-to-end at Task 14 (live web app)
-- [ ] Headers: HSTS + non-wildcard CORS — check at Task 14 (WebFetch can't see headers)
+- [x] Auth: no token → 403 on `/api/logList/`. Clerk-token → 200 still to be verified end-to-end at Task 14 (live web app, signed-in session)
+- [x] Headers: HSTS + non-wildcard CORS — confirmed live via Chrome DevTools MCP
+      on 2026-09-25 (Task 13)
 
 ---
 
@@ -528,7 +529,7 @@ no hardcoded hosts.
 
 ---
 
-## Task 13: [operator] Deploy frontend static site on Render  — IN PROGRESS
+## Task 13: [operator] Deploy frontend static site on Render  ✅ DONE
 
 **Description:** Set `videoessay-web` env vars (`EXPO_PUBLIC_API_BASE_URL` =
 `https://videoessay-backend.onrender.com`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` =
@@ -537,9 +538,21 @@ no hardcoded hosts.
 
 **Acceptance criteria:**
 - [x] Static site builds + serves at `https://videoessay-web.onrender.com`
-- [ ] Page loads; no CORS errors on API calls (backend CORS/CSRF env set)
+- [x] Page loads; no CORS errors on API calls (backend CORS/CSRF env set)
 - [~] Clerk: dev instances allow all origins — no config needed/possible
-- [ ] `/search` returns results (see Task 13a — needed SerpAPI wiring + `SERPAPI_KEY`)
+- [ ] `/search` returns results (see Task 13a — needed SerpAPI wiring + `SERPAPI_KEY`;
+      not yet checked live, requires a signed-in session — folded into Task 14)
+
+**Verified 2026-09-25 via Render MCP + Chrome DevTools MCP:**
+- `CORS_ALLOWED_ORIGINS`/`DJANGO_CSRF_TRUSTED_ORIGINS`/`SERPAPI_KEY` were already
+  set; added the missing `DJANGO_ALLOWED_HOSTS=videoessay-backend.onrender.com`
+  and redeployed (`dep-dar69se0tbcc73969gag`, live 2026-09-25T12:13:21Z)
+- Live browser check against `https://videoessay-web.onrender.com`: API call to
+  `/api/VideoEssays/popular/` → `200`, response header
+  `access-control-allow-origin: https://videoessay-web.onrender.com` (not `*`),
+  `strict-transport-security: max-age=3600; includeSubDomains; preload` present.
+  No CORS errors in console. This also closes the header check deferred from
+  Checkpoint C / Task 11.
 
 **Dependencies:** 12
 
@@ -588,30 +601,87 @@ Strategy against the live URLs. Fix blockers found (scope permitting) or log the
 Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
 
 **Acceptance criteria:**
-- [ ] Fresh sign-up via Clerk (dev instance) completes on the deployed web app
-- [ ] Search → log → review → view-by-video flow works
-- [ ] Profile shows the new log; list/watchlist add works
-- [ ] Reload / new session persists data (Postgres confirmed)
-- [ ] Unauthenticated protected endpoint → 403/401; valid token → 200
-- [ ] Deployed backend headers: no `Access-Control-Allow-Origin: *`; HTTPS
-      redirect + `Strict-Transport-Security` present (deferred from Checkpoint C)
-- [ ] `error.md` `'(home)'` navigator issue does not break routing on the built site
+- [x] Fresh sign-up via Clerk (dev instance) completes on the deployed web app
+- [x] Search → log → review → view-by-video flow works ✅ SerpAPI confirmed
+      live (18 real YouTube results); log with 5★ + review saved (`201`)
+- [x] Profile shows the new log; list/watchlist add works — log confirmed
+      immediately; watchlist add found broken during this pass and fixed
+      (see bug note below), re-verified working after the fix
+- [x] Reload / new session persists data (Postgres confirmed)
+- [x] Unauthenticated protected endpoint → 403/401; valid token → 200
+- [x] Deployed backend headers: no `Access-Control-Allow-Origin: *`; HTTPS
+      redirect + `Strict-Transport-Security` present (closed at Task 13)
+- [x] `error.md` `'(home)'` navigator issue does not break routing on the built
+      site — confirmed dev-only per its own text; no navigation breakage seen
 
-**Frontend cleanup (deferred from Task 12):**
-- [ ] `npx expo lint` → 0 errors (fix 31× `react-hooks/rules-of-hooks` +
-      1× `react/no-unescaped-entities`; warnings may remain)
-- [ ] `npx tsc --noEmit` → 0 errors (9 files: `popularLists.tsx`,
-      `collectionDetail.tsx`, `otherProfile.tsx`, `profile.tsx`, `auth.ts`,
-      `videos.ts`, `jwt.ts`, `collectionInfo.tsx`, `logInfo.tsx`)
-- [ ] `~50 debug print()` in `backend/movie_csv/views/api.py` removed (from Task 7)
-- [ ] `Log` / `Collection` models get `Meta.ordering` (DRF pagination warning, Task 6/8)
-- [ ] Decide: `VideoEssays` + `collections/` list endpoints `AllowAny` — keep for
-      beta or require auth? (flagged Task 7/8)
+**Verified 2026-09-25 via Chrome DevTools MCP against the live deployed URLs**
+(Clerk test-mode account `watchd_task14` / `+clerk_test@example.com`, fixed
+code `424242` — no real inbox needed; account + test log deleted afterward
+via Settings → Delete account, confirmed removed from the public feed):
+- Sign-up → email verify → signed-in home render: all clean, no console errors
+  beyond an unrelated `clerk-telemetry.com` DNS block
+- Search: typing hits local DB only; **Enter** is required to also hit
+  SerpAPI (`POST /api/search/` → `200`, 18 results) — matches the UI's own
+  "Press enter to search YouTube" hint, not a bug
+- `POST /api/logList/` → `201`; log appeared instantly in the home feed,
+  profile, and the video's own popular-this-week count
+- Full page reload kept the session and the log (Postgres-backed, not local
+  state)
+- Signed-out `GET /api/logList/` (fresh tab, no token) → `403`; all of the
+  app's own authenticated calls carried a Bearer token and returned `200`
+
+**🐛 Bug found and fixed — "Add to watchlist" toggle was a no-op:**
+`logVideoModal` and `quickLog` both render `CreateLogScreen`'s watchlist
+toggle but neither passed `onWatchListChange` down, so the switch never
+reached component state (`quickLog` even had a dead unused `watchList`
+`useState` sitting there already). Fixed in `f9647fd`: wired the toggle to
+state in both modals; on a successful log save, fetches the profile for
+`watchList.public_id` and calls the existing `addToWatchlist` (same call
+`VideoInfoScreen`'s working toggle uses). Best-effort — a watchlist-add
+failure is logged, not surfaced, so it can't undo an already-saved log.
+Verified live via Chrome DevTools MCP: toggle → save → `POST
+/api/collections/<id>/add/<id>/` → `200` → profile Watchlist count 0 → 1.
+`tsc`/lint/full jest suite (224 tests) all still clean.
+
+**Frontend cleanup (deferred from Task 12):**  ✅ DONE
+- [x] `npx expo lint` → 0 errors (215 warnings remain, none `rules-of-hooks` or
+      `react/no-unescaped-entities`)
+- [x] `npx tsc --noEmit` → 0 errors
+- [x] `npx expo export --platform web` still succeeds after the fixes
+- Removed unused duplicate hooks (`use-color-scheme.web.ts`, `use-theme-color.ts`)
+  and dead `src/helpers/jwt.ts`; trimmed `client.ts`/`authPost.ts`/`authUpdate.ts`/
+  `authDelete.ts` accordingly. Committed as `91c52ae`.
+
+**Backend debt (was open, closed 2026-09-25 — see `68c92ea`):**
+- [x] `~35` live debug `print()`s removed from `backend/movie_csv/views/api.py`
+      (request/user dumps, before/after save traces, collection add/remove
+      snapshots). Left the already-commented-out debug lines and the fully
+      dead alternate `logList` class untouched — orthogonal to this cleanup.
+      309/309 backend tests still pass.
+- [x] `Log` gets `Meta.ordering = ("-date", "-id")`, `Collection` gets
+      `Meta.ordering = ("-id",)` — matches the manual `.order_by()` pattern
+      `FollowingFeed` already used. Migration `0013` (options-only, no schema
+      change). `UnorderedObjectListWarning` is gone from the test run.
+- [x] **Decided: keep `AllowAny` on `VideoEssays` (GET) and `CollectionList`
+      (GET) for beta.** Confirmed this is load-bearing, not an oversight —
+      `SignedOutHomeScreen.tsx` calls `fetchPopularVideoEssaysPublic()`
+      (unauthenticated axios, no token) to render the public marketing
+      homepage's "Popular this week" section verified live during Task 14.
+      Revisit only if the public homepage feed is dropped or scoped down.
+      **Separate observation, not fixed here (raise if it matters for beta):**
+      `VideoEssays.post()` (the raw `ListCreateAPIView.post`, not
+      `VideoEssayCreateView` at `/api/video-essays/`) is also `AllowAny` and
+      sets `owner=request.user`, which would be `AnonymousUser` for an
+      unauthenticated caller — likely a 500 on that path today. The frontend
+      never calls it (confirmed via grep — only GET on `/VideoEssays/*`), so
+      it's dead-but-reachable rather than an active bug.
 
 **Verification:**
-- [ ] Each `SPEC.md` Success Criteria checkbox ticked
-- [ ] `npx expo export --platform web` still succeeds after the fixes
-- [ ] Backend `manage.py test` still green after api.py/model changes
+- [x] Each `SPEC.md` Success Criteria checkbox ticked (E2E acceptance portion;
+      remaining backend debt above still open)
+- [x] `npx expo export --platform web` still succeeds after the fixes
+- [x] Backend `manage.py test` still green after api.py/model changes — 309/309
+      pass after the debt-cleanup commit (`68c92ea`, print() removal + ordering)
 
 **Dependencies:** 11, 13
 
@@ -619,7 +689,7 @@ Also clear the pre-existing frontend `tsc`/`lint` debt deferred from Task 12.
 
 ---
 
-## Task 15: Write `DEPLOY.md` runbook
+## Task 15: Write `DEPLOY.md` runbook  ✅ DONE
 
 **Description:** Step-by-step: prerequisites, Render Blueprint setup, every
 dashboard env var and where its value comes from, Clerk prod setup, superuser
@@ -628,14 +698,25 @@ creation, redeploy steps, rollback (Render "Rollback" + how to revert
 SerpAPI quota, backup note).
 
 **Acceptance criteria:**
-- [ ] A reader can rebuild the whole deployment from scratch using only `DEPLOY.md`
-- [ ] Every env var from both `.env.example` files is listed with its source
-- [ ] Rollback procedure documented
-- [ ] Free-tier caveats + secret-rotation note included
+- [x] A reader can rebuild the whole deployment from scratch using only `DEPLOY.md`
+- [x] Every env var from both `.env.example` files is listed with its source
+      (cross-checked against every `render.yaml` var, not just `sync: false` —
+      the literal/generateValue ones are in the table too)
+- [x] Rollback procedure documented (dashboard rollback + git revert, explicitly
+      never force-push)
+- [x] Free-tier caveats + secret-rotation note included
 
 **Verification:**
-- [ ] Cross-check every `render.yaml` `sync: false` var appears in `DEPLOY.md`
-- [ ] Human read-through
+- [x] Cross-check every `render.yaml` `sync: false` var appears in `DEPLOY.md`
+      — all 6 confirmed present (`DJANGO_ALLOWED_HOSTS`,
+      `DJANGO_CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `SERPAPI_KEY`,
+      `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`)
+- [ ] Human read-through — pending, needs the user
+
+**⚠️ Surfaced while writing this:** the free `videoessay-db` Postgres instance
+(created 2026-09-07) expires **2026-10-07** — 12 days out from today
+(2026-09-25). Called out at the top of `DEPLOY.md`; needs a decision
+(upgrade to paid, or manual backup + re-provision plan) well before that date.
 
 **Dependencies:** 14
 
@@ -646,19 +727,47 @@ SerpAPI quota, backup note).
 
 ---
 
-## Task 16: Merge `v2` → `main`
+## Task 16: Merge `v2` → `main`  ✅ DONE (one live check outstanding)
 
 **Description:** Once beta is verified live, merge `v2` into `main`. Point Render
 Blueprint auto-deploy at `main`.
 
 **Acceptance criteria:**
-- [ ] `v2` merged to `main` (no force-push, no history rewrite)
-- [ ] Render deploys from `main` and stays green
-- [ ] `SPEC.md`, `tasks/`, `DEPLOY.md` all on `main`
+- [x] `v2` merged to `main` (no force-push, no history rewrite) — the merge
+      commit `60158e0` landed `v2` on `main`; later commits fast-forwarded
+      `main` and `v2` together, both at `2ce9152` as of 2026-10-28
+- [x] Render deploys from `main` and stays green — both services have
+      `branch: main`, auto-deploy on commit; backend deploy of `2ce9152`
+      went `live` (migrate ran clean, gunicorn up)
+- [x] `SPEC.md`, `tasks/`, `DEPLOY.md` all on `main`
 
 **Verification:**
-- [ ] `git log main -1` shows the merge; CI/Render build on `main` succeeds
-- [ ] Deployed URLs still serve after the `main` deploy
+- [x] `main` and `v2` point at the same commit; Render build on `main` succeeds
+- [ ] Deployed URLs still serve after the `main` deploy — backend boot confirmed
+      from logs; **a real `/api/search/` request (and a repeat to confirm the
+      cache) against the deployed app has not been run yet**
+
+**Notes:**
+- 2026-10-27: backend returned DB errors (`FATAL: (ENOTFOUND) tenant/user
+  postgres.<ref> not found`) because the **Supabase free project had paused**
+  after inactivity. Fixed by restoring it in the Supabase dashboard. This will
+  recur; see "Open follow-ups" below.
+- 2026-10-28: added optional Redis cache / Celery search task / S3 storage
+  plumbing (`2ce9152`; DEPLOY.md §10). Everything degrades to a free default
+  with no env vars set, so the beta is unchanged. Celery runs **eagerly**
+  (inline, no worker) in prod; the only gain with a broker would be retries,
+  since the search view still waits on the result. Not provisioned.
+- 2026-10-28: `test_render_blueprint` updated for the Supabase setup
+  (`DATABASE_URL` is a dashboard secret; no Render-managed DB).
+- README rewritten; old free-form notes are in git history (`18ec789^:README.md`).
+
+**Open follow-ups:**
+- [ ] Keep Supabase from pausing (scheduled ping to an endpoint that queries the
+      DB, or upgrade to Pro).
+- [ ] Verify the rate limiter's client IP on Render: it uses the last
+      `X-Forwarded-For` entry, which may be a shared proxy address (would put
+      all users in one 30/min bucket).
+- [ ] Decide whether to keep the Celery/Redis plumbing or remove it.
 
 **Dependencies:** 14
 
@@ -671,4 +780,5 @@ Blueprint auto-deploy at `main`.
 ### CHECKPOINT D — complete
 - [ ] All `SPEC.md` Success Criteria met
 - [ ] Full flow works on deployed web URL, data persists
-- [ ] `DEPLOY.md` accurate; `v2` merged to `main`; ready to invite testers
+- [ ] `DEPLOY.md` accurate (human read-through still pending); `v2` merged to
+      `main` ✅; ready to invite testers

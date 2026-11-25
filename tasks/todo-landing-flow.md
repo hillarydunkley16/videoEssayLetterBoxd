@@ -1,0 +1,164 @@
+# Todo: Search-First Landing Page
+
+Plan: `tasks/plan-landing-flow.md`. Spec: `SPEC-landing-flow.md`. Branch `v2`.
+Backend tests from `backend/`: `python manage.py test`. Frontend gates from `frontend/`:
+`npx jest`, `npx tsc --noEmit`, `npm run lint`, `npx expo export --platform web`.
+Mockup: https://claude.ai/artifact/Fc5oxgywnrSDmRk2NSTttd
+
+## Tasks
+
+### T1: Signed-out search is covered by a test (backend) — done
+- [x] Test: an unauthenticated POST to `search/` (provider mocked) returns 200, not 401/403; also with a stale Bearer token (`test_signed_out_search_is_allowed_even_with_a_stale_token`)
+- [x] Existing rate-limit tests still pass (12 tests in `movie_csv.test_youtube_search`)
+- Acceptance: the signed-out behavior the landing page depends on is locked in by a test; no change to `views/api.py`
+- Verify: `python manage.py test movie_csv.test_youtube_search`
+- Files: `backend/movie_csv/test_youtube_search.py` · Scope: XS
+
+### T2: pendingLog storage module — done
+- [x] `src/lib/pendingLog.ts`: `savePendingLog`, `readPendingLog`, `clearPendingLog` (all async)
+- [x] Uses `@react-native-async-storage/async-storage` on every platform (already a dependency; it is `localStorage`-backed on web), so no Platform branching and no new package. Replaces the plan's secure-store default. Every access in try/catch
+- [x] 24h expiry on read (expired entries are cleared and return null)
+- [x] Malformed JSON returns null; `rating` clamped to 1–5; `reviewText` capped at 2000 characters
+- [x] Stores only `{youtubeId, rating, reviewText, savedAt}` (nothing about the user)
+- Acceptance: round trip works; expired, malformed and throwing storage all return null without throwing
+- Verify: `npx jest src/lib/__tests__/pendingLog.test.ts`
+- Files: `frontend/src/lib/pendingLog.ts` (new), `frontend/src/lib/__tests__/pendingLog.test.ts` (new) · Scope: S
+
+### T3: Search errors the UI can tell apart — done
+- [x] New `searchYoutube(query)` in `src/api/videos.ts` returns `{ results, status: 'ok' | 'rate_limited' | 'unavailable' | 'cancelled' | 'error' }` (429, 503, aborted, other). `cancelled` was added so the page can ignore a replaced query
+- [x] `fetchYoutubeResults` keeps its current signature and behavior so existing callers are unchanged
+- [x] Accepts an `AbortSignal` so a newer query cancels the older one
+- Acceptance: 429 maps to `rate_limited`, 503 to `unavailable`, network failure to `error`, success to `ok` with mapped results
+- Verify: `npx jest src/api` (new test file with axios mocked)
+- Files: `frontend/src/api/videos.ts`, `frontend/src/api/__tests__/searchYoutube.test.ts` (new) · Scope: S
+
+### T4: usePendingLogReplay + mount in root layout — done
+- [x] **Prove-It test first:** two simultaneous sign-in signals create exactly one log
+- [x] `src/hooks/usePendingLogReplay.ts`: when signed in and a pending log exists, call `getOrCreateVideoEssayByYoutubeId`, then `createLog` with `{essay, date: today, rating, review_text}`
+- [x] Clear the pending log only after `createLog` succeeds; in-flight guard prevents a second run
+- [x] On 422 or network failure: keep the pending log and show a toast (no retry loop: a failed pending log is skipped until the app is reopened, but a newer one still replays)
+- [x] Does nothing when signed out or when no pending log exists
+- [x] Mounted in `app/_layout.tsx` next to `useShareIntentRouter()`
+- Acceptance: signed in + pending log → one resolve call, one create call, pending cleared, success toast; failure leaves pending in place
+- Verify: `npx jest src/hooks/__tests__/usePendingLogReplay.test.ts`
+- Note: `app/__tests__/_layout.test.tsx` now mocks the hook, like it already does for `useShareIntentRouter`.
+- Files: `frontend/src/hooks/usePendingLogReplay.ts` (new), its test (new), `frontend/app/_layout.tsx` · Scope: M
+
+### Checkpoint A — logic verified, no UI yet
+- [x] `npx jest` green (50 suites, 349 tests)
+- [x] `npx tsc --noEmit` shows no new errors in touched files
+- [x] `python manage.py test movie_csv.test_youtube_search` green (12 tests)
+- [x] `npx expo export --platform web` succeeds
+- [ ] Review with you before building UI
+
+### T5: RatingSheet and AccountSheet components — done
+- [x] `RatingSheet`: essay title, channel, tappable stars (`TappableRatingDots`), optional review field, **Log it** disabled until a rating, Cancel
+- [x] `AccountSheet`: shows the pending log (thumbnail, title, stars), `GoogleButton`, "Create account with email" (to `/sign-up`), "Log in" (to `/sign-in`), Back to rating
+- [x] Both are RN `Modal`s with `accessibilityViewIsModal`, Escape closes on web, focus ring visible
+- [x] **Log it** is double-tap safe (one `onSubmit` call)
+- [x] Colors and fonts from `constants/theme.ts`; spacing on the 4px scale
+- Acceptance: component tests pass; rating required; double tap fires once; Back returns to rating without losing it
+- Verify: `npx jest src/components/__tests__/RatingSheet.test.tsx src/components/__tests__/AccountSheet.test.tsx`
+- Note: both share a small `BottomSheet` (RN `Modal`, scrim, 480px max width). Not yet mounted anywhere, so the web export does not exercise them until T6. Escape-to-close on web and the visual result are unchecked until T6/T8.
+- Files: `frontend/src/components/RatingSheet.tsx`, `AccountSheet.tsx` (new) and tests (new) · Scope: M
+
+### T6: Rewrite SignedOutHomeScreen as search-first — done
+- [x] Headline + one-line pitch + search box as the hero; feature list and hero "Create account" button removed
+- [x] Search: 400ms debounce, 3-character minimum, abort previous request, uses `searchYoutube`
+- [x] Empty query shows popular essays (`fetchPopularVideoEssaysPublic`), fetched after first paint
+- [x] Messages: `rate_limited` → "Too many searches. Try again in a minute"; `unavailable` → falls back to DB-only results; `error` → retry link
+- [x] Tap a result opens `RatingSheet`; **Log it** saves the pending log (T2) then opens `AccountSheet`; Cancel discards it
+- [x] No storage or `Modal` access during render (static web export safe)
+- [x] Update `SignedOutHomeScreen.test.tsx` (the feature-icon test is obsolete and is replaced, not skipped)
+- Acceptance: all UI success criteria in the spec pass in component tests; `HeroGate` still renders it on web
+- Verify: `npx jest src/screens/__tests__/SignedOutHomeScreen.test.tsx "app/(home)/__tests__/index.test.tsx"`
+- Notes: `unavailable` (503) falls back to a new `searchDataBasePublic` (GET `VideoEssays/?search=`, AllowAny). `RatingSheet` gained `initialRating`/`initialReview` so Back from the account sheet keeps the visitor's answer. Result links go through `extractYoutubeId` from `shareIntent.ts`, so there is one parser (spec Open Question 5). The exported `dist/index.html` contains the new headline and search box. Visual check and the LCP comparison are still T8.
+- Files: `frontend/src/screens/SignedOutHomeScreen.tsx`, its test · Scope: M
+
+### T7: Log in button on the native top bar — done
+- [x] `MobileTopNav` shows "Log in" at the right when signed out (web keeps `WebNav`'s existing Log in / Sign up)
+- [x] Hidden on auth routes
+- Acceptance: native signed-out users see Log in top right; signed-in layout unchanged
+- Verify: `npx jest components` (new or updated nav test)
+- Note: also hidden on `/choose-username` and `/sso-callback`; `/singleLog` and `/profile` hide only the signed-in search entry, so a signed-out visitor there still gets Log in.
+- Files: `frontend/components/ui/MobileTopNav.tsx` and test · Scope: S
+
+### Checkpoint B — automated gates
+- [x] `npx jest` green (53 suites, 384 tests)
+- [x] `npx tsc --noEmit` zero errors; eslint 0 errors on touched files
+- [x] `npx expo export --platform web` succeeds
+- [x] `python manage.py test` green (323 tests)
+- [ ] Review with you before manual verification
+
+### T8: Manual verification (web + Android)
+- [ ] Web, email sign-up: search, rate, Create account with email, verify, land on home, log is in the diary
+- [ ] Web, Google: same, through the OAuth redirect; confirm the log survived the page reload
+- [ ] Web: reload on the rating screen, then sign in; log still replays once
+- [ ] Web: wait past 24h expiry (set `savedAt` back by hand in storage); pending ignored
+- [ ] Android emulator: search, rate, Google sign-in, log saved
+- [ ] Rate limit: 31 searches inside a minute shows the "try again" message
+- [ ] Offline during replay: pending kept, toast shown, replays on next app open
+- [ ] LCP on Slow 4G compared with the numbers in `tasks/plan-lcp.md`
+- Record results in this file under each box.
+
+**Web run, dev servers (Expo on 8081, Django on 8000), Chrome at 430px wide, dark theme**
+- [x] Landing renders: headline, search, Log in / Sign up top right (WebNav). Static HTML check passed at T6.
+- [x] Real search works: `POST /api/search/` returned 200 with real results and thumbnails for "visual comedy" (SerpAPI key is set in dev).
+- [x] Rating, then Log it, opened the account sheet; `watchd:pending-log` in localStorage held `{youtubeId, rating: 5, reviewText: "", savedAt}` and nothing else.
+- [x] The pending log survived a page reload (storage unchanged, sheet closed, landing rendered).
+- [x] Google sign-in redirect on web, then the replay: `POST /api/logList/` returned 201 with rating 5 and the placeholder review (after the review_text fix below). Pending-log cleanup and the diary row were confirmed in the email run below
+- [x] Email sign-up and verification code: passed (user-run). Log saved toast shown, log in the diary with the right video and rating, `watchd:pending-log` cleared afterwards. Also fixed the Clerk CAPTCHA console error on the sign-up form (`1ff7ebd`)
+- [ ] Android emulator run
+- [ ] 31 searches in a minute shows the rate-limit message (covered by component tests only)
+- [ ] 24h expiry by hand, offline replay, LCP vs `tasks/plan-lcp.md`
+
+**Bug found during the Google run (fixed):** the replay's `POST /api/logList/` returned 400 `review_text: This field is required`. `Log.review_text` is a required `CharField(max_length=200)` with no `blank=True`, and the hook omitted it for rating-only logs. Replay now sends the same placeholder quickLog uses (`"Blank review text for quick log"`), and the review is capped at 200 characters in the sheet and in `pendingLog`. Follow-up for you to decide: that placeholder shows up as the review text in `logInfo` (existing quickLog behavior); the clean fix is `blank=True` plus a migration, which is a schema change.
+
+**Second bug found in the same run (fixed):** the home feed (`RecentLogsScreen`) threw "Encountered two children with the same key" right after the replay. A log added while the feed is open pushes the last row of page 1 onto page 2, so `loadMore` appended a row already shown. `loadMore` now skips rows it already has. `FollowingFeedScreen` has the identical `[...current, ...page.results]` pattern and is not changed here. Also: the new log does not appear in the global feed until a refresh.
+
+**Findings for T9**
+- Search input shows the browser's default focus outline as a second box inside the rounded field. Move the focus ring to the field.
+- "Popular this week" heading shows with nothing under it when the endpoint returns no rows (dev DB has 0). Hide the heading when there is nothing to list.
+- A channel name in Hebrew renders right-aligned in a left-to-right row. Pin the text alignment.
+- `GoogleButton` is a bright white block in the dark sheet (hardcoded `#fff`/`#ccc`).
+- SerpAPI rows have no runtime, so the mono runtime stamp only shows on stored essays.
+
+### T9: Polish pass (optional) — fixes 1–5 done
+- Done: focus ring on the field (cobalt, 2px), heading hidden when no popular rows, left-pinned title and channel, `GoogleButton` themed (surface, border, text), pressed state on rows. Tests for heading and alignment written first.
+- Not done: runtime stamp on SerpAPI rows (needs the backend to return a duration). Light-mode web was checked in Chrome; the dark account sheet and Android were not.
+- [ ] Apply the `/unslop` findings: sentence-case labels instead of uppercase tracked, no italic emphasis, 4px spacing, line icons instead of glyphs, plain focus ring, real thumbnails
+- Acceptance: no item left on the unslop audit list for this screen
+- Verify: screenshot web and Android at phone width, light and dark
+- Files: the files touched in T5 and T6 · Scope: S
+
+### T10: Runtime stamp on search results — done
+- Why: the mono runtime stamp (the screen's signature detail) only shows on stored essays, because `toSearchResults` in `src/api/videos.ts` never sets `duration` and `YouTubeSearchResponse` has no length field.
+- Likely frontend-only: the backend passes SerpAPI's JSON through unchanged, and SerpAPI's YouTube results normally carry a `length` string such as "11:13". Not yet confirmed against a live response; check one `POST /api/search/` response first. If `length` is missing, this becomes a backend task.
+- [x] Confirmed against a live `POST /api/search/` response: results carry `length` (e.g. "2:45"); frontend-only
+- [x] Test first: a search result with `length: "11:13"` maps to `video.duration === "11:13"` and the row shows the stamp; a result with no `length` shows none
+- [x] Add `length?: string` to the response type and map it in `toSearchResults`
+- Verify: `npx jest src/api src/screens/__tests__/SignedOutHomeScreen.test.tsx`
+- Files: `frontend/src/api/videos.ts`, `frontend/src/api/__tests__/searchYoutube.test.ts`, `SignedOutHomeScreen.test.tsx` · Scope: XS
+
+### T11: Email sign-up inside the account sheet — built, needs your run
+- Mockup: https://claude.ai/artifact/NrdUQ2Wo6NWxd7hpSTrBuj
+- [x] Tests first (9 failed before the build, 15 pass now): Create account with email opens the form in the same sheet; Back returns to the choices; Continue stays off until fields are filled and the username is not taken; taken username offers suggestions; Clerk create then email-code prepare shows the verify step; Clerk errors show and keep the step; correct code activates the session and closes the sheet; wrong code keeps it open; Back from verify keeps the typed fields; reopening starts from the choices
+- [x] `src/components/EmailSignUpSteps.tsx` (new) holds the Clerk calls, same as `app/(auth)/sign-up.tsx`; `AccountSheet` switches between choices and the email form. `/sign-up` stays for people who start there. Google and Log in unchanged
+- [x] Web check: sheet opens the form on `/`, CAPTCHA mount point present, pending log saved, no new console errors. Not run: a real sign-up through the new form
+- [ ] You: complete a real email sign-up through the sheet (code, toast, diary row, storage cleared)
+- Files: `frontend/src/components/EmailSignUpSteps.tsx`, `AccountSheet.tsx`, `__tests__/AccountSheet.test.tsx` · Scope: M
+
+### T12: Passwords and age confirmation on sign-up — built
+- [x] Password needs a number and a special character (`src/helpers/passwordRules.ts`, `PasswordRules.tsx`), on the account sheet and `/sign-up`. Clerk's own rules (default minimum 8) still apply; to enforce these two server-side too, set them in the Clerk dashboard
+- [x] "I confirm I am 16 or older" checkbox (`AgeConfirmation.tsx`), unchecked by default. In the sheet it holds back Google and Create account with email; on `/sign-up` it holds back Google and Continue. Log in is not held back. The sheet clears the tick when it closes
+- [x] The tick is recorded: `Profile.age_confirmed_at` (migration `users/0013`), set by `POST /api/users/age-confirmation/` with the server's own time, first report only, never exposed on profile responses. The app holds the tick in storage (`watchd:age-confirmed`, 24h) and reports it after sign-in (`useAgeConfirmationSync`), so it survives the Google redirect
+- Decided: no prompt for accounts without a recorded confirmation. Every existing one is the owner's own test account. Still true: Google on `/sign-in` can create a new account without seeing the checkbox, so that account would have none
+- Deploy note: the migration must run on production (`python manage.py migrate`) before the new frontend ships
+- [x] Checked by you: Google on `/sign-in` still works, and on sign-up the Google button stays off until the box is ticked. Still unchecked by anyone: the `age_confirmed_at` date landing in the database after a real sign-up
+
+## Open items to settle before or during the work
+- [ ] Confirm the account sheet uses buttons into the existing sign-up and sign-in screens instead of inline email fields (plan, Key Decisions)
+- [ ] Popular list size for signed-out users (mockup shows 6)
+- [ ] Duplicate log behavior: replay creates a second log if the essay was already logged (default, since `rewatch` exists)
+
+- [x] T13: Age confirmation on `app/(auth)/choose-username.tsx` (new Google accounts from `/sign-in`). Box starts unchecked, Continue off until ticked; reported via `useAgeConfirmationSync`. Closes the T12 Google-on-sign-in gap.

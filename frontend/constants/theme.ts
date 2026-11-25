@@ -1,5 +1,5 @@
 /**
- * Visual Arguments design tokens.
+ * watchd design tokens.
  *
  * Palette: cool graphite/stone neutrals with a single cobalt-blue pop for
  * ratings and primary actions, and a muted teal accent for secondary
@@ -36,6 +36,7 @@ export const Colors = {
     tint: cobalt,
     accent: cobalt,
     accent2: teal,
+    error: '#D93025',
     icon: slate,
     tabIconDefault: slate,
     tabIconSelected: cobalt,
@@ -49,6 +50,7 @@ export const Colors = {
     tint: '#5B7CFF',
     accent: '#5B7CFF',
     accent2: '#2FA593',
+    error: '#FF6B6B',
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: '#5B7CFF',
@@ -58,7 +60,7 @@ export const Colors = {
 // Display type (titles/headings) is Fraunces; body/UI type is Inter.
 // Native font family names must match the @expo-google-fonts asset names
 // loaded via useFonts (see app/hooks/use-app-fonts.ts); web falls back to
-// the Google Fonts stylesheet linked in app/+html.tsx.
+// the self-hosted @font-face rules in app/+html.tsx (files in public/fonts).
 export const Fonts = Platform.select({
   web: {
     display: "'Fraunces', Georgia, 'Times New Roman', serif",

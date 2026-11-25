@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
 import uuid
@@ -41,7 +41,9 @@ class Log(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(5)]
     )
     rewatch = models.BooleanField(default=False)
-   
+
+    class Meta:
+        ordering = ("-date", "-id")
 
 
 class Like(models.Model): 
@@ -70,3 +72,101 @@ class Collection(models.Model):
     essays = models.ManyToManyField("VideoEssay", related_name="lists")
     is_watchlist = models.BooleanField(default = False)
 
+    class Meta:
+        ordering = ("-id",)
+        constraints = [
+            # At most one watchlist per owner; ordinary lists are unrestricted.
+            models.UniqueConstraint(
+                fields=["owner"],
+                condition=models.Q(is_watchlist=True),
+                name="one_watchlist_per_owner",
+            ),
+        ]
+
+    @classmethod
+    def watchlist_for(cls, user):
+        """The user's watchlist: the flagged row, else their legacy "<clerk id>'s Watchlist"
+        row (flagged now, keeping its essays), else a new one. Adopting the legacy row here
+        means it doesn't matter whether this code or migration 0011 reaches an owner first."""
+        watchlist = cls.objects.filter(owner=user, is_watchlist=True).first()
+        if watchlist is not None:
+            return watchlist
+        legacy = (
+            cls.objects.filter(owner=user, is_watchlist=False, name=f"{user.username}'s Watchlist")
+            .order_by("id")
+            .first()
+        )
+        if legacy is not None:
+            try:
+                with transaction.atomic():
+                    cls.objects.filter(pk=legacy.pk).update(is_watchlist=True)
+                legacy.is_watchlist = True
+                return legacy
+            except IntegrityError:
+                pass  # another request flagged or created the watchlist first
+        watchlist, _ = cls.objects.get_or_create(
+            owner=user, is_watchlist=True, defaults={"name": "Watchlist"}
+        )
+        return watchlist
+
+
+class Report(models.Model):
+    """A user's report of a log, comment, user or list, for the owner to triage in Django admin.
+
+    Every FK is SET_NULL and `snapshot` keeps the reported text, so a report outlives the
+    content, the reporter and the reported user (evidence stays after a removal or an account
+    deletion). `target_type` is always set, so a report whose target is gone still says what it
+    was about. At most one target FK is set (not exactly one: SET_NULL empties it)."""
+    REASONS = [
+        ("spam", "Spam"),
+        ("harassment", "Harassment or bullying"),
+        ("hate", "Hate speech"),
+        ("sexual", "Sexual content"),
+        ("violence", "Violence or threats"),
+        ("other", "Other"),
+    ]
+    TARGET_TYPES = [("log", "Log"), ("comment", "Comment"), ("user", "User"), ("list", "List")]
+    OPEN = "open"
+    RESOLVED = "resolved"
+    STATUSES = [(OPEN, "Open"), (RESOLVED, "Resolved")]
+
+    id = models.BigAutoField(primary_key=True)
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="reports_made", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    reason = models.CharField(max_length=16, choices=REASONS)
+    details = models.CharField(max_length=500, blank=True, default="")
+    target_type = models.CharField(max_length=8, choices=TARGET_TYPES)
+    log = models.ForeignKey("Log", related_name="reports", on_delete=models.SET_NULL, null=True, blank=True)
+    comment = models.ForeignKey("Comment", related_name="reports", on_delete=models.SET_NULL, null=True, blank=True)
+    reported_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="reports_against", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    collection = models.ForeignKey(
+        "Collection", related_name="reports", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    snapshot = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=8, choices=STATUSES, default=OPEN)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolution_note = models.CharField(max_length=500, blank=True, default="")
+
+    TARGET_FIELDS = ("log", "comment", "reported_user", "collection")
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.CheckConstraint(
+                name="report_at_most_one_target",
+                condition=(
+                    models.Q(log__isnull=True, comment__isnull=True, reported_user__isnull=True, collection__isnull=True)
+                    | models.Q(log__isnull=False, comment__isnull=True, reported_user__isnull=True, collection__isnull=True)
+                    | models.Q(log__isnull=True, comment__isnull=False, reported_user__isnull=True, collection__isnull=True)
+                    | models.Q(log__isnull=True, comment__isnull=True, reported_user__isnull=False, collection__isnull=True)
+                    | models.Q(log__isnull=True, comment__isnull=True, reported_user__isnull=True, collection__isnull=False)
+                ),
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_target_type_display()} report #{self.id} ({self.status})"

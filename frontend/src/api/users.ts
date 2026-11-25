@@ -4,34 +4,30 @@
 // export function updateUser(id, data)
 // export function getAUser()
 
-import { authFetch } from "./client";
+import axios from "axios";
+import { authFetch, API_BASE_URL } from "./client";
 import {User} from "../types/user";
 import { PaginatedResponse } from "../types/api";
 import { useAuthUpdate } from "./authUpdate";
 import { useAuthPost } from "./authPost";
-import { UrlObject } from "expo-router/build/global-state/routeInfo";
+import { useAuthDelete } from "./authDelete";
 import { Profile } from "../types/profile";
 export async function fetchUsers(): Promise<PaginatedResponse<User>>{
-    console.log("fetch users function called?!")
     return authFetch("/users");
 } 
 
 export async function fetchAUser(id: number): Promise<User>{
-    console.log("get a user function called!!"); 
     return authFetch(`/users/${id}`)
 }
 export async function fetchProfile( token: string): Promise<Profile>{
-    console.log("fetch profile"); 
     const response = await authFetch(`/users/profile`, {}, token)
     return response
 }
 export async function fetchAProfileById(id: number, token: string): Promise<Profile>{
-    console.log("fetch a profile by id: ", id); 
     const response = await authFetch(`/users/profile/${id}/`, {}, token)
     return response
 }
 export async function updateProfileImageAPI( imageUrl: string,  authFetch: ReturnType<typeof useAuthUpdate>){
-    console.log("UPDATE user PROFILE IMAGE");
     const response = await authFetch(`/api/users/updatePic`, {imageUrl});
     return response;
 }
@@ -43,7 +39,56 @@ export type FollowResult = {
 
 // Toggles following the given user. Mirrors likeLog's toggle-on-POST shape.
 export async function followUser(userId: number, authFetch: ReturnType<typeof useAuthPost>): Promise<FollowResult> {
-    console.log("toggling follow for user: ", userId);
     const response = await authFetch(`/api/users/${userId}/follow/`);
     return response.data;
+}
+
+export type FollowListUser = {
+    id: number;
+    username: string;
+    imageUrl: string | null;
+    is_following: boolean;
+}
+
+export async function fetchFollowers(userId: number, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
+    return authFetch(`/users/${userId}/followers/?page=${page}`, {}, token);
+}
+
+export async function fetchFollowing(userId: number, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
+    return authFetch(`/users/${userId}/following/?page=${page}`, {}, token);
+}
+
+// Removes followerId from userId's followers (userId must be the signed-in user). Not a block.
+export async function removeFollower(userId: number, followerId: number, authFetch: ReturnType<typeof useAuthDelete>): Promise<void> {
+    await authFetch(`/api/users/${userId}/followers/${followerId}/`);
+}
+
+// Up to 5 users the viewer doesn't follow yet (plain list, not paginated).
+export async function fetchSuggestedUsers(token: string): Promise<FollowListUser[]> {
+    return authFetch(`/users/suggestions/`, {}, token);
+}
+
+// People whose username contains q, never the viewer. q under 2 characters returns an empty page.
+export async function searchUsers(q: string, page: number, token: string): Promise<PaginatedResponse<FollowListUser>> {
+    return authFetch(`/users/search/?q=${encodeURIComponent(q)}&page=${page}`, {}, token);
+}
+
+export type UsernameAvailability = {
+    available: boolean;
+    suggestions: string[];
+}
+
+// Public — no token, since sign-up has no Clerk session yet (mirrors fetchPopularVideoEssaysPublic's
+// plain-axios pattern rather than authFetch). Clerk itself remains the final authority on submit.
+export async function checkUsernameAvailability(candidate: string): Promise<UsernameAvailability> {
+    const response = await axios.get<UsernameAvailability>(
+        `${API_BASE_URL}/users/username-available/?u=${encodeURIComponent(candidate)}`
+    );
+    return response.data;
+}
+
+// Tells the server the signed-in user confirmed they are 16 or older. The server records its own
+// receive time on the first call and ignores repeats, so retrying is safe.
+export async function recordAgeConfirmation(token: string): Promise<{ age_confirmed_at: string }> {
+    return authFetch("/users/age-confirmation/", { method: "POST", body: JSON.stringify({}) }, token);
 }

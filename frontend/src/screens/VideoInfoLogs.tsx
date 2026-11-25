@@ -2,10 +2,10 @@ import { FlatList, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator }
 import { getAVideoEssay } from "../api/videos";
 import { VideoEssay } from "../types/videoEssay";
 import { Log } from "../types/log";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import {router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import {LineChart} from 'react-native-gifted-charts';
 
@@ -23,7 +23,9 @@ export default function VideoInfoLogs({ id }: { id: string}){
     // const sectionBackground = useThemeColor({ light: '#f1f5f9', dark: '#111827' }, 'background');
     // const secondaryTextColor = useThemeColor({ light: '#475569', dark: '#94a3b8' }, 'text');
     // const borderColor = useThemeColor({ light: '#e2e8f0', dark: '#334155' }, 'text');
-    useEffect(() => {
+    // Refetch on every focus, not just mount: quick log dismisses with router.back(),
+    // which leaves this screen mounted with a stale log list.
+    useFocusEffect(useCallback(() => {
             if (!id) {
               setLoading(false);
               return;
@@ -74,7 +76,10 @@ export default function VideoInfoLogs({ id }: { id: string}){
             }
           
             loadVideo();
-          }, [id]);
+            // getToken's identity changes on every Clerk render; excluding it keeps this from
+            // refetching each render.
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+          }, [id]));
     return (
       <ScrollView
       style = {{width: '100%'}}

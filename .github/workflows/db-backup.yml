@@ -1,0 +1,52 @@
+name: Database backup
+
+# Nightly pg_dump of the production database (Supabase free has no backups).
+# The dump holds user data, so it is encrypted before upload. Restore steps are
+# in DEPLOY.md. NOTE: GitHub runs scheduled workflows only from the default
+# branch, so this does nothing until it is merged there.
+
+on:
+  schedule:
+    - cron: "17 7 * * *" # 07:17 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # ubuntu-latest ships an older client; pg_dump must be >= the server version.
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-client-17
+
+      - name: Dump and encrypt
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$DATABASE_URL" && test -n "$BACKUP_PASSPHRASE"
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-privileges \
+            --schema=public "$DATABASE_URL" > dump.pgdump
+          # Refuse to upload an empty or suspiciously tiny dump.
+          test "$(stat -c %s dump.pgdump)" -gt 10000
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o "backup-$stamp.pgdump.gpg" dump.pgdump
+          rm dump.pgdump
+          ls -l backup-*.gpg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup
+          path: backup-*.pgdump.gpg
+          retention-days: 30
+          if-no-files-found: error

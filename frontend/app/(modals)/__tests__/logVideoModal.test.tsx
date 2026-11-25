@@ -9,8 +9,9 @@
  * handler (no Clerk, no network, no nested screens).
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 
+let mockParams: Record<string, string> = { essayId: 'essay-123' };
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
@@ -20,17 +21,30 @@ jest.mock('expo-router', () => ({
     replace: (...args: unknown[]) => mockReplace(...args),
     canGoBack: () => true,
   },
-  useLocalSearchParams: () => ({ essayId: 'essay-123' }),
+  useLocalSearchParams: () => mockParams,
 }));
+
+const mockShowToast = jest.fn();
+jest.mock('@/src/helpers/toast', () => ({ showToast: (...args: unknown[]) => mockShowToast(...args) }));
 
 const mockCreateLog = jest.fn();
+const mockUpdateLog = jest.fn();
+const mockFetchALog = jest.fn();
 jest.mock('@/src/api/logs', () => ({
   createLog: (...args: unknown[]) => mockCreateLog(...args),
+  updateLog: (...args: unknown[]) => mockUpdateLog(...args),
+  fetchALog: (...args: unknown[]) => mockFetchALog(...args),
 }));
 jest.mock('@/src/api/authPost', () => ({ useAuthPost: () => jest.fn() }));
+jest.mock('@/src/api/authUpdate', () => ({ useAuthUpdate: () => jest.fn() }));
+jest.mock('@clerk/clerk-expo', () => ({ useAuth: () => ({ getToken: async () => 'tok' }) }));
 jest.mock('@/src/api/client', () => ({ authFetch: jest.fn() }));
 
-jest.mock('@/src/screens/createLogScreen', () => () => null);
+const mockFormProps = jest.fn();
+jest.mock('@/src/screens/createLogScreen', () => (props: Record<string, unknown>) => {
+  mockFormProps(props);
+  return null;
+});
 jest.mock('@/src/screens/GetVideoEssayScreen', () => () => null);
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => 'MaterialCommunityIcons');
 jest.mock('@/components/themed-view', () => {
@@ -50,6 +64,61 @@ jest.setTimeout(20000);
 describe('logVideoModal Save button', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockParams = { essayId: 'essay-123' };
+  });
+
+  it('starts from the rating handed over from the quick-log sheet', async () => {
+    mockParams = { essayId: 'essay-123', rating: '4' };
+    mockCreateLog.mockResolvedValue(undefined);
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    await waitFor(() => expect(mockCreateLog).toHaveBeenCalledTimes(1));
+    expect(mockCreateLog.mock.calls[0][1]).toMatchObject({ essay: 'essay-123', rating: 4 });
+  });
+
+  it('closes the modal and shows a "Log created" sign after a successful save', async () => {
+    mockCreateLog.mockResolvedValue(undefined);
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(mockShowToast).toHaveBeenCalledWith('Log created');
+  });
+
+  it('does not show the sign when the save fails', async () => {
+    mockCreateLog.mockRejectedValueOnce(new Error('network'));
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    await waitFor(() => expect(screen.getByText(/Couldn't save/)).toBeTruthy());
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it('passes a blank-review rejection to the review field, not the top banner', async () => {
+    mockCreateLog.mockRejectedValueOnce({
+      response: { status: 400, data: { review_text: ['This field may not be blank.'] } },
+    });
+
+    render(<LogVideoModal />);
+    fireEvent.press(screen.getByText('Save Log'));
+
+    await waitFor(() => {
+      const props = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+      expect(props.reviewError).toBe('This field may not be blank.');
+    });
+    expect(screen.queryByText(/may not be blank/)).toBeNull();
+    expect(screen.queryByText(/Couldn't save/)).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    // Typing clears the error.
+    const props = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+    act(() => props.onReviewTextChange('great'));
+    const after = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+    expect(after.reviewError).toBeFalsy();
   });
 
   it('creates the log only once when Save is double-tapped, then dismisses', async () => {
@@ -92,5 +161,78 @@ describe('logVideoModal Save button', () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
 
     expect(mockCreateLog).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('logVideoModal edit mode (?logId=)', () => {
+  const existingLog = {
+    public_id: 'log-1',
+    essay_details: { public_id: 'essay-9' },
+    rating: 3,
+    review_text: 'pretty good',
+    date: '2026-03-05',
+    rewatch: true,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockParams = { logId: 'log-1' };
+    mockFetchALog.mockResolvedValue(existingLog);
+  });
+
+  it('pre-fills the form from the existing log, keeping the calendar day', async () => {
+    render(<LogVideoModal />);
+
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy());
+    const props = mockFormProps.mock.calls[mockFormProps.mock.calls.length - 1][0];
+    expect(props).toMatchObject({ id: 'essay-9', initialRating: 3, reviewText: 'pretty good', rewatch: true });
+    const d = props.date as Date;
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 2, 5]);
+  });
+
+  it('PATCHes once (no essay) when Save is double-tapped, then goes back', async () => {
+    let resolveUpdate: () => void = () => {};
+    mockUpdateLog.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveUpdate = resolve;
+        }),
+    );
+
+    render(<LogVideoModal />);
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy());
+    const save = screen.getByText('Save changes');
+    fireEvent.press(save);
+    fireEvent.press(save);
+
+    expect(mockUpdateLog).toHaveBeenCalledTimes(1);
+    const [id, payload] = mockUpdateLog.mock.calls[0];
+    expect(id).toBe('log-1');
+    expect(payload).toEqual({ rating: 3, review_text: 'pretty good', rewatch: true, date: '2026-03-05' });
+
+    resolveUpdate();
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(mockCreateLog).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('shows an error and allows retry when the update fails', async () => {
+    mockUpdateLog.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce(undefined);
+
+    render(<LogVideoModal />);
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Save changes'));
+    await waitFor(() => expect(screen.getByText(/Couldn't save/)).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Save changes'));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(mockUpdateLog).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows an error when the log cannot be loaded', async () => {
+    mockFetchALog.mockRejectedValueOnce(new Error('404'));
+    render(<LogVideoModal />);
+    await waitFor(() => expect(screen.getByText(/Couldn't load this log/)).toBeTruthy());
   });
 });

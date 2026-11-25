@@ -1,31 +1,93 @@
 import { router, useLocalSearchParams} from 'expo-router';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CreateLogScreen from '@/src/screens/createLogScreen';
 import GetVideoEssayScreen from '@/src/screens/GetVideoEssayScreen';
-import { useRef, useState} from 'react';
+import { useEffect, useRef, useState} from 'react';
+import { useAuth } from '@clerk/clerk-expo';
 import { ThemedView } from '@/components/themed-view'
-import { createLog } from '@/src/api/logs';
+import { createLog, fetchALog, updateLog } from '@/src/api/logs';
+import { addToWatchlist } from '@/src/api/collection';
+import { fetchProfile } from '@/src/api/users';
 import { useAuthPost } from '@/src/api/authPost';
+import { useAuthUpdate } from '@/src/api/authUpdate';
 import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { showToast } from '@/src/helpers/toast';
+import { validationErrors, validationMessage } from '@/src/helpers/validationMessage';
 
 export default function LogVideoModal() {
-  const authFetch = useAuthPost();  // ← use this instead of imported authFetch
+  const authFetch = useAuthPost();  // use this instead of imported authFetch
+    const authUpdate = useAuthUpdate();
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const submittingRef = useRef(false);
-    const [ratingValue, setRatingValue] = useState(0);
+    const params = useLocalSearchParams<{essayId?: string | string[]; rating?: string; logId?: string}>();
+    // With a logId the modal edits that log (pre-filled) instead of creating one.
+    const logId = typeof params.logId === "string" ? params.logId : undefined;
+    const [loadedEssayId, setLoadedEssayId] = useState<string>();
+    const [loadingLog, setLoadingLog] = useState(!!logId);
+    const [loadError, setLoadError] = useState(false);
+    // A rating already given in the quick-log sheet arrives as a param.
+    const [ratingValue, setRatingValue] = useState(Number(params.rating) || 0);
     const [rewatch, setRewatch] = useState(false);
+    const [watchlist, setWatchlist] = useState(false);
     const [reviewText, setReviewText] = useState("");
     const [date, setDate] = useState(new Date());
     const [error, setError] = useState("");
-    const theme = Colors[useColorScheme() ?? 'light'];
-    const params = useLocalSearchParams<{essayId?: string | string[]}>();
-    const essayId =
+    // Shown under the review box (next to the character count), not in the top banner.
+    const [reviewError, setReviewError] = useState("");
+    const theme = Colors[useColorScheme()];
+    const essayId = logId ? loadedEssayId :
       typeof params.essayId === "string" ?
       params.essayId
       : Array.isArray(params.essayId)
       ? params.essayId[0]
       : undefined;
 
+    useEffect(() => {
+        if (!logId) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const token = await getToken();
+                const log = await fetchALog(logId, token!);
+                if (cancelled) return;
+                setRatingValue(log.rating);
+                setReviewText(log.review_text ?? "");
+                setRewatch(log.rewatch);
+                // Local noon, not UTC midnight: the date round-trips through
+                // toISOString() and toLocaleDateString(), and noon keeps the same
+                // calendar day in either for any real timezone offset.
+                const [y, m, d] = String(log.date).split('-').map(Number);
+                setDate(new Date(y, m - 1, d, 12));
+                setLoadedEssayId(log.essay_details.public_id);
+            } catch (err) {
+                console.error("Error loading log:", err);
+                if (!cancelled) setLoadError(true);
+            } finally {
+                if (!cancelled) setLoadingLog(false);
+            }
+        })();
+        return () => { cancelled = true; };
+        // getToken's identity changes on every Clerk render; excluding it keeps
+        // this from refetching (and clobbering in-progress edits) each render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [logId]);
+
+     if (logId && loadingLog) {
+        return (
+          <ThemedView style={styles.page}>
+            <ActivityIndicator size="large" color={theme.accent} style={styles.loading} />
+          </ThemedView>
+        );
+      }
+     if (logId && loadError) {
+        return (
+          <ThemedView style={styles.page}>
+            <Text style={[styles.errorText, { color: theme.accent }]}>{"Couldn't load this log."}</Text>
+          </ThemedView>
+        );
+      }
      if (typeof essayId !== "string") {
         return (
           <View>
@@ -43,41 +105,66 @@ export default function LogVideoModal() {
             router.replace('/');
         }
     };
+    // Best-effort: a failure here shouldn't undo an already-saved log, so it's
+    // logged rather than surfaced as a save error.
+    const addEssayToWatchlist = async () => {
+        try {
+            const token = await getToken();
+            const profile = await fetchProfile(token!);
+            await addToWatchlist(essayId, profile.watchList.public_id, authFetch);
+        } catch (err) {
+            console.error("Failed to add to watchlist:", err);
+        }
+    };
     const handleSubmit = async () => {
         // Guard against double-taps creating duplicate logs.
         if (submittingRef.current) return;
         submittingRef.current = true;
         setLoading(true);
         setError("");
+        setReviewError("");
         try{
-            const payload = {
-                essay: essayId,
+            const fields = {
                 date: date.toISOString().split('T')[0],
                 rating: ratingValue,
                 review_text: reviewText,
                 rewatch: rewatch
             }
 
-            await createLog(authFetch, payload);
+            if (logId) {
+                await updateLog(logId, fields, authUpdate);
+                if (watchlist) await addEssayToWatchlist();
+                setLoading(false);
+                handleClose();
+                return;
+            }
+            await createLog(authFetch, { essay: essayId, ...fields });
+            if (watchlist) await addEssayToWatchlist();
             console.log("Log created successfully");
             setLoading(false);
             router.replace('/');
+            showToast('Log created');
         } catch (err) {
-            console.error("Error creating log:", err);
-            setError("Couldn't save this log — try again.");
+            console.error("Error saving log:", err);
+            const fieldErrors = validationErrors(err);
+            setReviewError(fieldErrors?.review_text ?? "");
+            setError(fieldErrors ? (validationMessage(err, ['review_text']) ?? "") : "Couldn't save this log — try again.");
             submittingRef.current = false;
             setLoading(false);
         }
     }
     return(
         <ThemedView style={[styles.page, { backgroundColor: theme.surface }]}>
-        <ThemedView style={[styles.largeContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
+        <KeyboardAvoidingView
+          style={[styles.largeContainer, { borderColor: theme.border, backgroundColor: theme.background }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={[styles.header, { borderColor: theme.border }]}>
             <TouchableOpacity onPress={handleClose} style={styles.headerSide} accessibilityLabel="Close">
               <Text style={[styles.closeIcon, { color: theme.muted }]}>{"✕"}</Text>
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: theme.text, fontFamily: Fonts?.displayMedium }]}>
-              Log this watch
+              {logId ? "Edit log" : "Log this watch"}
             </Text>
             <TouchableOpacity
               onPress={handleSubmit}
@@ -85,7 +172,7 @@ export default function LogVideoModal() {
               style={[styles.headerSide, styles.headerSideRight]}
             >
               <Text style={[styles.saveText, { color: theme.accent, opacity: loading ? 0.5 : 1 }]}>
-                {loading ? "Saving..." : "Save Log"}
+                {loading ? "Saving..." : logId ? "Save changes" : "Save Log"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -94,22 +181,29 @@ export default function LogVideoModal() {
             <Text style={[styles.errorText, { color: theme.accent }]}>{error}</Text>
           ) : null}
 
-          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={Keyboard.dismiss}
+          >
             <GetVideoEssayScreen id={essayId} compact />
             <CreateLogScreen
               id={essayId}
               style={styles.form}
               initialRating={ratingValue}
               reviewText={reviewText}
+              reviewError={reviewError}
               date={date}
               rewatch={rewatch}
               onRatingChange={setRatingValue}
-              onReviewTextChange={setReviewText}
+              onReviewTextChange={(text) => { setReviewText(text); setReviewError(""); }}
               onDateChange={setDate}
               onWatchedChange={setRewatch}
+              onWatchListChange={setWatchlist}
             />
           </ScrollView>
-        </ThemedView>
+        </KeyboardAvoidingView>
         </ThemedView>
     )
 }
@@ -168,6 +262,9 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         paddingTop: 10,
         fontSize: 13,
+    },
+    loading: {
+        flex: 1,
     },
     body: {
         flex: 1,

@@ -195,9 +195,27 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Media storage: local filesystem (MEDIA_ROOT) unless AWS_STORAGE_BUCKET_NAME
+# is set, in which case media is served from a real AWS S3 bucket. Nothing in
+# this app writes to storage yet — this is plumbing for the next feature that
+# needs uploads. The bucket is expected to be private (see DEPLOY.md "10." for
+# the IAM setup) — AWS_QUERYSTRING_AUTH stays on (the default) so
+# django-storages generates presigned, time-limited URLs rather than requiring
+# a public bucket policy.
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+if AWS_STORAGE_BUCKET_NAME:
+    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "us-east-1")
+    AWS_DEFAULT_ACL = None
+    AWS_S3_SIGNATURE_VERSION = "s3v4"  # required outside us-east-1
+    _default_storage_backend = "storages.backends.s3.S3Storage"
+else:
+    _default_storage_backend = "django.core.files.storage.FileSystemStorage"
+
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": _default_storage_backend,
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -211,6 +229,36 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # Directory where uploaded media is saved.
 MEDIA_URL = '/media/' # Public URL at the browser
+
+# --- Cache / Redis ---------------------------------------------------------
+# REDIS_URL (e.g. a Render Key Value instance, or local `redis://127.0.0.1:6379/0`
+# via docker-compose) switches the cache backend with no code change; unset ->
+# an in-process LocMemCache, which is fine for a single free-tier instance.
+REDIS_URL = os.environ.get("REDIS_URL")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
+
+# --- Celery -----------------------------------------------------------------
+# Broker is the same Redis instance as the cache. With no REDIS_URL, tasks run
+# eagerly (synchronously, in-process, no worker needed) — behavior is
+# identical to calling the function directly, just through the Celery API so
+# switching to a real broker later is a config change, not a code change.
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_TASK_ALWAYS_EAGER = not REDIS_URL
+CELERY_TASK_EAGER_PROPAGATES = True
 
 # tutorial/settings.py
 REST_FRAMEWORK = {

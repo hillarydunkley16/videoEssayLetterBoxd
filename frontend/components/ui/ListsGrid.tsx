@@ -29,7 +29,7 @@ function ListCoverCollage({ essays, theme }: { essays: VideoEssay[]; theme: (typ
     <View style={styles.coverGrid}>
       {Array.from({ length: 4 }, (_, i) => shown[i]).map((essay, i) => (
         <View key={i} style={[styles.coverCell, { backgroundColor: theme.surface }]}>
-          {essay?.thumbnail ? <Image source={{ uri: essay.thumbnail }} style={styles.coverImage} /> : null}
+          {essay?.thumbnail ? <Image source={{ uri: essay.thumbnail }} style={styles.coverImage} resizeMode="cover" /> : null}
           {i === 3 && remaining > 0 ? (
             <View style={styles.coverMoreOverlay}>
               <Text style={styles.coverMoreText}>+{remaining}</Text>
@@ -41,10 +41,21 @@ function ListCoverCollage({ essays, theme }: { essays: VideoEssay[]; theme: (typ
   );
 }
 
-export function ListCard({ list, theme }: { list: Collection; theme: (typeof Colors)["light"] }) {
+export function ListCard({
+  list,
+  theme,
+  width,
+  showOwner,
+}: {
+  list: Collection;
+  theme: (typeof Colors)["light"];
+  width?: number;
+  // Search results show whose list it is; "Your Lists" doesn't need to.
+  showOwner?: boolean;
+}) {
   return (
     <TouchableOpacity
-      style={[styles.listCard, { borderColor: theme.border, backgroundColor: theme.surface }]}
+      style={[styles.listCard, { borderColor: theme.border, backgroundColor: theme.surface }, width ? { width } : styles.listCardFluid]}
       onPress={() => router.push(`/collectionDetail?publicId=${list.public_id}`)}
     >
       <ListCoverCollage essays={list.essays} theme={theme} />
@@ -58,6 +69,11 @@ export function ListCard({ list, theme }: { list: Collection; theme: (typeof Col
         <Text style={[styles.listCardMeta, { color: theme.muted, fontFamily: Fonts?.sans }]}>
           {list.essays.length} {list.essays.length === 1 ? "essay" : "essays"}
         </Text>
+        {showOwner ? (
+          <Text style={[styles.listCardMeta, { color: theme.muted, fontFamily: Fonts?.sans }]} numberOfLines={1}>
+            by {list.owner}
+          </Text>
+        ) : null}
         {list.description ? (
           <Text style={[styles.listCardDesc, { color: theme.text, fontFamily: Fonts?.sans }]} numberOfLines={2}>
             {list.description}
@@ -106,9 +122,11 @@ const styles = StyleSheet.create({
   newListText: {
     fontSize: 13,
   },
-  listCard: {
+  listCardFluid: {
     flex: 1,
     maxWidth: "48%",
+  },
+  listCard: {
     marginBottom: 14,
     borderWidth: 1,
     borderRadius: 5,

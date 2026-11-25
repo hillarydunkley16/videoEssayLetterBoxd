@@ -43,7 +43,7 @@ web app and its `django-bootstrap-v5` dependency is incompatible with Python 3.1
 | Backend framework | Django 5.2.10 LTS, Django REST Framework 3.16.0 |
 | Backend runtime | Python 3.13, gunicorn 26.0.0 |
 | Static file serving | WhiteNoise 6.12.0 (admin + DRF browsable API only) |
-| DB (prod) | Render PostgreSQL via `dj-database-url` 3.1.2 + `psycopg[binary]` 3.3.4 |
+| DB (prod) | Supabase PostgreSQL (Session Pooler) via `dj-database-url` 3.1.2 + `psycopg[binary]` 3.3.4 |
 | DB (local dev) | SQLite (unchanged) |
 | Auth | Clerk (**development** instance for the beta) — JWT verified with `python-jose` |
 | External API | SerpAPI (`google-search-results`) for YouTube search |
@@ -259,7 +259,9 @@ lists these; all must pass before inviting testers:
 ## Success Criteria
 
 - [ ] `render.yaml` at repo root provisions: 1 web service (backend), 1 static
-      site (frontend web), 1 PostgreSQL instance.
+      site (frontend web); the database is a Supabase PostgreSQL project
+      (migrated off Render's managed Postgres 2026-09-25, ahead of its 90-day
+      free-tier expiry).
 - [ ] Backend is reachable at its Render URL; `GET /admin/` loads with WhiteNoise-served CSS.
 - [ ] `python manage.py check --deploy` reports **0 issues** with the production env.
 - [ ] `git ls-files` shows no `.env`, no `db.sqlite3`, no `.pyc`, no `.DS_Store`;

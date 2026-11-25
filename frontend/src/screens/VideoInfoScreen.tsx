@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -9,12 +9,12 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { ThemedView } from "@/components/themed-view";
 import { Colors, Fonts } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { RatingDots } from "@/components/ui/RatingDots";
 import { getAVideoEssay } from "@/src/api/videos";
 import { fetchProfile } from "@/src/api/users";
@@ -38,7 +38,7 @@ function formatShortDate(value: string | Date) {
 }
 
 export default function VideoInfoScreen({ id }: { id: string }) {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const { getToken } = useAuth();
   const authPost = useAuthPost();
   const authDelete = useAuthDelete();
@@ -76,9 +76,11 @@ export default function VideoInfoScreen({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  useEffect(() => {
+  // Refetch on every focus, not just mount: quick log dismisses with router.back(),
+  // which leaves this screen mounted with a stale log list.
+  useFocusEffect(useCallback(() => {
     load();
-  }, [load]);
+  }, [load]));
 
   // router.back() silently no-ops when this screen has no back-history (e.g.
   // opened via a direct/refreshed URL on web), so fall back to a known route

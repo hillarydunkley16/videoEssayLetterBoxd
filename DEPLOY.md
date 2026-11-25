@@ -1,0 +1,380 @@
+# Deploy Runbook — Closed Beta
+
+This is the step-by-step guide to standing up (or rebuilding from scratch) the
+closed-beta deployment described in `SPEC.md`. It assumes you already have a
+Render account and a GitHub repo connected to it.
+
+**Live URLs (current beta):**
+- Backend: https://videoessay-backend.onrender.com
+- Frontend: https://videoessay-web.onrender.com
+
+## Database: Supabase Postgres, not Render's managed Postgres
+
+The app's database is a Supabase Postgres project, connected via its
+**Session Pooler** URI (IPv4-compatible — Supabase's direct-connection host
+is IPv6-only, which this network / Render's build environment can't always
+reach). `DATABASE_URL` is `sync: false` in `render.yaml` and set by hand in
+the `videoessay-backend` dashboard to that pooler URI.
+
+This replaced a Render-managed free Postgres instance (`videoessay-db`),
+migrated off ahead of its 90-day free-tier expiry via `pg_dump` /
+`pg_restore` on 2026-09-25. If `videoessay-db` still exists in the Render
+dashboard, it's no longer in use and can be deleted once the Supabase cutover
+is confirmed stable.
+
+Supabase's own free-tier caveat: a project **pauses after ~1 week of
+inactivity** and needs a manual dashboard "restore" to resume — different
+failure mode than Render's hard 90-day expiry, but worth watching for the
+same reason (closed beta traffic may be too low to keep it warm on its own).
+
+## 1. Prerequisites
+
+- A Render account, with this repo connected as a GitHub source.
+- A Supabase account with a Postgres project created — see "Database" above
+  for the connection string to use.
+- A Clerk account with the **development** instance already created (the beta
+  intentionally uses Clerk dev, not prod — see "Clerk setup" below for why).
+- A SerpAPI account (free tier is ~100 searches/month) for `SERPAPI_KEY`.
+
+## 2. First-time provisioning (Blueprint deploy)
+
+1. Create a Supabase project (supabase.com/dashboard) and note its **Session
+   Pooler** connection string (Settings → Database → Connection string →
+   "Session pooler" tab) — this is `DATABASE_URL`.
+2. In the Render dashboard: **New → Blueprint**, point it at this repo, branch
+   `v2` (or `main` after Task 16's merge). Render reads `render.yaml` at the
+   repo root and provisions both resources in one pass:
+   - `videoessay-backend` — Python web service, free plan
+   - `videoessay-web` — static site, free plan
+3. The first deploy will likely fail or come up partially broken, because
+   several env vars are intentionally `sync: false` in `render.yaml` (Render
+   won't guess secrets, the Supabase connection string, or the frontend's own
+   URL for you). That's expected — continue to step 4.
+4. Set every `sync: false` env var per the table below, then trigger a manual
+   redeploy of both services (**Manual Deploy → Deploy latest commit**, or
+   just **Save Changes** on the Environment tab, which redeploys
+   automatically).
+5. Once `videoessay-backend` is live, add its own web origin's frontend
+   counterpart: set `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and
+   `CORS_ALLOWED_ORIGINS` on the backend to `videoessay-web`'s real URL (see
+   table), then redeploy the backend again.
+6. Create a Django superuser via the backend's **Shell** tab in the Render
+   dashboard:
+   ```
+   python manage.py createsuperuser
+   ```
+   Confirm `/admin/login/` on the deployed backend works with those
+   credentials.
+
+## 3. Every env var and where its value comes from
+
+### `videoessay-backend`
+
+| Key | Source | Notes |
+|---|---|---|
+| `PYTHON_VERSION` | literal `3.13.7` in `render.yaml` | Render ignores `runtime.txt` and defaults to a newer Python otherwise — pin explicitly. |
+| `DATABASE_URL` | dashboard, `sync: false` | Supabase **Session Pooler** URI (`postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`) — not the direct-connection URI, which is IPv6-only. |
+| `DJANGO_SECRET_KEY` | `generateValue: true` in `render.yaml` | Render generates and stores this; never set by hand, never commit it. |
+| `DJANGO_DEBUG` | literal `"false"` in `render.yaml` | Must stay `false` in any real deployment. |
+| `DJANGO_ALLOWED_HOSTS` | dashboard, `sync: false` | Set to `videoessay-backend.onrender.com` (its own host — also auto-trusted via `RENDER_EXTERNAL_HOSTNAME`, but set explicitly per Task 13). |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | dashboard, `sync: false` | Set to `https://videoessay-web.onrender.com` — the frontend's origin, with scheme. |
+| `CORS_ALLOWED_ORIGINS` | dashboard, `sync: false` | Same value as above — comma-separate if you ever add a second frontend origin (e.g. a custom domain). |
+| `CLERK_ISSUER` | literal in `render.yaml` (currently the dev instance URL) | This is a public URL, not a secret — set literally so an unset `sync: false` var can't silently break auth. Swap when cutting over to Clerk prod (see below). |
+| `CLERK_ISSUER_LEGACY` | not set for the beta | Only needed during a dev→prod Clerk cutover window; leave unset until then. |
+| `SERPAPI_KEY` | dashboard, `sync: false` | Real secret from serpapi.com. Missing it degrades `/api/search/` to a `503`, not a crash. |
+| `REDIS_URL` | not set for the beta | Optional. Unset -> in-process cache + synchronous (eager) Celery tasks. See "10. Cache, background jobs, and file storage" below before adding a paid Render Key Value instance. |
+| `AWS_STORAGE_BUCKET_NAME` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_S3_REGION_NAME` | not set for the beta | Optional. Unset -> local filesystem media storage (fine for a single free-tier instance; nothing in the app writes to media storage yet). Targets real AWS S3 — see "10." below for bucket/IAM setup. |
+
+### `videoessay-web`
+
+| Key | Source | Notes |
+|---|---|---|
+| `NODE_VERSION` | literal `22.11.0` in `render.yaml` | Pinned for build reproducibility. |
+| `EXPO_PUBLIC_API_BASE_URL` | dashboard, `sync: false` | Set to `https://videoessay-backend.onrender.com`. This is the *only* place the backend URL should ever be set — `frontend/src/api/client.ts` reads it and nothing else. |
+| `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | dashboard, `sync: false` | Clerk **dev** instance's publishable key (`pk_test_...`). Public by design — it ships in the web bundle. |
+
+Every var above should also appear (name only, no value) in
+`backend/.env.example` and `frontend/.env.example` — cross-check those files
+if this table and the Blueprint ever drift apart.
+
+## 4. Clerk setup
+
+The beta intentionally runs on Clerk's **development** instance
+(`splendid-sunbird-55.clerk.accounts.dev`), not production. A Clerk
+*production* instance requires a custom domain with DNS control, which the
+`*.onrender.com` beta setup doesn't have.
+
+**Before public launch**, when a custom domain exists:
+1. Register the domain and point it at Render (see Render's custom-domain
+   docs for the CNAME/A record).
+2. Create a Clerk **production** instance, add its required DNS records.
+3. Set the backend's `CLERK_ISSUER` to the new prod issuer, and move the old
+   dev issuer into `CLERK_ISSUER_LEGACY` — `authentication.py` accepts tokens
+   from both during the cutover window, so existing sessions don't break.
+4. Set the frontend's `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` to the prod
+   publishable key.
+5. Once all traffic has cut over, remove `CLERK_ISSUER_LEGACY`.
+
+### Google sign-in ("Continue with Google")
+
+Spec: `SPEC-google-signin.md`. Nothing in the repo or in Render holds a Google
+secret: the Google Client ID/Secret live **only** in the Clerk dashboard, and the
+app and backend never see them. No backend env var changes.
+
+**Why custom credentials, even on the dev instance.** Clerk's shared dev
+credentials sent the Google redirect to `clerk.shared.lcl.dev`, which doesn't
+resolve, so sign-in never reached Google. The dev instance needs its own Google
+OAuth client.
+
+One-time setup (already done for `splendid-sunbird-55`; repeat for any new Clerk
+instance):
+1. **Clerk Dashboard** → SSO connections → Google → turn on **Use custom
+   credentials**. Copy the **Authorized Redirect URI** it shows.
+2. **Google Cloud Console** → Google Auth Platform:
+   - Audience: user type **External**, publishing status **Testing**.
+   - Clients → Create client → type **Web application** (one client is enough;
+     iOS/Android client IDs are not used, sign-in runs in the system browser and
+     returns through Clerk).
+   - **Authorized redirect URIs:** the value copied from Clerk, pasted unchanged
+     with `https://` in front if Clerk shows it without the scheme.
+   - **Authorized JavaScript origins:** `http://localhost:8081` and the deployed
+     web origin (`https://videoessay-web.onrender.com`).
+3. Paste the Client ID and Client Secret into the Clerk Google connection and
+   save. Never commit them or put them in any `.env`.
+4. If Clerk rejects a redirect, add the web origin's `/sso-callback` and the
+   native `frontend://sso-callback` to the instance's allowed redirect URLs.
+
+**Who can sign in: currently anyone.** The Google OAuth app is set to
+**Testing** with the Test users list, but in practice that list did **not**
+block anyone: accounts removed from it, and a throwaway account that had never
+used the app, all signed in on the live site (checked 2026-11-15; cause
+unknown). Treat Google's Test users list as **not** a gate. The beta is
+effectively open to any Google account.
+- If you need to limit sign-ups, do it in Clerk Dashboard → Configure →
+  Restrictions (allowlist or restricted sign-up mode), then test it once with
+  an unlisted account on the live site. Not set up yet.
+- Moving to "In production" later needs Google's app verification (name, logo,
+  privacy policy, scopes).
+
+Behaviour to know:
+- A Google email that matches an existing Clerk account with a verified email is
+  linked to it automatically (same user, no duplicate).
+- A Google account Clerk has never seen is asked for a **username** on the
+  "Pick a username" screen; no session or Django user exists until it's saved,
+  and Cancel discards the attempt.
+- Native (iOS/Android) needs a dev build (`npx expo run:ios` / `run:android`);
+  Expo Go can't do the OAuth redirect. Android has not been verified yet.
+
+## 5. Redeploying
+
+Render auto-deploys a push to the connected branch only after the GitHub CI
+checks pass (`autoDeployTrigger: checksPass` in `render.yaml`). A red or
+still-running CI means no deploy yet. If the services were created before this
+setting existed, set **Settings → Build & Deploy → Auto-Deploy → After CI
+Checks Pass** on both services, because a Blueprint sync may not change it. In
+an emergency, use Manual Deploy (below), which skips the check. To redeploy without a new commit — e.g. after
+changing an env var — use **Manual Deploy → Deploy latest commit** on the
+service, or just save the Environment tab (which triggers a redeploy on its
+own).
+
+Before pushing a deploy-affecting change:
+```
+cd backend && python manage.py check --deploy && python manage.py test
+cd frontend && npx tsc --noEmit && npm run lint && npx expo export --platform web
+```
+
+## 6. Rollback
+
+- **Fastest path:** Render dashboard → the service → **Deploys** tab → find
+  the last known-good deploy → **Rollback to this deploy**. This works for
+  both `videoessay-backend` and `videoessay-web` independently.
+- **Via git:** revert the offending commit(s) on the deploy branch and push —
+  Render's `autoDeploy` picks it up automatically. Never force-push to rewrite
+  history on `v2` or `main` to "undo" a bad deploy; a revert commit is safer
+  and keeps the audit trail.
+- **Database:** the nightly encrypted `pg_dump` (section 11) is the recovery
+  path for bad data, not code rollback. The Supabase free plan has no
+  automated backups of its own. A schema-changing migration should be reverted
+  with a new migration, never by editing or deleting an applied one
+  (`SPEC.md` Boundaries).
+
+## 7. Free-tier caveats
+
+- **Cold start:** the backend web service spins down after ~15 minutes of
+  inactivity; the next request pays a ~30-60s cold-start cost while it spins
+  back up. Expected on the free plan — not a bug.
+- **Supabase project pausing:** see the database section at the top of this
+  doc — a free-tier Supabase project pauses after ~1 week with no activity
+  and needs a manual "Restore" click in its dashboard to come back.
+- **SerpAPI quota:** the free plan is ~100 searches/month. If beta usage
+  exceeds that, `/api/search/` starts returning `502`/`504` (the app degrades
+  to DB-only search results, but that's a real UX hit) — upgrade the SerpAPI
+  plan or add caching before that becomes a problem.
+- **Backups:** the Supabase free plan has none. A nightly encrypted
+  `pg_dump` runs from GitHub Actions and is kept for 30 days (section 11).
+  It is a stopgap: revisit durable storage and a read-only backup role
+  before public launch.
+- **Single instance:** the backend runs on a single free-tier instance, so
+  there's no rolling-deploy/zero-downtime story and no migration race to
+  worry about — `migrate` runs safely in `startCommand` before `gunicorn`
+  starts.
+
+## 8. Rotating a secret
+
+If `SERPAPI_KEY` or `DJANGO_SECRET_KEY` is ever exposed (e.g. committed by
+accident, leaked in a log), rotate it without a code change:
+
+- **`SERPAPI_KEY`:** generate a new key at serpapi.com, paste it into
+  `videoessay-backend`'s Environment tab, save. The old key can then be
+  revoked on SerpAPI's side. `/api/search/` has no downtime from this — it
+  just starts using the new key on the next request after redeploy.
+- **`DJANGO_SECRET_KEY`:** delete the env var's current value in the
+  dashboard and let Render's `generateValue: true` (from `render.yaml`)
+  regenerate it on the next deploy, or paste in a manually generated one.
+  Rotating this invalidates all existing sessions/signed cookies — expect
+  every signed-in user to need to log back in.
+- **Clerk keys:** rotated from the Clerk dashboard itself (API Keys page);
+  update `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` on `videoessay-web` to match and
+  redeploy the frontend. The backend's `CLERK_ISSUER` doesn't change during a
+  same-instance key rotation.
+- Never rotate a secret by editing `render.yaml` with a literal value — every
+  real secret in this project stays `sync: false` (dashboard-only) or
+  `generateValue: true`, never committed.
+
+## 9. Manual acceptance checklist (run after any deploy-affecting change)
+
+From `SPEC.md`'s Testing Strategy — all of these should pass against the live
+URLs before telling beta testers to use the app:
+
+1. Web URL loads; Clerk sign-up completes (the "development" badge on Clerk's
+   UI is expected for the beta).
+2. Search a video essay → log it → write a review → see it under that video.
+3. Profile shows the new log; list/watchlist add works.
+4. Reload / new browser session persists data (confirms Supabase Postgres,
+   not ephemeral state).
+5. An unauthenticated request to a protected endpoint (e.g.
+   `GET /api/logList/`) returns `403`; the same request with a valid Clerk
+   token returns `200`.
+6. Backend response headers show `Strict-Transport-Security` and a specific
+   (non-wildcard) `Access-Control-Allow-Origin` — never `*`.
+7. **Google sign-in:** on the live web URL, "Continue with Google" signs in an
+   existing account, and a brand-new Google account is asked for a username
+   before reaching the app and gets its Google photo. Google does not block
+   unlisted accounts (see section 4); don't expect an "access blocked" page.
+
+## 10. Cache, background jobs, and file storage (added, not yet provisioned)
+
+The backend has plumbing for three cloud capabilities it doesn't yet need to
+run for real, wired so each degrades to a free, single-instance-friendly
+default until you're ready to pay for the Render add-on:
+
+| Capability | Unset (today) | Configured |
+|---|---|---|
+| Cache (`/api/search/` result caching, per-IP rate limiting) | Django's in-process `LocMemCache` | `django-redis` against `REDIS_URL` |
+| Background jobs (the SerpAPI call in `/api/search/`) | Celery runs the task eagerly — synchronously, in the request, no worker needed (`CELERY_TASK_ALWAYS_EAGER`) | Celery dispatches to a real broker (same `REDIS_URL`); a separate worker process runs it and retries transient network failures |
+| Media storage | Local filesystem (`MEDIA_ROOT`) — nothing in the app writes here yet | `django-storages` against a real **AWS S3** bucket |
+
+**Local dev, if you want to exercise the Redis-backed paths:**
+```
+docker run -p 6379:6379 redis:7-alpine
+# then, in backend/.env:
+REDIS_URL=redis://127.0.0.1:6379/0
+```
+To actually run a Celery worker locally instead of eager mode:
+```
+cd backend && celery -A config worker --loglevel=info
+```
+
+**Graduating to Render for real (when the beta needs it):**
+1. Render Key Value (starter plan, ~$10/mo) → set `REDIS_URL` (dashboard,
+   `sync: false`) on `videoessay-backend` to its internal connection string.
+2. A Render background worker (starter plan, ~$7/mo) running
+   `celery -A config worker --loglevel=info` from `backend/`, same env vars as
+   the web service (including `REDIS_URL` and `DATABASE_URL`).
+3. For file storage: no Render service needed, just a real AWS account. See
+   "Provisioning the S3 bucket + IAM user" below.
+
+None of this is in `render.yaml` yet since the beta doesn't need it — add the
+`keyvalue` and `worker` blocks there when you provision them, following the
+patterns in the `render:render-keyvalue` and
+`render:render-background-workers` skills.
+
+**Provisioning the S3 bucket + IAM user (AWS Console):**
+1. **S3 → Create bucket.** Name it (e.g. `videoessay-media-prod`), pick a
+   region (e.g. `us-east-1`), keep **Block all public access** ON — the app
+   reads/writes via signed IAM credentials + presigned URLs
+   (`AWS_QUERYSTRING_AUTH` is on by default for that reason), not a public
+   bucket policy.
+2. **IAM → Policies → Create policy** (JSON tab), scoped to that one bucket
+   only:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:ListBucket"],
+       "Resource": [
+         "arn:aws:s3:::videoessay-media-prod",
+         "arn:aws:s3:::videoessay-media-prod/*"
+       ]
+     }]
+   }
+   ```
+3. **IAM → Users → Create user** (e.g. `videoessay-backend-s3`), no console
+   access, attach the policy from step 2. Create an **access key** for it
+   (Security credentials tab → "Application running outside AWS" use case) —
+   this is the one time the secret key is shown; copy both immediately.
+4. Set on `videoessay-backend` (dashboard, `sync: false`):
+   `AWS_STORAGE_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+   `AWS_S3_REGION_NAME` (matching the bucket's region — `config/settings.py`
+   defaults this to `us-east-1` if unset, which is wrong for any other
+   region). Never commit these; never reuse your own root/admin AWS keys —
+   this dedicated IAM user is scoped to nothing but this bucket.
+5. Rotating: create a new access key on the IAM user, update the env vars,
+   redeploy, then deactivate (don't delete yet) the old key on the IAM user
+   until you've confirmed the new one works — same pattern as §8's secret
+   rotation.
+
+## 11. Database backups and restore
+
+**What runs:** `.github/workflows/db-backup.yml` dumps the `public` schema
+nightly (07:17 UTC) with `pg_dump`, encrypts it with `gpg` (AES-256), and
+uploads it as the `db-backup` artifact, kept for 30 days. You can also run it
+by hand: Actions → Database backup → Run workflow. Scheduled runs only fire
+from `main`.
+
+**Secrets** (repo → Settings → Secrets and variables → Actions):
+- `BACKUP_DATABASE_URL`: the Supabase **Session Pooler** URI, copied from
+  Render's `DATABASE_URL`. The direct host is IPv6-only and GitHub's runners
+  can't reach it. If you rotate the database password, update this too.
+- `BACKUP_PASSPHRASE`: from `openssl rand -base64 32`. Keep a copy in a
+  password manager; without it every backup is unreadable. The repo is
+  public, so artifacts are downloadable by any signed-in GitHub user and the
+  encryption is the only protection.
+
+**Restore into a scratch database** (never straight into production):
+1. Download the artifact: Actions → the run → `db-backup` (a zip), or
+   `gh run download <run-id> -n db-backup`. Unzip it.
+2. Decrypt, reading the passphrase from your clipboard or password manager
+   into an env var so it stays out of shell history:
+   ```
+   read -rs BACKUP_PASSPHRASE; export BACKUP_PASSPHRASE
+   gpg --batch --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+     -o dump.pgdump -d backup-<timestamp>.pgdump.gpg
+   ```
+3. Restore into an empty scratch database (a local Postgres, or a second
+   free Supabase project):
+   ```
+   pg_restore --no-owner --no-privileges --dbname "<scratch-uri>" dump.pgdump
+   ```
+4. Check it: row counts on a few tables, for example
+   `SELECT count(*) FROM auth_user;` and `SELECT count(*) FROM movie_csv_log;`,
+   against the live database.
+5. Delete `dump.pgdump` when done. It holds unencrypted user data.
+
+**Restoring for real:** restore to a scratch database first, confirm it, then
+point `DATABASE_URL` at it or load only the tables you need. Dumps cover the
+`public` schema only; Supabase's own schemas are not included.
+
+**Last restore test:** not yet done. Record the date and result here after the
+first one.

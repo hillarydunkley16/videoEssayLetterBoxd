@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
-import { View, TextInput, Platform, StyleSheet, TouchableOpacity, Text, useColorScheme } from 'react-native'
+import { useState, useEffect, useRef } from 'react';
+import { View, TextInput, Platform, StyleSheet, TouchableOpacity, Text, Keyboard} from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TappableRatingDots } from '@/components/ui/RatingDots';
 import { Toggle } from '@/components/ui/Toggle';
 import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 type Props = {
     id: string;
     initialRating?: number;
     style: object;
     reviewText: string;
+    reviewError?: string;
     date: Date;
     rewatch: boolean;
     onRatingChange?: (value: number) => void;
@@ -38,14 +40,17 @@ export default function CreateLogScreen(
     onWatchedChange,
     onWatchListChange,
     reviewText,
+    reviewError,
     date
     }: Props){
-    const theme = Colors[useColorScheme() ?? 'light'];
+    const theme = Colors[useColorScheme()];
 
     const [rating, setRating] = useState<number>(initialRating ?? 0);
     const [watchList, setWatchList] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
     const [ratingIsSet, setRatingIsSet] = useState(initialRating != null && initialRating > 0);
+    const [reviewFocused, setReviewFocused] = useState(false);
+    const reviewInputRef = useRef<TextInput>(null);
 
     useEffect(() => {
         if (initialRating !== undefined) {
@@ -130,30 +135,49 @@ export default function CreateLogScreen(
             </View>
 
             <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                    review <Text style={{ opacity: 0.7 }}>optional</Text>
-                </Text>
+                <View style={styles.reviewLabelRow}>
+                    <Text style={[styles.fieldLabel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                        review
+                    </Text>
+                    {reviewFocused && (
+                        <TouchableOpacity onPress={() => reviewInputRef.current?.blur()}>
+                            <Text style={[styles.doneLabel, { color: theme.accent, fontFamily: Fonts?.sansSemiBold }]}>
+                                Done
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <TextInput
+                    ref={reviewInputRef}
                     value={reviewText}
                     placeholder="What stood out about this one?"
                     placeholderTextColor={theme.muted}
                     onChangeText={onReviewTextChange}
+                    onFocus={() => setReviewFocused(true)}
+                    onBlur={() => setReviewFocused(false)}
                     multiline
+                    returnKeyType="none"
+                    onSubmitEditing={Keyboard.dismiss}
                     style={[
                         styles.reviewBox,
-                        { borderColor: theme.border, backgroundColor: theme.surface, color: theme.text, fontFamily: Fonts?.sans },
+                        { borderColor: reviewError ? theme.error : theme.border, backgroundColor: theme.surface, color: theme.text, fontFamily: Fonts?.sans },
                     ]}
                 />
-                <Text style={[styles.charCount, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                    {reviewText.length} characters
-                </Text>
+                <View style={styles.reviewFooter}>
+                    <Text style={[styles.reviewError, { color: theme.error, fontFamily: Fonts?.sans }]}>
+                        {reviewError ?? ''}
+                    </Text>
+                    <Text style={[styles.charCount, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+                        {reviewText.length} characters
+                    </Text>
+                </View>
             </View>
 
             <View style={[styles.toggleRow, { borderColor: theme.border }]}>
                 <View>
                     <Text style={{ color: theme.text, fontFamily: Fonts?.sansMedium }}>Rewatch</Text>
                     <Text style={[styles.toggleSub, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                        You've seen this one before
+                        You&apos;ve seen this one before
                     </Text>
                 </View>
                 <Toggle value={rewatch} onChange={(next) => onWatchedChange?.(next)} />
@@ -192,6 +216,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 10,
   },
+  reviewLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  doneLabel: {
+    fontSize: 13,
+    marginBottom: 10,
+  },
   centerLabel: {
     textAlign: 'center',
   },
@@ -217,10 +250,20 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     textAlignVertical: 'top',
   },
+  reviewFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  reviewError: {
+    flex: 1,
+    fontSize: 12,
+    paddingRight: 8,
+  },
   charCount: {
     fontSize: 11,
     textAlign: 'right',
-    marginTop: 6,
   },
   toggleRow: {
     flexDirection: 'row',

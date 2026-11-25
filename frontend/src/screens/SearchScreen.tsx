@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useWindowDimensions,
-  useColorScheme,
   FlatList,
   Image,
 } from 'react-native';
@@ -16,6 +15,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/clerk-expo';
 import { Colors, Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import ListResults from './ListResults';
+import PeopleResults from './PeopleResults';
+import { SEARCH_LABEL, SEARCH_MODES, resolveSearchType } from './searchModes';
 
 type SearchBarComponentProps = Record<string, never>;
 
@@ -23,6 +26,8 @@ type SearchBarComponentProps = Record<string, never>;
 // grid drops another column — keeps thumbnails a legible 16:9 box instead
 // of stretching a single full-width card (the old bug on wide web viewports).
 const MIN_TILE_WIDTH = 220;
+const PAGE_PADDING = 16;
+const ROW_GAP = 16;
 
 // How long to wait after the last keystroke before filtering the DB, so
 // typing doesn't fire a request per character.
@@ -32,21 +37,30 @@ const DB_FILTER_DEBOUNCE_MS = 250;
  *
  *
 */
-const SwitchComponent: React.FunctionComponent<SearchBarComponentProps> = () => {
+const EssayResults: React.FunctionComponent<SearchBarComponentProps> = () => {
 // WebNav's top-nav search bar is the only search input now (see WebNav.tsx) —
 // it lives outside this screen's render tree, so it hands typed text down
 // via the `q` route param and signals "run the full API search" via a
 // `submittedAt` param bump (set on Enter), rather than this screen owning
 // its own text field.
-const { q: initialQuery, submittedAt } = useLocalSearchParams<{ q?: string; submittedAt?: string }>();
+const { q: initialQuery, submittedAt, mode } = useLocalSearchParams<{ q?: string; submittedAt?: string; mode?: string }>();
+// `mode=log` comes from the mobile Log tab: picking a result opens the quick-log
+// sheet instead of the full log modal.
+const isLogMode = mode === 'log';
+const logPathname = isLogMode ? "/quickLog" : "/logVideoModal";
 const {convertYouTubeResultToVideoEssay} = useVideoApi();
 const [search, setSearch] = useState(initialQuery ?? "");
 const [loading, setLoading] = useState(false);
 const [database, setDatabase] = useState<SearchResult[]>([]);
 const {getToken} = useAuth();
 const { width } = useWindowDimensions();
-const theme = Colors[useColorScheme() ?? 'light'];
+const theme = Colors[useColorScheme()];
 const numColumns = Math.max(1, Math.floor(width / MIN_TILE_WIDTH));
+// Fixed per-column width (instead of flex: 1) so a lone result in the last row
+// keeps normal tile size rather than stretching across the whole page.
+const tileWidth = numColumns > 1
+    ? (width - PAGE_PADDING * 2 - ROW_GAP * (numColumns - 1)) / numColumns
+    : undefined;
 
 // Guards against a slow request from an earlier keystroke/submit clobbering
 // the result of a newer one that finished first.
@@ -176,23 +190,27 @@ return (
           }
           ListEmptyComponent={() => (
             <Text style={[styles.emptyText, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-              {search.trim() ? 'No results found' : 'Search for video essays by title'}
+              {search.trim()
+                ? 'No results found'
+                : isLogMode
+                ? 'Search for the essay you want to log'
+                : 'Search for video essays by title. Press enter to search YouTube.'}
             </Text>
           )}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, tileWidth ? { width: tileWidth } : styles.tileSingleColumn]}
               onPress={async () => {
                 if (item.source === "database") {
                   router.push({
-                    pathname: "/logVideoModal",
+                    pathname: logPathname,
                     params: { essayId: item.video.public_id },
                   });
                 } else {
                   const result = await convertYouTubeResultToVideoEssay(item.video);
                   if (result.source === 'database') {
                     router.push({
-                      pathname: "/logVideoModal",
+                      pathname: logPathname,
                       params: {
                         essayId: result.video.public_id,
                       },
@@ -237,6 +255,21 @@ return (
 };
 
 const styles = StyleSheet.create({
+screen: {
+  flex: 1,
+},
+modeRow: {
+  flexDirection: 'row',
+  gap: 8,
+  paddingHorizontal: 16,
+  paddingTop: 12,
+},
+modeChip: {
+  borderWidth: 1,
+  borderRadius: 16,
+  paddingHorizontal: 14,
+  paddingVertical: 6,
+},
 safeArea: {
   flex: 1,
   paddingHorizontal: 16,
@@ -256,12 +289,15 @@ listContent: {
   paddingTop: 4,
 },
 row: {
-  gap: 16,
+  gap: ROW_GAP,
 },
 tile: {
-  flex: 1,
   marginBottom: 22,
   maxWidth: '100%',
+},
+tileSingleColumn: {
+  width: '100%',
+  maxWidth: 480,
 },
 thumbWrap: {
   width: '100%',
@@ -319,4 +355,56 @@ emptyText: {
 },
 });
 
-export default SwitchComponent;
+// The screen behind the top-nav search bar. The `type` route param picks the mode (essays by
+// default); the switch writes only `type`, so the typed `q` survives a mode change. `mode=log`
+// (mobile Log tab) is always the essay search and has no switch.
+const SearchScreen: React.FunctionComponent<SearchBarComponentProps> = () => {
+    const { q, type: rawType, mode } = useLocalSearchParams<{ q?: string; type?: string; mode?: string }>();
+    const theme = Colors[useColorScheme()];
+    const type = resolveSearchType({ type: rawType, mode });
+
+    return (
+        <View style={styles.screen}>
+            {mode !== 'log' ? (
+                <View style={styles.modeRow}>
+                    {SEARCH_MODES.map((m) => {
+                        const selected = m === type;
+                        return (
+                            <TouchableOpacity
+                                key={m}
+                                testID={`search-mode-${m}`}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected }}
+                                onPress={() => router.setParams({ type: m })}
+                                style={[
+                                    styles.modeChip,
+                                    { borderColor: theme.border },
+                                    selected && { backgroundColor: theme.text, borderColor: theme.text },
+                                ]}
+                            >
+                                <Text
+                                    style={{
+                                        color: selected ? theme.background : theme.muted,
+                                        fontFamily: Fonts?.sansMedium,
+                                        fontSize: 13,
+                                    }}
+                                >
+                                    {SEARCH_LABEL[m]}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            ) : null}
+            {type === 'people' ? (
+                <PeopleResults q={q ?? ''} />
+            ) : type === 'lists' ? (
+                <ListResults q={q ?? ''} />
+            ) : (
+                <EssayResults />
+            )}
+        </View>
+    );
+};
+
+export default SearchScreen;

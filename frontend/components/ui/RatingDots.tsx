@@ -1,10 +1,11 @@
-import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // Aperture-ring dot rating (matches the design-system mockup's `.rating`
 // treatment) rather than stars — out of 5, filled dots first.
 export function RatingDots({ value, max = 5, size = 15 }: { value: number; max?: number; size?: number }) {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
   const filled = "★".repeat(Math.max(0, Math.min(max, value)));
   const empty = "★".repeat(Math.max(0, max - value));
 
@@ -32,7 +33,7 @@ export function TappableRatingDots({
   max?: number;
   dotSize?: number;
 }) {
-  const theme = Colors[useColorScheme() ?? "light"];
+  const theme = Colors[useColorScheme()];
 
   return (
     <View style={styles.row}>

@@ -20,9 +20,10 @@ class RenderBlueprintTests(SimpleTestCase):
     def test_blueprint_file_exists_at_repo_root(self):
         self.assertTrue(RENDER_YAML.exists())
 
-    def test_declares_a_free_postgres_database(self):
-        self.assertIn("databases:", self.text)
+    def test_runs_on_the_free_plan_with_no_render_managed_database(self):
+        # The DB is Supabase (see DEPLOY.md), not a Render-managed Postgres.
         self.assertIn("plan: free", self.text)
+        self.assertNotIn("databases:", self.text)
 
     def test_has_a_python_web_service_and_a_static_site(self):
         self.assertIn("runtime: python", self.text)
@@ -35,6 +36,17 @@ class RenderBlueprintTests(SimpleTestCase):
         self.assertIn("manage.py migrate", self.text)
         self.assertIn("gunicorn config.wsgi:application", self.text)
         self.assertIn("0.0.0.0:$PORT", self.text)
+
+    def test_gunicorn_serves_requests_concurrently(self):
+        # The home screen fires profile and logList together. A single sync worker answers them
+        # one after the other, and each waits on the (cross-region) database, so the later
+        # request queued behind the earlier. Threads, not a second worker: the free plan has
+        # 512 MB and these requests mostly wait on I/O.
+        start_line = next(
+            (ln for ln in self.text.splitlines() if ln.strip().startswith("startCommand:")),
+            "",
+        )
+        self.assertRegex(start_line, r"gunicorn .*--threads [2-9]")
 
     def test_python_version_pinned_to_313(self):
         self.assertIn("key: PYTHON_VERSION", self.text)
@@ -57,9 +69,10 @@ class RenderBlueprintTests(SimpleTestCase):
         self.assertIn("destination: /index.html", self.text)
         self.assertIn("type: rewrite", self.text)
 
-    def test_database_url_wired_from_the_managed_db(self):
-        self.assertIn("fromDatabase:", self.text)
-        self.assertIn("property: connectionString", self.text)
+    def test_database_url_is_a_dashboard_supplied_secret(self):
+        # Supabase Session Pooler URI, set by hand in the Render dashboard.
+        self.assertNotIn("fromDatabase:", self.text)
+        self.assertRegex(self.text, r"-\s*key:\s*DATABASE_URL[^\n]*\n\s*sync:\s*false")
 
     def test_secret_key_is_generated_and_debug_is_off(self):
         self.assertIn("key: DJANGO_SECRET_KEY", self.text)
@@ -80,6 +93,10 @@ class RenderBlueprintTests(SimpleTestCase):
             self.text,
             r'-\s*key:\s*CLERK_ISSUER\s*\n\s*value:\s*"https://\S+clerk\.accounts\.dev"',
         )
+
+    def test_both_services_deploy_only_after_ci_checks_pass(self):
+        # Without this a push deploys even when the CI workflow is red or still running.
+        self.assertEqual(self.text.count("autoDeployTrigger: checksPass"), 2)
 
     def test_no_real_secret_values_committed(self):
         for token in ("sk_live", "sk_test", "pk_live", "SERPAPI_KEY: ", "serpapi_"):

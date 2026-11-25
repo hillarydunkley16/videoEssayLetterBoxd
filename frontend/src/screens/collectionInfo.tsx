@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -8,20 +8,20 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from 'react-native'
-import { router } from 'expo-router'
-import { useAuth, useUser } from '@clerk/clerk-expo'
+import { router, useFocusEffect } from 'expo-router'
+import { useAuth } from '@clerk/clerk-expo'
 import { Colors, Fonts } from '@/constants/theme'
+import { useColorScheme } from '@/hooks/use-color-scheme'
 import { fetchACollection, removeFromWatchlist, deleteCollection } from '@/src/api/collection'
 import { useAuthDelete } from '@/src/api/authDelete'
 import { Collection } from '@/src/types/collection'
 import { VideoEssay } from '@/src/types/videoEssay'
+import ReportMenu from '@/src/components/ReportMenu'
 
 export default function CollectionInfo({ public_id }: { public_id: string }) {
-  const theme = Colors[useColorScheme() ?? 'light']
+  const theme = Colors[useColorScheme()]
   const { getToken } = useAuth()
-  const { user } = useUser()
   const authDelete = useAuthDelete()
 
   const [collection, setCollection] = useState<Collection>()
@@ -48,9 +48,12 @@ export default function CollectionInfo({ public_id }: { public_id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [public_id])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  // Reload on focus so essays added from the addEssayToList modal show up.
+  useFocusEffect(
+    useCallback(() => {
+      load()
+    }, [load])
+  )
 
   function handleBack() {
     if (router.canGoBack()) {
@@ -60,7 +63,7 @@ export default function CollectionInfo({ public_id }: { public_id: string }) {
     }
   }
 
-  const isOwner = !!user && collection?.owner === user.id
+  const isOwner = !!collection?.is_owner
 
   async function handleRemoveEssay(essayPublicId: string) {
     if (!collection || removingId) return
@@ -102,7 +105,11 @@ export default function CollectionInfo({ public_id }: { public_id: string }) {
         <TouchableOpacity onPress={handleBack} accessibilityLabel="Back" style={styles.backBtn}>
           <Text style={[styles.backIcon, { color: theme.text }]}>{'‹'}</Text>
         </TouchableOpacity>
-        <View style={styles.backBtn} />
+        <View style={styles.backBtn}>
+          {isOwner ? null : (
+            <ReportMenu targetType="list" targetId={collection.public_id} accessibilityLabel="Report options" />
+          )}
+        </View>
       </View>
 
       <FlatList
@@ -124,11 +131,19 @@ export default function CollectionInfo({ public_id }: { public_id: string }) {
               By {collection.owner} · {collection.essays.length}{' '}
               {collection.essays.length === 1 ? 'essay' : 'essays'}
             </Text>
+            {isOwner ? (
+              <TouchableOpacity
+                style={[styles.addEssayBtn, { backgroundColor: theme.accent }]}
+                onPress={() => router.push(`/addEssayToList?publicId=${collection.public_id}`)}
+              >
+                <Text style={[styles.addEssayText, { fontFamily: Fonts?.sansSemiBold }]}>+ Add essay</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
           <Text style={[styles.empty, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-            Nothing here yet — add a video essay from its page.
+            Nothing here yet — add an essay above or from its page.
           </Text>
         }
         ListFooterComponent={
@@ -262,6 +277,16 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 12,
+  },
+  addEssayBtn: {
+    marginTop: 14,
+    paddingVertical: 10,
+    borderRadius: 3,
+    alignItems: 'center',
+  },
+  addEssayText: {
+    color: '#fff',
+    fontSize: 13,
   },
   empty: {
     fontSize: 13,

@@ -23,6 +23,7 @@ export interface ProfileWatchList {
     public_id: string,
     name: string,
     owner: string,
+    is_owner: boolean,
     essays: VideoEssay[]
 }
 
@@ -31,7 +32,12 @@ export interface Profile {
     user: User,
     imageUrl: string | null,
     user_logs: Log[],
-    followers: User[],
-    following: User[],
-    watchList: ProfileWatchList
+    followers_count: number,
+    following_count: number,
+    is_following: boolean,
+    watchList: ProfileWatchList,
+    // True when Profile.display_username is set. `user.username` above already falls back to
+    // the literal "Anonymous" for a missing one, so this is the only reliable signal for
+    // "no username set" (see SPEC-username-onboarding.md, backend ProfileSerializer.get_has_username).
+    has_username: boolean
 }

@@ -5,6 +5,11 @@ import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { getClerkErrorMessage } from '@/src/helpers/clerkErrors'
+import GoogleButton from '@/src/components/GoogleButton'
+import AgeConfirmation from '@/src/components/AgeConfirmation'
+import PasswordRules from '@/src/components/PasswordRules'
+import { passwordMeetsRules } from '@/src/helpers/passwordRules'
+import { useUsernameAvailability } from '@/src/hooks/useUsernameAvailability'
 
 export default function Page() {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -16,8 +21,15 @@ export default function Page() {
   const [firstName, setFirstName] = React.useState('')
   const [lastName, setLastName] = React.useState('')
   const [username, setUsername] = React.useState('')
+  const [ageConfirmed, setAgeConfirmed] = React.useState(false)
   const [pendingVerification, setPendingVerification] = React.useState(false)
   const [code, setCode] = React.useState('')
+
+  const {
+    checking: checkingUsername,
+    available: usernameAvailable,
+    suggestions: usernameSuggestions,
+  } = useUsernameAvailability(username)
 
   // Handle submission of sign-up form
   const onSignUpPress = async () => {
@@ -85,6 +97,11 @@ export default function Page() {
     }
   }
 
+  // Blocked on empty/still-checking/known-taken only — never on `usernameAvailable === null`
+  // (unchecked, too short, or the check errored), since Clerk still validates on submit.
+  const submitDisabled =
+    !ageConfirmed || !emailAddress || !passwordMeetsRules(password) || !username || checkingUsername || usernameAvailable === false
+
   if (pendingVerification) {
     return (
       <ThemedView style={styles.container}>
@@ -133,6 +150,8 @@ export default function Page() {
           <ThemedText style={styles.errorText}>{errors}</ThemedText>
         </View>
       ) : null}
+      <AgeConfirmation checked={ageConfirmed} onChange={setAgeConfirmed} />
+      <GoogleButton disabled={!ageConfirmed} />
       <ThemedText style = {styles.label}>First Name</ThemedText>
       <TextInput
         style={styles.input}
@@ -161,6 +180,24 @@ export default function Page() {
         placeholderTextColor="#666666"
         onChangeText={(username) => setUsername(username)}
       />
+      {checkingUsername ? (
+        <ThemedText style={styles.usernameHint}>Checking…</ThemedText>
+      ) : usernameAvailable === true ? (
+        <ThemedText style={[styles.usernameHint, styles.usernameAvailable]}>✓ Available</ThemedText>
+      ) : usernameAvailable === false ? (
+        <View>
+          <ThemedText style={[styles.usernameHint, styles.usernameTaken]}>
+            That username is taken. Try:
+          </ThemedText>
+          <View style={styles.suggestions}>
+            {usernameSuggestions.map((suggestion) => (
+              <Pressable key={suggestion} onPress={() => setUsername(suggestion)}>
+                <ThemedText type="link">{suggestion}</ThemedText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <ThemedText style={styles.label}>Email address</ThemedText>
       <TextInput
         style={styles.input}
@@ -180,14 +217,18 @@ export default function Page() {
         secureTextEntry={true}
         onChangeText={(password) => setPassword(password)}
       />
+      <PasswordRules password={password} />
+      {/* Clerk mounts its CAPTCHA here on web; custom flows must provide it. */}
+      <View nativeID="clerk-captcha" />
       <Pressable
+        testID="signup-submit"
         style={({ pressed }) => [
           styles.button,
-          (!emailAddress || !password) && styles.buttonDisabled,
+          submitDisabled && styles.buttonDisabled,
           pressed && styles.buttonPressed,
         ]}
         onPress={onSignUpPress}
-        disabled={!emailAddress || !password}
+        disabled={submitDisabled}
       >
         <ThemedText style={styles.buttonText}>Continue</ThemedText>
       </Pressable>
@@ -235,6 +276,22 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#fff',
+    color: '#111',
+  },
+  usernameHint: {
+    fontSize: 13,
+    marginTop: -6,
+  },
+  usernameAvailable: {
+    color: '#16a34a',
+  },
+  usernameTaken: {
+    color: '#dc2626',
+  },
+  suggestions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   button: {
     backgroundColor: '#0a7ea4',

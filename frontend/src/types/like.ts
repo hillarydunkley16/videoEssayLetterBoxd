@@ -1,9 +1,5 @@
-import { User } from "./user";
-import { Log } from "./log";
-import { Profile } from "./profile";
+// A like as the backend serializes it (see LikeSerializer): bare primary keys.
 export interface Like{
-    id: number,
-    user: Profile,
-    date: Date,
-    log: Log,  
+    user: number,
+    post: number,
 }

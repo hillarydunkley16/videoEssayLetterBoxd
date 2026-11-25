@@ -1,44 +1,69 @@
 import { useEffect, useState } from "react";
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useColorScheme,
-} from "react-native";
-import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, TextStyle, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from "@/constants/theme";
-import { RatingDots } from "@/components/ui/RatingDots";
-import { fetchPopularVideoEssaysPublic } from "@/src/api/videos";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import AccountSheet from "@/src/components/AccountSheet";
+import RatingSheet from "@/src/components/RatingSheet";
+import { fetchPopularVideoEssaysPublic, searchDataBasePublic, searchYoutube } from "@/src/api/videos";
+import { extractYoutubeId } from "@/src/lib/shareIntent";
+import { clearPendingLog, savePendingLog } from "@/src/lib/pendingLog";
+import { SearchResult } from "@/src/types/youtubeResult";
 import { VideoEssay } from "@/src/types/videoEssay";
 
-const FEATURES: {
-  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
-  label: string;
-}[] = [
-  { icon: "eye-outline", label: "Log & rate what you watch" },
-  { icon: "playlist-star", label: "Build lists & watchlists" },
-  { icon: "account-group-outline", label: "Follow people with taste" },
-];
+const MIN_QUERY_LENGTH = 3;
+const DEBOUNCE_MS = 400;
+const POPULAR_COUNT = 6;
 
-// Home screen shown to signed-out visitors (SignedOut branch of
-// app/(home)/index.tsx). Ports the mockups/homeSignedOut.html design —
-// the topbar/brand + "Log in" link there is already covered by WebNav/
-// MobileNav, so this starts at the hero.
+type Row = {
+  youtubeId: string;
+  title: string;
+  channel: string;
+  thumbnail?: string;
+  duration?: string | null;
+};
+
+type SearchState = "idle" | "loading" | "ok" | "rate_limited" | "unavailable" | "error";
+
+// A row needs a youtube_id to be logged later. Search results and stored essays both carry a
+// YouTube link, so one parser (the share-to-app one) covers them; a row without one is skipped.
+function toRow(video: Pick<VideoEssay, "youtube_url" | "title" | "channel_name" | "thumbnail"> & { duration?: string | null }): Row | null {
+  const youtubeId = extractYoutubeId(video.youtube_url ?? "");
+  if (!youtubeId) return null;
+  return {
+    youtubeId,
+    title: video.title,
+    channel: video.channel_name,
+    thumbnail: video.thumbnail,
+    duration: video.duration,
+  };
+}
+
+function toRows(results: SearchResult[]): Row[] {
+  return results.flatMap((r) => toRow(r.video) ?? []);
+}
+
+// Home screen shown to signed-out visitors (SignedOut branch of app/(home)/index.tsx). Search is
+// the hero: the visitor finds an essay, rates it, and only then is asked to make an account. The
+// rated log is saved to pendingLog first, so it survives the sign-up and is replayed afterwards
+// (usePendingLogReplay). Top-right Log in lives in the shared nav (WebNav / MobileTopNav).
 export default function SignedOutHomeScreen() {
-  const colorScheme = useColorScheme() ?? "light";
-  const theme = Colors[colorScheme];
-  const [popular, setPopular] = useState<VideoEssay[]>([]);
+  const theme = Colors[useColorScheme()];
+  const [popular, setPopular] = useState<Row[]>([]);
+  const [query, setQuery] = useState("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [state, setState] = useState<SearchState>("idle");
+  const [retry, setRetry] = useState(0);
+
+  const [pick, setPick] = useState<Row | null>(null);
+  const [sheet, setSheet] = useState<"rating" | "account" | null>(null);
+  const [answer, setAnswer] = useState({ rating: 0, review: "" });
 
   useEffect(() => {
     let cancelled = false;
     fetchPopularVideoEssaysPublic()
       .then((page) => {
-        if (!cancelled) setPopular(page.results.slice(0, 3));
+        if (!cancelled) setPopular(page.results.flatMap((e) => toRow(e) ?? []).slice(0, POPULAR_COUNT));
       })
       .catch((error) => {
         console.error("Failed to load popular essays for the signed-out home screen:", error);
@@ -48,284 +73,233 @@ export default function SignedOutHomeScreen() {
     };
   }, []);
 
+  // Debounced search. Each new query aborts the previous request, so a slow early answer can
+  // never replace a newer one.
+  useEffect(() => {
+    const text = query.trim();
+    if (text.length < MIN_QUERY_LENGTH) {
+      setRows([]);
+      setState("idle");
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setState("loading");
+      const out = await searchYoutube(text, controller.signal);
+      if (controller.signal.aborted || out.status === "cancelled") return;
+      if (out.status === "unavailable") {
+        // External search is switched off: show what is already on watchd instead.
+        const stored = await searchDataBasePublic(text);
+        if (controller.signal.aborted) return;
+        setRows(toRows(stored));
+        setState("unavailable");
+        return;
+      }
+      setRows(toRows(out.results));
+      setState(out.status);
+    }, DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, retry]);
+
+  const searching = query.trim().length >= MIN_QUERY_LENGTH;
+  const list = searching ? rows : popular;
+  const [focused, setFocused] = useState(false);
+
+  const openRating = (row: Row) => {
+    setPick(row);
+    setAnswer({ rating: 0, review: "" });
+    setSheet("rating");
+  };
+
+  const submitRating = async (rating: number, reviewText: string) => {
+    if (!pick) return;
+    setAnswer({ rating, review: reviewText });
+    await savePendingLog({ youtubeId: pick.youtubeId, rating, reviewText });
+    setSheet("account");
+  };
+
+  const cancelRating = () => {
+    setSheet(null);
+    setPick(null);
+    setAnswer({ rating: 0, review: "" });
+    void clearPendingLog();
+  };
+
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={styles.scroll}
-    >
-      <View style={styles.hero}>
-        <Text style={[styles.eyebrow, { color: theme.accent2, fontFamily: Fonts?.sansSemiBold }]}>
-          Bootleg Letterboxd for video essays
-        </Text>
-        <Text style={[styles.headline, { color: theme.text, fontFamily: Fonts?.display }]}>
-          Track every video essay that{" "}
-          <Text style={{ fontStyle: "italic", color: theme.accent, fontFamily: Fonts?.display }}>
-            rewired
-          </Text>{" "}
-          how you watch.
-        </Text>
-        <Text style={[styles.subhead, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-          Log the essays you finish, rate them, write the review you&apos;d actually send a
-          friend, and build watchlists out of whatever&apos;s melting your brain on YouTube tonight.
-        </Text>
-
-        <View style={styles.actionsRow}>
-          <Pressable
-            style={[styles.btn, styles.btnPrimary, { backgroundColor: theme.accent, borderColor: theme.accent }]}
-            onPress={() => router.push("/sign-up")}
-          >
-            <Text style={[styles.btnText, { color: "#fff", fontFamily: Fonts?.sansSemiBold }]}>
-              Create account
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.btn, { borderColor: theme.border }]}
-            onPress={() => router.push("/sign-in")}
-          >
-            <Text style={[styles.btnText, { color: theme.text, fontFamily: Fonts?.sansSemiBold }]}>
-              Log in
-            </Text>
-          </Pressable>
-        </View>
-
-        <Text style={[styles.fine, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-          Beta is invite-only right now. <Text style={{ color: theme.text, fontWeight: "600" }}>Request access</Text>
-        </Text>
-      </View>
-
-      {popular.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.muted, fontFamily: Fonts?.sansSemiBold }]}>
-            Popular this week
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.background }}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.column}>
+          <Text style={[styles.headline, { color: theme.text, fontFamily: Fonts?.display }]}>
+            YouTube videos, logged
+          </Text>
+          <Text style={[styles.subhead, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+            Log your favorite video and make an account to save it
           </Text>
 
-          <View style={styles.teaserWrap}>
-            {popular.map((essay) => (
-              <View key={essay.public_id} style={[styles.logRow, { borderColor: theme.border }]}>
-                <View style={[styles.logThumb, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-                  {essay.thumbnail ? (
-                    <Image source={{ uri: essay.thumbnail }} style={styles.logThumbImage} />
-                  ) : null}
-                </View>
-                <View style={styles.logBody}>
-                  <View style={styles.logTop}>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[styles.logTitle, { color: theme.text, fontFamily: Fonts?.sansSemiBold }]}
-                        numberOfLines={2}
-                      >
-                        {essay.title}
-                      </Text>
-                      <Text style={[styles.logChannel, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                        {essay.channel_name}
-                      </Text>
-                    </View>
-                    <RatingDots value={4} size={10} />
-                  </View>
-                  {typeof essay.log_count === "number" ? (
-                    <Text style={[styles.logWatcher, { color: theme.muted, fontFamily: Fonts?.sans }]}>
-                      Logged by {essay.log_count} {essay.log_count === 1 ? "person" : "people"} this week
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            ))}
-
-            <LinearGradient
-              pointerEvents="none"
-              colors={[`${theme.background}00`, theme.background]}
-              style={styles.teaserFade}
+          <View
+            style={[
+              styles.search,
+              { backgroundColor: theme.surface, borderColor: focused ? theme.accent : theme.border },
+              focused && styles.searchFocused,
+            ]}
+          >
+            <View style={styles.searchIcon}>
+              <MaterialCommunityIcons name="magnify" size={20} color={theme.muted} />
+            </View>
+            <TextInput
+              style={[styles.searchInput, { color: theme.text, fontFamily: Fonts?.sans }]}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search videos"
+              placeholderTextColor={theme.muted}
+              accessibilityLabel="Search videos"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
             />
-            <View style={styles.teaserCtaWrap}>
-              <Text style={[styles.teaserCta, { color: theme.accent, fontFamily: Fonts?.sansSemiBold }]}>
-                Create an account to see the full feed
+          </View>
+
+          {searching || popular.length > 0 ? (
+            <View style={styles.listHeader}>
+              <Text style={[styles.listTitle, { color: theme.muted, fontFamily: Fonts?.sansSemiBold }]}>
+                {searching ? "Results" : "Popular this week"}
               </Text>
             </View>
-          </View>
-        </View>
-      ) : null}
+          ) : null}
 
-      <View style={styles.features}>
-        {FEATURES.map((feature) => (
-          <View key={feature.label} style={[styles.feature, { borderColor: theme.border }]}>
-            <MaterialCommunityIcons name={feature.icon} size={24} color={theme.accent2} />
-            <Text style={[styles.featureLabel, { color: theme.text, fontFamily: Fonts?.sansSemiBold }]}>
-              {feature.label}
+          {state === "loading" ? (
+            <Text style={[styles.note, { color: theme.muted, fontFamily: Fonts?.sans }]}>Searching</Text>
+          ) : null}
+          {state === "rate_limited" ? (
+            <Text style={[styles.note, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+              Too many searches. Try again in a minute
             </Text>
-          </View>
-        ))}
-      </View>
+          ) : null}
+          {state === "unavailable" ? (
+            <Text style={[styles.note, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+              Search is limited right now. Showing essays already on watchd
+            </Text>
+          ) : null}
+          {state === "error" ? (
+            <View style={styles.errorRow}>
+              <Text style={[styles.note, { color: theme.muted, fontFamily: Fonts?.sans }]}>Search didn&apos;t work</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Try again" onPress={() => setRetry((n) => n + 1)}>
+                <Text style={[styles.retry, { color: theme.accent, fontFamily: Fonts?.sansSemiBold }]}>Try again</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {searching && state === "ok" && list.length === 0 ? (
+            <Text style={[styles.note, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+              No essays match &quot;{query.trim()}&quot;. Try a channel name
+            </Text>
+          ) : null}
 
-      <View style={[styles.closing, { backgroundColor: colorScheme === "dark" ? theme.surface : Colors.light.text }]}>
-        <Text style={[styles.closingTitle, { fontFamily: Fonts?.display }]}>
-          Your next favorite essay is one log away.
-        </Text>
-        <Text style={styles.closingSub}>Free during the beta — no credit card, just an account.</Text>
-        <Pressable
-          style={[styles.btn, styles.btnPrimary, styles.closingBtn, { backgroundColor: theme.accent, borderColor: theme.accent }]}
-          onPress={() => router.push("/sign-up")}
-        >
-          <Text style={[styles.btnText, { color: "#fff", fontFamily: Fonts?.sansSemiBold }]}>Create account</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+          {list.map((row) => (
+            <Pressable
+              key={row.youtubeId}
+              accessibilityRole="button"
+              accessibilityLabel={`Log ${row.title}`}
+              onPress={() => openRating(row)}
+              style={({ pressed }) => [
+                styles.row,
+                { borderColor: theme.border },
+                pressed && { backgroundColor: theme.surface },
+              ]}
+            >
+              <View style={[styles.thumb, { backgroundColor: theme.surface }]}>
+                {row.thumbnail ? (
+                  <Image source={{ uri: row.thumbnail }} style={styles.thumbImage} accessibilityIgnoresInvertColors />
+                ) : null}
+                {row.duration ? (
+                  <Text style={[styles.stamp, { fontFamily: Fonts?.sansMedium }]}>{row.duration}</Text>
+                ) : null}
+              </View>
+              <View style={styles.rowBody}>
+                <Text style={[styles.rowTitle, { color: theme.text, fontFamily: Fonts?.displayMedium }]} numberOfLines={2}>
+                  {row.title}
+                </Text>
+                <Text style={[styles.rowChannel, { color: theme.muted, fontFamily: Fonts?.sans }]} numberOfLines={1}>
+                  {row.channel}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+
+      {pick ? (
+        <>
+          <RatingSheet
+            visible={sheet === "rating"}
+            title={pick.title}
+            channel={pick.channel}
+            initialRating={answer.rating}
+            initialReview={answer.review}
+            onSubmit={submitRating}
+            onCancel={cancelRating}
+          />
+          <AccountSheet
+            visible={sheet === "account"}
+            title={pick.title}
+            thumbnail={pick.thumbnail}
+            rating={answer.rating}
+            onBack={() => setSheet("rating")}
+            onDismiss={() => setSheet(null)}
+          />
+        </>
+      ) : null}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    paddingBottom: 40,
-  },
-  hero: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderColor: "transparent",
-  },
-  eyebrow: {
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-  headline: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "500",
-    marginBottom: 12,
-  },
-  subhead: {
-    fontSize: 14.5,
-    lineHeight: 21,
-    marginBottom: 20,
-    maxWidth: 480,
-  },
-  actionsRow: {
+  scroll: { paddingBottom: 40 },
+  column: { width: "100%", maxWidth: 640, alignSelf: "center", paddingHorizontal: 16, paddingTop: 32 },
+  headline: { fontSize: 32, lineHeight: 36, marginBottom: 12 },
+  subhead: { fontSize: 16, lineHeight: 24, marginBottom: 24, maxWidth: 480 },
+  search: {
     flexDirection: "row",
-    gap: 10,
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderRadius: 3,
-    borderWidth: 1,
     alignItems: "center",
-  },
-  btnPrimary: {},
-  btnText: {
-    fontSize: 13.5,
-  },
-  fine: {
-    fontSize: 11.5,
-    marginTop: 14,
-  },
-  section: {
-    paddingHorizontal: 20,
-    paddingTop: 22,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 12,
-  },
-  logRow: {
-    flexDirection: "row",
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  logThumb: {
-    width: 88,
-    aspectRatio: 16 / 9,
-    borderRadius: 3,
+    gap: 8,
     borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  // The icon renders nothing until its font loads; reserve its size so the field doesn't shift.
+  searchIcon: { width: 20, height: 20 },
+  // Web draws its own outline on the inner input; the ring is drawn on the field instead.
+  searchFocused: { borderWidth: 2, paddingHorizontal: 11 },
+  searchInput: { flex: 1, minWidth: 0, paddingVertical: 12, fontSize: 16, outlineStyle: "none" } as unknown as TextStyle,
+  listHeader: { marginTop: 32, marginBottom: 8 },
+  listTitle: { fontSize: 14 },
+  note: { fontSize: 14, lineHeight: 20, paddingVertical: 12 },
+  errorRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  retry: { fontSize: 14, paddingVertical: 12 },
+  row: { flexDirection: "row", gap: 12, paddingVertical: 12, borderBottomWidth: 1, alignItems: "center" },
+  thumb: { width: 96, aspectRatio: 16 / 9, borderRadius: 8, overflow: "hidden" },
+  thumbImage: { width: "100%", height: "100%" },
+  stamp: {
+    position: "absolute",
+    right: 4,
+    bottom: 4,
+    fontSize: 11,
+    color: "#fff",
+    backgroundColor: "rgba(0,0,0,0.75)",
+    paddingHorizontal: 4,
+    borderRadius: 4,
+    fontVariant: ["tabular-nums"],
     overflow: "hidden",
   },
-  logThumbImage: {
-    width: "100%",
-    height: "100%",
-  },
-  logBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  logTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  logTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  logChannel: {
-    fontSize: 11.5,
-    marginTop: 2,
-  },
-  logWatcher: {
-    fontSize: 11,
-    marginTop: 6,
-  },
-  teaserWrap: {
-    position: "relative",
-  },
-  teaserFade: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 56,
-  },
-  teaserCtaWrap: {
-    alignItems: "center",
-    paddingTop: 6,
-  },
-  teaserCta: {
-    fontSize: 12.5,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-  },
-  features: {
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  feature: {
-    flex: 1,
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 4,
-    padding: 14,
-  },
-  featureLabel: {
-    fontSize: 12,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  closing: {
-    margin: 20,
-    marginTop: 26,
-    padding: 22,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  closingTitle: {
-    fontSize: 19,
-    color: "#F1F1EE",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  closingSub: {
-    fontSize: 12.5,
-    color: "rgba(241,241,238,0.72)",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  closingBtn: {
-    flex: undefined,
-    minWidth: 200,
-  },
+  rowBody: { flex: 1, minWidth: 0, gap: 4 },
+  rowTitle: { fontSize: 16, lineHeight: 20, textAlign: "left", writingDirection: "auto" },
+  rowChannel: { fontSize: 14, textAlign: "left", writingDirection: "auto" },
 });

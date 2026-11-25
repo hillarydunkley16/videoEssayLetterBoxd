@@ -14,10 +14,9 @@ export default function PopularLists(){
             try{
                 const token = await getToken();
                 const data = await fetchCollections(token!);
-                
-                // console.log("PRINTING IDS", data.results.filter(item => !item.name.includes("Watchlist") ));
-                const filteredData = data.results.filter(
-                    item => !item.name.includes("Watchlist")
+
+                const filteredData = data.filter(
+                    (item: Collection) => !item.name.includes("Watchlist")
                 )
                 console.log("FILTERED DATA: ", filteredData)
                 setCollections(filteredData);
