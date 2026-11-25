@@ -167,8 +167,12 @@ Behaviour to know:
 
 ## 5. Redeploying
 
-Render auto-deploys on every push to the connected branch (`autoDeploy: yes`
-in the service config). To redeploy without a new commit — e.g. after
+Render auto-deploys a push to the connected branch only after the GitHub CI
+checks pass (`autoDeployTrigger: checksPass` in `render.yaml`). A red or
+still-running CI means no deploy yet. If the services were created before this
+setting existed, set **Settings → Build & Deploy → Auto-Deploy → After CI
+Checks Pass** on both services, because a Blueprint sync may not change it. In
+an emergency, use Manual Deploy (below), which skips the check. To redeploy without a new commit — e.g. after
 changing an env var — use **Manual Deploy → Deploy latest commit** on the
 service, or just save the Environment tab (which triggers a redeploy on its
 own).
@@ -188,9 +192,9 @@ cd frontend && npx tsc --noEmit && npm run lint && npx expo export --platform we
   Render's `autoDeploy` picks it up automatically. Never force-push to rewrite
   history on `v2` or `main` to "undo" a bad deploy; a revert commit is safer
   and keeps the audit trail.
-- **Database:** Supabase's automated daily backups (Project → Database →
-  Backups, retention depends on plan tier) are the recovery path for bad
-  data, not code rollback. A schema-changing migration should be reverted
+- **Database:** the nightly encrypted `pg_dump` (section 11) is the recovery
+  path for bad data, not code rollback. The Supabase free plan has no
+  automated backups of its own. A schema-changing migration should be reverted
   with a new migration, never by editing or deleting an applied one
   (`SPEC.md` Boundaries).
 
@@ -206,9 +210,10 @@ cd frontend && npx tsc --noEmit && npm run lint && npx expo export --platform we
   exceeds that, `/api/search/` starts returning `502`/`504` (the app degrades
   to DB-only search results, but that's a real UX hit) — upgrade the SerpAPI
   plan or add caching before that becomes a problem.
-- **Backups:** currently just Supabase's automated backups. No separate
-  scheduled `pg_dump` — acceptable for closed beta, revisit before public
-  launch.
+- **Backups:** the Supabase free plan has none. A nightly encrypted
+  `pg_dump` runs from GitHub Actions and is kept for 30 days (section 11).
+  It is a stopgap: revisit durable storage and a read-only backup role
+  before public launch.
 - **Single instance:** the backend runs on a single free-tier instance, so
   there's no rolling-deploy/zero-downtime story and no migration race to
   worry about — `migrate` runs safely in `startCommand` before `gunicorn`
@@ -329,3 +334,47 @@ patterns in the `render:render-keyvalue` and
    redeploy, then deactivate (don't delete yet) the old key on the IAM user
    until you've confirmed the new one works — same pattern as §8's secret
    rotation.
+
+## 11. Database backups and restore
+
+**What runs:** `.github/workflows/db-backup.yml` dumps the `public` schema
+nightly (07:17 UTC) with `pg_dump`, encrypts it with `gpg` (AES-256), and
+uploads it as the `db-backup` artifact, kept for 30 days. You can also run it
+by hand: Actions → Database backup → Run workflow. Scheduled runs only fire
+from `main`.
+
+**Secrets** (repo → Settings → Secrets and variables → Actions):
+- `BACKUP_DATABASE_URL`: the Supabase **Session Pooler** URI, copied from
+  Render's `DATABASE_URL`. The direct host is IPv6-only and GitHub's runners
+  can't reach it. If you rotate the database password, update this too.
+- `BACKUP_PASSPHRASE`: from `openssl rand -base64 32`. Keep a copy in a
+  password manager; without it every backup is unreadable. The repo is
+  public, so artifacts are downloadable by any signed-in GitHub user and the
+  encryption is the only protection.
+
+**Restore into a scratch database** (never straight into production):
+1. Download the artifact: Actions → the run → `db-backup` (a zip), or
+   `gh run download <run-id> -n db-backup`. Unzip it.
+2. Decrypt, reading the passphrase from your clipboard or password manager
+   into an env var so it stays out of shell history:
+   ```
+   read -rs BACKUP_PASSPHRASE; export BACKUP_PASSPHRASE
+   gpg --batch --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+     -o dump.pgdump -d backup-<timestamp>.pgdump.gpg
+   ```
+3. Restore into an empty scratch database (a local Postgres, or a second
+   free Supabase project):
+   ```
+   pg_restore --no-owner --no-privileges --dbname "<scratch-uri>" dump.pgdump
+   ```
+4. Check it: row counts on a few tables, for example
+   `SELECT count(*) FROM auth_user;` and `SELECT count(*) FROM movie_csv_log;`,
+   against the live database.
+5. Delete `dump.pgdump` when done. It holds unencrypted user data.
+
+**Restoring for real:** restore to a scratch database first, confirm it, then
+point `DATABASE_URL` at it or load only the tables you need. Dumps cover the
+`public` schema only; Supabase's own schemas are not included.
+
+**Last restore test:** not yet done. Record the date and result here after the
+first one.

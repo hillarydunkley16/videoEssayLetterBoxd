@@ -94,6 +94,10 @@ class RenderBlueprintTests(SimpleTestCase):
             r'-\s*key:\s*CLERK_ISSUER\s*\n\s*value:\s*"https://\S+clerk\.accounts\.dev"',
         )
 
+    def test_both_services_deploy_only_after_ci_checks_pass(self):
+        # Without this a push deploys even when the CI workflow is red or still running.
+        self.assertEqual(self.text.count("autoDeployTrigger: checksPass"), 2)
+
     def test_no_real_secret_values_committed(self):
         for token in ("sk_live", "sk_test", "pk_live", "SERPAPI_KEY: ", "serpapi_"):
             self.assertNotIn(token, self.text)

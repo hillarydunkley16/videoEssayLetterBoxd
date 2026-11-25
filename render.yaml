@@ -14,6 +14,7 @@ services:
     type: web
     runtime: python
     plan: free
+    autoDeployTrigger: checksPass   # wait for the GitHub CI checks (.github/workflows/ci.yml)
     rootDir: backend
     # Build = install only. migrate + collectstatic run in startCommand so they
     # execute with the full runtime env (CLERK_ISSUER etc.) present — settings.py
@@ -52,6 +53,7 @@ services:
   - name: videoessay-web
     type: web
     runtime: static
+    autoDeployTrigger: checksPass
     rootDir: frontend
     buildCommand: npm ci --legacy-peer-deps && npx expo export --platform web
     staticPublishPath: dist
