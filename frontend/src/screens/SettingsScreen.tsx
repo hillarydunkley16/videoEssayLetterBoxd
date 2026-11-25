@@ -37,6 +37,12 @@ export default function SettingsScreen() {
         {photoError && <Text style={[styles.error, { color: theme.accent, fontFamily: Fonts?.sans }]}>{photoError}</Text>}
       </View>
 
+      <View style={[styles.row, { borderColor: theme.border }]}>
+        <TouchableOpacity onPress={() => router.push("/blockedUsers")} accessibilityLabel="Blocked users">
+          <Text style={[styles.rowText, { color: theme.text, fontFamily: Fonts?.sansMedium }]}>Blocked users</Text>
+        </TouchableOpacity>
+      </View>
+
       <ChangePasswordForm />
 
       <View style={[styles.row, { borderColor: theme.border }]}>

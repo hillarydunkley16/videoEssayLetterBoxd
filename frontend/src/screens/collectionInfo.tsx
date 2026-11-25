@@ -17,6 +17,7 @@ import { fetchACollection, removeFromWatchlist, deleteCollection } from '@/src/a
 import { useAuthDelete } from '@/src/api/authDelete'
 import { Collection } from '@/src/types/collection'
 import { VideoEssay } from '@/src/types/videoEssay'
+import ReportMenu from '@/src/components/ReportMenu'
 
 export default function CollectionInfo({ public_id }: { public_id: string }) {
   const theme = Colors[useColorScheme()]
@@ -104,7 +105,11 @@ export default function CollectionInfo({ public_id }: { public_id: string }) {
         <TouchableOpacity onPress={handleBack} accessibilityLabel="Back" style={styles.backBtn}>
           <Text style={[styles.backIcon, { color: theme.text }]}>{'‹'}</Text>
         </TouchableOpacity>
-        <View style={styles.backBtn} />
+        <View style={styles.backBtn}>
+          {isOwner ? null : (
+            <ReportMenu targetType="list" targetId={collection.public_id} accessibilityLabel="Report options" />
+          )}
+        </View>
       </View>
 
       <FlatList

@@ -18,6 +18,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors, Fonts } from "@/constants/theme";
 import { RatingDots } from "@/components/ui/RatingDots";
 import { OverflowMenu } from "@/components/ui/OverflowMenu";
+import ReportMenu from "@/src/components/ReportMenu";
 import { logRoute } from "@/src/helpers/logRoute";
 
 type Props = {
@@ -174,7 +175,11 @@ export default function LogInfo({ id, onTitleLoaded }: Props) {
                   ]}
                 />
               </View>
-            ) : null}
+            ) : (
+              <View style={styles.topBar}>
+                <ReportMenu targetType="log" targetId={log.public_id} accessibilityLabel="Report options" />
+              </View>
+            )}
             {confirmingDelete ? (
               <View style={[styles.deleteConfirm, { borderColor: theme.border }]}>
                 <Text style={[styles.deleteConfirmText, { color: theme.text, fontFamily: Fonts?.sans }]}>
@@ -325,6 +330,13 @@ export default function LogInfo({ id, onTitleLoaded }: Props) {
                         {c.text}
                       </Text>
                     </View>
+                    {c.is_mine ? null : (
+                      <ReportMenu
+                        targetType="comment"
+                        targetId={c.id}
+                        accessibilityLabel={`Report options for comment by ${c.user}`}
+                      />
+                    )}
                   </View>
                 ))
               )}

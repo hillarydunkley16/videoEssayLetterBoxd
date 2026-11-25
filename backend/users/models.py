@@ -17,6 +17,49 @@ class Follow(models.Model):
         return f'{self.follower_id} follows {self.followee_id}'
 
 
+class Block(models.Model):
+    """`blocker` has blocked `blocked`. The effect is mutual (see blocked_user_ids): neither
+    user sees the other's content. Both FKs cascade, so deleting either account removes the row."""
+    blocker = models.ForeignKey(User, related_name='blocks_made', on_delete=models.CASCADE)
+    blocked = models.ForeignKey(User, related_name='blocks_received', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['blocker', 'blocked'], name='unique_block'),
+            models.CheckConstraint(condition=~models.Q(blocker=models.F('blocked')), name='no_self_block'),
+        ]
+
+    def __str__(self):
+        return f'{self.blocker_id} blocks {self.blocked_id}'
+
+
+def blocked_user_ids(viewer):
+    """Ids of every user with a block against `viewer` in either direction. The one place the
+    block rule lives; empty (and no query) for an anonymous or missing viewer."""
+    if viewer is None or not viewer.is_authenticated:
+        return set()
+    ids = set()
+    for blocker_id, blocked_id in Block.objects.filter(
+        models.Q(blocker=viewer) | models.Q(blocked=viewer)
+    ).values_list('blocker_id', 'blocked_id'):
+        ids.add(blocked_id if blocker_id == viewer.id else blocker_id)
+    return ids
+
+
+def exclude_blocked(queryset, viewer, field):
+    """`queryset` without rows whose user (the `field` FK, e.g. "owner" or "id") has a block
+    against `viewer` in either direction. Subqueries, so it stays one query. Unchanged for an
+    anonymous or missing viewer."""
+    if viewer is None or not viewer.is_authenticated:
+        return queryset
+    return queryset.exclude(
+        **{f'{field}__in': Block.objects.filter(blocker=viewer).values('blocked_id')}
+    ).exclude(
+        **{f'{field}__in': Block.objects.filter(blocked=viewer).values('blocker_id')}
+    )
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null = True, blank = True) 
     imageUrl = models.URLField(blank = True, null = True)

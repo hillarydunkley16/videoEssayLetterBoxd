@@ -13,6 +13,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { Colors, Fonts } from "@/constants/theme";
 import { FollowListUser, fetchSuggestedUsers, followUser, searchUsers } from "@/src/api/users";
 import { useAuthPost } from "@/src/api/authPost";
+import { useRefreshOnBlockChange } from "@/src/hooks/useRefreshOnBlockChange";
 import UserRow from "./UserRow";
 
 // Matches the backend: a shorter query returns an empty page, so we show suggestions instead.
@@ -36,6 +37,8 @@ export default function PeopleResults({ q }: { q: string }) {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Blocking or unblocking someone elsewhere reloads the list, like Retry does.
+  useRefreshOnBlockChange(() => setAttempt((n) => n + 1));
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const nextPage = useRef(1);
   const fetching = useRef(false);

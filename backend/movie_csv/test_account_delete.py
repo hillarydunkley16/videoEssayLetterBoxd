@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 
-from movie_csv.models import Collection, Comment, Like, Log, VideoEssay
+from movie_csv.models import Collection, Comment, Like, Log, Report, VideoEssay
 from movie_csv.views.api import DeleteAccount
 from users.models import Follow, Profile
 
@@ -82,3 +82,21 @@ class DeleteAccountTests(TestCase):
         essay.refresh_from_db()
         self.assertEqual(essay.owner_id, self.other.pk)
         self.assertIn(essay, lst.essays.all())
+
+    def test_reports_survive_the_reporter_deleting_their_account(self):
+        log = self._log(VideoEssay.objects.create(title="E", owner=self.other), self.other, review_text="bad")
+        Report.objects.create(reporter=self.me, reason="spam", log=log, snapshot="bad")
+        self.assertEqual(self._delete(self.me).status_code, 204)
+        report = Report.objects.get()
+        self.assertIsNone(report.reporter)
+        self.assertEqual(report.log, log)
+
+    def test_reports_survive_the_reported_user_deleting_their_account(self):
+        essay = VideoEssay.objects.create(title="E", owner=self.me)
+        log = self._log(essay, self.me, review_text="bad")
+        Report.objects.create(reporter=self.other, reason="spam", log=log, snapshot="bad")
+        Report.objects.create(reporter=self.other, reason="hate", reported_user=self.me, snapshot="user me")
+        self.assertEqual(self._delete(self.me).status_code, 204)
+        self.assertEqual(Report.objects.count(), 2)
+        self.assertEqual(Report.objects.filter(snapshot="bad").get().log, None)
+        self.assertEqual(Report.objects.get(reason="hate").snapshot, "user me")

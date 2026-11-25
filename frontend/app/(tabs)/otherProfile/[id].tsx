@@ -13,10 +13,14 @@ import {
   useColorScheme,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Log } from '@/src/types/log'
 import { fetchAProfileById, followUser } from '@/src/api/users'
 import { useAuthPost } from '@/src/api/authPost'
+import { blockUser } from '@/src/api/safety'
+import ReportMenu from '@/src/components/ReportMenu'
+import { notifyBlockChanged } from '@/src/helpers/blockEvents'
+import { showToast } from '@/src/helpers/toast'
 import { Profile } from '@/src/types/profile'
 import { router, useLocalSearchParams } from 'expo-router'
 
@@ -47,6 +51,10 @@ export default function Page() {
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [followBusy, setFollowBusy] = useState(false)
+  const [confirmingBlock, setConfirmingBlock] = useState(false)
+  const [blockError, setBlockError] = useState('')
+  // A ref, not state: a second tap can land before a state update re-renders.
+  const blocking = useRef(false)
 
   useEffect(() => {
     async function loadProfile() {
@@ -68,7 +76,9 @@ export default function Page() {
         setIsFollowing(profileData.is_following)
       } catch (err) {
         console.error('Failed to load other profile:', err)
-        setError('Unable to load profile')
+        // The server answers 404 when either user has blocked the other. Say nothing more
+        // than "unavailable", so a blocked user can't tell it from a missing profile.
+        setError(String(err).includes('API error: 404') ? "This profile isn't available." : 'Unable to load profile')
       } finally {
         setLoading(false)
       }
@@ -91,6 +101,26 @@ export default function Page() {
       console.error('Failed to toggle follow:', err)
     } finally {
       setFollowBusy(false)
+    }
+  }
+
+  async function handleBlock() {
+    if (!profileId || blocking.current) return
+    blocking.current = true
+    setBlockError('')
+    try {
+      await blockUser(profileId, authPost)
+      notifyBlockChanged()
+      showToast(`Blocked ${profile?.user.username ?? 'user'}`)
+      if (router.canGoBack()) {
+        router.back()
+      } else {
+        router.replace('/')
+      }
+    } catch (err) {
+      console.error('Failed to block user:', err)
+      setBlockError("Couldn't block this user. Please try again.")
+      blocking.current = false
     }
   }
 
@@ -119,6 +149,46 @@ export default function Page() {
   const header = (
     <View>
       <View style={[styles.identity, { borderColor: theme.border }]}>
+        <View style={styles.menuRow}>
+          <ReportMenu
+            targetType="user"
+            targetId={profileId!}
+            accessibilityLabel="Profile options"
+            extraItems={[
+              {
+                label: 'Block user',
+                destructive: true,
+                onPress: () => {
+                  setBlockError('')
+                  setConfirmingBlock(true)
+                },
+              },
+            ]}
+          />
+        </View>
+        {confirmingBlock ? (
+          <View style={[styles.blockConfirm, { borderColor: theme.border }]}>
+            <Text style={[styles.blockTitle, { color: theme.text, fontFamily: Fonts?.displayMedium }]}>
+              Block {username}?
+            </Text>
+            <Text style={[styles.blockBody, { color: theme.muted, fontFamily: Fonts?.sans }]}>
+              {"You won't see each other's logs, comments or lists, and any follows between you will be removed. They won't be told."}
+            </Text>
+            {blockError ? (
+              <Text accessibilityRole="alert" style={[styles.blockError, { color: theme.error, fontFamily: Fonts?.sans }]}>
+                {blockError}
+              </Text>
+            ) : null}
+            <View style={styles.blockActions}>
+              <TouchableOpacity onPress={() => setConfirmingBlock(false)} accessibilityLabel="Cancel block">
+                <Text style={[styles.blockCancel, { color: theme.muted, fontFamily: Fonts?.sansMedium }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleBlock} accessibilityLabel="Confirm block">
+                <Text style={[styles.blockConfirmText, { color: theme.error, fontFamily: Fonts?.sansSemiBold }]}>Block</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
         <View style={styles.idRow}>
           {profile?.user.imageUrl ? (
             <Image source={{ uri: profile.user.imageUrl }} style={[styles.avatar, { borderColor: theme.background }]} />
@@ -293,6 +363,14 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 32 },
   status: { fontSize: 15, textAlign: 'center', marginTop: 32, paddingHorizontal: 20 },
   identity: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 4, borderBottomWidth: 1 },
+  menuRow: { alignItems: 'flex-end', marginBottom: 8 },
+  blockConfirm: { borderWidth: 1, borderRadius: 8, padding: 14, marginBottom: 16, gap: 8 },
+  blockTitle: { fontSize: 18 },
+  blockBody: { fontSize: 13, lineHeight: 18 },
+  blockError: { fontSize: 13 },
+  blockActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 24, marginTop: 4 },
+  blockCancel: { fontSize: 14 },
+  blockConfirmText: { fontSize: 14 },
   idRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   avatar: { width: 76, height: 76, borderRadius: 38, borderWidth: 3 },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },

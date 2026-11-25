@@ -6,7 +6,8 @@
  * search when the viewer follows nobody. Clerk, the network and navigation are stubbed.
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { notifyBlockChanged } from '@/src/helpers/blockEvents';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
@@ -126,5 +127,19 @@ describe('FollowingFeedScreen', () => {
     render(<FollowingFeedScreen />);
 
     expect(await screen.findByText(/Follow people to see their logs here/)).toBeTruthy();
+  });
+
+  it('reloads page 1 when the user blocks someone, so their logs leave the feed', async () => {
+    mockFetchFeed
+      .mockResolvedValueOnce(page([log(1, 'ann', 'Essay One'), log(2, 'ben', 'Essay Two')]))
+      .mockResolvedValueOnce(page([log(1, 'ann', 'Essay One')]));
+    render(<FollowingFeedScreen />);
+    await screen.findByText('review by ben');
+
+    act(() => notifyBlockChanged());
+
+    await waitFor(() => expect(screen.queryByText('review by ben')).toBeNull());
+    expect(screen.getByText('review by ann')).toBeTruthy();
+    expect(mockFetchFeed).toHaveBeenCalledTimes(2);
   });
 });

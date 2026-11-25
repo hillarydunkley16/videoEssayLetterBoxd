@@ -87,6 +87,17 @@ export default function Layout() {
                 }}
             />
             <Stack.Screen
+                name = "blockedUsers"
+                options = {{
+                    title: 'Blocked users',
+                    headerShown: true,
+                    headerShadowVisible: false,
+                    headerTintColor: theme.text,
+                    headerStyle: { backgroundColor: theme.background },
+                    headerTitleStyle: { color: theme.text, fontFamily: Fonts?.displayMedium, fontSize: 22 },
+                }}
+            />
+            <Stack.Screen
                 name = "addEssayToList"
                 options = {{
                     presentation: 'modal',

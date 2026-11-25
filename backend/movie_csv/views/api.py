@@ -1,14 +1,16 @@
 import re
+import uuid
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import UserRateThrottle
 # from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.generics import DestroyAPIView
-from ..models import VideoEssay, Log, Like, Comment, Collection
-from ..serializers import VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer, CollectionSerializer, FollowListUserSerializer
+from ..models import VideoEssay, Log, Like, Comment, Collection, Report
+from ..serializers import display_username, VideoEssaySerializer, LogSerializer, UserSerializer, CommentSerializer, ProfileSerializer, LikeSerializer, CollectionSerializer, FollowListUserSerializer, BlockedUserSerializer
 from rest_framework import generics, permissions, filters
 from ..permissions import IsOwnerOrReadOnly
 from django.contrib.auth.models import User
@@ -36,10 +38,10 @@ from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from movie_csv.authentication import ClerkAuthentication
-from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Q, Value, When
+from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Prefetch, Q, Value, When
 from django.utils import timezone
 from datetime import timedelta
-from users.models import Follow, Profile
+from users.models import Block, Follow, Profile, blocked_user_ids, exclude_blocked
 import logging
 from django.db import transaction
 
@@ -93,23 +95,31 @@ class  VideoEssays(generics.ListCreateAPIView):
         serializer = VideoEssaySerializer(videoEssay)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-def with_log_relations(queryset):
+def with_log_relations(queryset, viewer=None):
     """Everything LogSerializer touches per row (essay, owner name, comment authors'
-    names, likes), fetched up front so list endpoints run a constant number of queries."""
-    return queryset.select_related("essay", "owner__profile").prefetch_related(
-        "likes", "comments__user__profile"
+    names, likes), fetched up front so list endpoints run a constant number of queries.
+
+    With a `viewer`, logs, comments and likes from users blocked either way are left out, so
+    the counts a client derives (comments, likes) match what it can see. Anonymous or missing
+    viewers get everything."""
+    comments = exclude_blocked(Comment.objects.select_related("user__profile"), viewer, "user")
+    likes = exclude_blocked(Like.objects.all(), viewer, "user")
+    return exclude_blocked(queryset, viewer, "owner").select_related("essay", "owner__profile").prefetch_related(
+        Prefetch("likes", queryset=likes), Prefetch("comments", queryset=comments)
     )
 
 
 class logList(generics.ListCreateAPIView): 
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [AllowAny]
-    queryset = with_log_relations(Log.objects.all())
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated]
     # permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    
+
+    def get_queryset(self):
+        return with_log_relations(Log.objects.all(), self.request.user)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
@@ -164,15 +174,19 @@ class userLogs(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return with_log_relations(Log.objects.filter(owner=self.request.user))
+        return with_log_relations(Log.objects.filter(owner=self.request.user), self.request.user)
 class logDetail(generics.RetrieveUpdateDestroyAPIView): 
     # authentication_classes = [JWTAuthentication]
-    queryset = with_log_relations(Log.objects.all())
     profile_queryset = Profile.objects.all()
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = "public_id"
+
+    def get_queryset(self):
+        # A blocked user's log is a 404, not a 403, so its existence isn't confirmed.
+        return with_log_relations(Log.objects.all(), self.request.user)
+
     def get(self, request, public_id):
         # print("Headers:", request.headers)
         # print("Auth user:", request.user)
@@ -197,8 +211,11 @@ class logFormView():
 class UserList(generics.ListAPIView): 
     permission_classes = [IsAuthenticated]
     # authentication_classes = [JWTAuthentication]
-    queryset = User.objects.select_related("profile").prefetch_related("logs").order_by("id")
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        users = User.objects.select_related("profile").prefetch_related("logs").order_by("id")
+        return exclude_blocked(users, self.request.user, "id")
 #combine user detail with profile so you just get the user info once, comes with user model class, user logs, profile details (imageurl etc)
 class UserDetail(generics.RetrieveAPIView): 
     authentication_classes = [ClerkAuthentication]
@@ -230,6 +247,8 @@ class ProfileDetailById(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = "user_id"
     def get(self, request, user_id):
+        if user_id in blocked_user_ids(request.user):
+            return Response({"message": "Profile not found"}, status=404)
         try:
             profile = Profile.objects.get(user_id=user_id)
             serializer = ProfileSerializer(profile, context={"request": request})
@@ -252,7 +271,7 @@ class VideoInfo(generics.RetrieveAPIView):
 
     def get(self, request, public_id):
         video = self.get_object()
-        logs = with_log_relations(Log.objects.filter(essay=video))
+        logs = with_log_relations(Log.objects.filter(essay=video), request.user)
         return Response({
             "video": VideoEssaySerializer(video).data,
             "logs": LogSerializer(logs, many=True, context={"request": request}).data,
@@ -296,11 +315,11 @@ class LikePost(generics.ListCreateAPIView):
         except Log.DoesNotExist:
             return Response({"message": "404"})
         new_like, created = Like.objects.get_or_create(user=request.user, post=post)
-        if created:
-            return Response({"liked": True, "likes_count": post.likes.count() })
-        else: 
+        if not created:
             new_like.delete()
-            return Response({"liked": False, "likes_count": post.likes.count()})
+        # Counted for this viewer: likes from users blocked either way don't count.
+        likes_count = exclude_blocked(post.likes.all(), request.user, "user").count()
+        return Response({"liked": created, "likes_count": likes_count})
 
 class UnLikePost(DestroyAPIView):
     queryset = Like.objects.all(); 
@@ -329,13 +348,16 @@ class CommentOnPost(generics.CreateAPIView):
             log = Log.objects.get(public_id = public_id)
         except Log.DoesNotExist: 
             return Response({"message": "Log not found"}, status=404)
+        # Deliberately says nothing about a block: the blocked user must not learn of it.
+        if log.owner_id in blocked_user_ids(request.user):
+            return Response({"message": "You can't do that"}, status=403)
         comment = Comment.objects.create(
             user = self.request.user, 
             # date = data["date"],
             log = log,
             text = request.data.get("text", "")
         )
-        serializer = CommentSerializer(comment)
+        serializer = CommentSerializer(comment, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 #  @login_required
 
@@ -537,7 +559,9 @@ class CollectionList(generics.ListCreateAPIView):
     queryset = Collection.objects.all()
     permission_classes = [AllowAny]
     def get_queryset(self):
-        return with_collection_relations(public_collections())
+        return with_collection_relations(
+            exclude_blocked(public_collections(), self.request.user, "owner")
+        )
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -551,7 +575,8 @@ class CollectionDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         # Another user's watchlist is a 404, not a 403, so its existence isn't confirmed.
         visible = Q(is_watchlist=False) | Q(owner=self.request.user)
-        return with_collection_relations(Collection.objects.filter(visible))
+        lists = exclude_blocked(Collection.objects.filter(visible), self.request.user, "owner")
+        return with_collection_relations(lists)
     
 class CollectionSearch(generics.ListAPIView):
     """Lists whose name contains ?q (name only). Watchlists are never results, for any viewer,
@@ -568,7 +593,7 @@ class CollectionSearch(generics.ListAPIView):
         if len(q) < self.MIN_QUERY_LENGTH:
             return Collection.objects.none()
         return (
-            with_collection_relations(public_collections())
+            with_collection_relations(exclude_blocked(public_collections(), self.request.user, "owner"))
             .filter(name__icontains=q)
             .annotate(
                 essay_total=Count("essays"),
@@ -674,6 +699,9 @@ class FollowUser(APIView):
             target_user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response({"message": "User not found"}, status=404)
+        # Deliberately says nothing about a block: the blocked user must not learn of it.
+        if target_user.id in blocked_user_ids(request.user):
+            return Response({"message": "You can't do that"}, status=403)
 
         follow, following = Follow.objects.get_or_create(follower=request.user, followee=target_user)
         if not following:
@@ -682,10 +710,146 @@ class FollowUser(APIView):
         return Response(
             {
                 "following": following,
-                "followers_count": Follow.objects.filter(followee=target_user).count(),
+                "followers_count": exclude_blocked(
+                    Follow.objects.filter(followee=target_user), request.user, "follower"
+                ).count(),
             },
             status=200,
         )
+
+
+class BlockUser(APIView):
+    """POST blocks <user_id>, DELETE unblocks. Both are idempotent. Blocking also removes
+    follows in both directions; unblocking does not restore them. The effect on what each
+    side sees is mutual (see users.models.blocked_user_ids)."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        if request.user.id == user_id:
+            return Response({"message": "Cannot block yourself"}, status=400)
+        target = get_object_or_404(User, id=user_id)
+        with transaction.atomic():
+            Block.objects.get_or_create(blocker=request.user, blocked=target)
+            Follow.objects.filter(
+                Q(follower=request.user, followee=target) | Q(follower=target, followee=request.user)
+            ).delete()
+        return Response({"blocked": True}, status=200)
+
+    def delete(self, request, user_id):
+        get_object_or_404(User, id=user_id)
+        Block.objects.filter(blocker=request.user, blocked_id=user_id).delete()
+        return Response(status=204)
+
+
+class BlockedUsersList(generics.ListAPIView):
+    """The users the caller has blocked, newest block first. Only the caller's own blocks:
+    who has blocked the caller is never exposed."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = BlockedUserSerializer
+
+    def get_queryset(self):
+        return (
+            User.objects.filter(blocks_received__blocker=self.request.user)
+            .select_related("profile")
+            .annotate(blocked_at=F("blocks_received__created_at"))
+            .order_by("-blocked_at", "-id")
+        )
+
+
+REPORT_DAILY_LIMIT = 20  # reports per signed-in user per day, duplicates included
+
+
+class ReportThrottle(UserRateThrottle):
+    """Caps reports per user per day. Counted in the Django cache (per process with LocMemCache,
+    like the search limiter), so it resets on a restart or deploy."""
+    scope = "report"
+    rate = f"{REPORT_DAILY_LIMIT}/day"
+
+
+class ReportCreate(APIView):
+    """POST /api/reports/ {target_type, target_id, reason, details?}
+
+    target_type is log, comment, user or list; target_id is the public_id for a log or list and
+    the numeric id for a comment or user. Reporting your own content is a 400. Content the
+    reporter can't see (hidden by a block, or someone else's watchlist) is a 404. A second report
+    of the same target while the first is open returns the first (200). Each new report is
+    stored with a snapshot of the reported text, so it stays useful if the content is deleted."""
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ReportThrottle]
+
+    def post(self, request):
+        target_type = request.data.get("target_type")
+        target_id = request.data.get("target_id")
+        reason = request.data.get("reason")
+        details = request.data.get("details") or ""
+
+        if target_type not in {t for t, _ in Report.TARGET_TYPES}:
+            return Response({"message": "Unknown target_type"}, status=400)
+        if reason not in {r for r, _ in Report.REASONS}:
+            return Response({"message": "Unknown reason"}, status=400)
+        if not isinstance(details, str) or len(details) > Report._meta.get_field("details").max_length:
+            return Response({"message": "details must be at most 500 characters"}, status=400)
+        try:
+            key = uuid.UUID(str(target_id)) if target_type in ("log", "list") else int(str(target_id))
+        except (ValueError, TypeError):
+            return Response({"message": "Invalid target_id"}, status=400)
+
+        viewer = request.user
+        if target_type == "log":
+            field = "log"
+            target = exclude_blocked(
+                Log.objects.select_related("owner__profile", "essay"), viewer, "owner"
+            ).filter(public_id=key).first()
+            owner_id = target and target.owner_id
+            snapshot = target and (
+                f'Log by {display_username(target.owner)} on "{target.essay.title}" '
+                f"({target.rating}/5): {target.review_text}"
+            )
+        elif target_type == "comment":
+            field = "comment"
+            target = exclude_blocked(
+                exclude_blocked(Comment.objects.select_related("user__profile"), viewer, "user"),
+                viewer,
+                "log__owner",
+            ).filter(id=key).first()
+            owner_id = target and target.user_id
+            snapshot = target and f"Comment by {display_username(target.user)}: {target.text}"
+        elif target_type == "user":
+            field = "reported_user"
+            target = exclude_blocked(User.objects.select_related("profile"), viewer, "id").filter(id=key).first()
+            owner_id = target and target.id
+            snapshot = target and f"User {display_username(target)} (id {target.id})"
+        else:
+            field = "collection"
+            target = exclude_blocked(
+                public_collections().select_related("owner__profile"), viewer, "owner"
+            ).filter(public_id=key).first()
+            owner_id = target and target.owner_id
+            snapshot = target and (
+                f'List "{target.name}" by {display_username(target.owner)}: {target.description}'
+            )
+
+        if target is None:
+            return Response({"message": "Not found"}, status=404)
+        if owner_id == viewer.id:
+            return Response({"message": "You can't report your own content"}, status=400)
+
+        existing = Report.objects.filter(reporter=viewer, status=Report.OPEN, **{field: target}).first()
+        if existing is not None:
+            return Response({"id": existing.id, "status": existing.status}, status=200)
+
+        report = Report.objects.create(
+            reporter=viewer,
+            reason=reason,
+            details=details,
+            target_type=target_type,
+            snapshot=snapshot,
+            **{field: target},
+        )
+        return Response({"id": report.id, "status": report.status}, status=201)
 
 
 class FollowListBase(generics.ListAPIView):
@@ -701,10 +865,15 @@ class FollowListBase(generics.ListAPIView):
 
     def get_queryset(self):
         target_id = self.kwargs["user_id"]
-        get_object_or_404(User, id=target_id)
+        # One lookup for "exists and not blocked either way": a blocked user is a 404.
+        get_object_or_404(exclude_blocked(User.objects.all(), self.request.user, "id"), id=target_id)
         viewer_follows = Follow.objects.filter(follower=self.request.user, followee=OuterRef("pk"))
         return (
-            User.objects.filter(**{f"{self.relation}__{self.target_field}_id": target_id})
+            exclude_blocked(
+                User.objects.filter(**{f"{self.relation}__{self.target_field}_id": target_id}),
+                self.request.user,
+                "id",
+            )
             .select_related("profile")
             .annotate(is_following=Exists(viewer_follows), followed_at=F(f"{self.relation}__created_at"))
             .order_by("-followed_at", "-id")
@@ -747,7 +916,9 @@ class FollowingFeed(generics.ListAPIView):
 
     def get_queryset(self):
         followees = Follow.objects.filter(follower=self.request.user).values("followee_id")
-        return with_log_relations(Log.objects.filter(owner_id__in=followees)).order_by("-date", "-id")
+        return with_log_relations(
+            Log.objects.filter(owner_id__in=followees), self.request.user
+        ).order_by("-date", "-id")
 
 
 class SuggestedUsers(generics.ListAPIView):
@@ -762,7 +933,7 @@ class SuggestedUsers(generics.ListAPIView):
         me = self.request.user
         already_following = Follow.objects.filter(follower=me, followee=OuterRef("pk"))
         return (
-            User.objects.exclude(id=me.id)
+            exclude_blocked(User.objects.exclude(id=me.id), me, "id")
             .annotate(followed=Exists(already_following), follower_total=Count("follower_set"))
             .filter(followed=False)
             .annotate(is_following=Exists(already_following))
@@ -790,7 +961,7 @@ class UserSearch(generics.ListAPIView):
         already_following = Follow.objects.filter(follower=me, followee=OuterRef("pk"))
         name = "profile__display_username"
         return (
-            User.objects.exclude(id=me.id)
+            exclude_blocked(User.objects.exclude(id=me.id), me, "id")
             .filter(**{f"{name}__icontains": q})
             .annotate(
                 is_following=Exists(already_following),
