@@ -26,6 +26,10 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
+      # settings.py uses a manifest static storage, so rendering the admin
+      # needs collectstatic to have run (staticfiles/ is gitignored).
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput
       - name: Tests
         run: python manage.py test
       - name: Missing migrations
