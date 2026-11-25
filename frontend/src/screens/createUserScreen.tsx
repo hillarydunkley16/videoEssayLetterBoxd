@@ -40,26 +40,7 @@ export default function UserListScreen() {
     horizontal
     keyExtractor={(item) => item.id.toString()}
     renderItem={({ item }) => (
-    //   <TouchableOpacity onPress={() => router.push(`/modal?essayId=${item.id}`)}>
-    //       <Text style={{ fontWeight: "bold" }}>{item.title}</Text>
-    //       <View style={{ padding: 12 }}>
-    //     {item.thumbnail && (
-    //       <Image
-    //         source={{ uri: item.thumbnail }}
-    //         style={{ width: "100%", height: 180 }}
-    //       />
-    //     )}
-
-    //     <Text style={{ fontWeight: "bold", marginTop: 8 }}>
-    //       {item.title}
-    //     </Text>
-
-    //     {item.channel_name && (
-    //       <Text>{item.channel_name}</Text>
-    //     )}
-    //   </View>
-    //   </TouchableOpacity>
-        <Text>{item.username}</Text>
+    <Text>{item.username}</Text>
     )}
   />
   );

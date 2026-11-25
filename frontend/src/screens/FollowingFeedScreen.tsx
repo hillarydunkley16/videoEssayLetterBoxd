@@ -8,6 +8,7 @@ import { Colors, Fonts } from "@/constants/theme";
 import { LogRow } from "@/components/ui/LogRow";
 import { fetchFollowingFeed, fetchLogsPage } from "../api/logs";
 import { Log } from "../types/log";
+import { useRefreshOnBlockChange } from "@/src/hooks/useRefreshOnBlockChange";
 
 // Logs from the people you follow, newest first (server-side filtered).
 export default function FollowingFeedScreen() {
@@ -38,6 +39,9 @@ export default function FollowingFeedScreen() {
     if (!isLoaded || !isSignedIn) return;
     loadFirstPage().finally(() => setLoading(false));
   }, [isLoaded, isSignedIn, loadFirstPage]);
+
+  // Blocking someone elsewhere in the app removes their logs from this feed.
+  useRefreshOnBlockChange(loadFirstPage);
 
   const loadMore = useCallback(async () => {
     if (!nextUrl || loadingMore) return;

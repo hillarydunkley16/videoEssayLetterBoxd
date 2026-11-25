@@ -13,26 +13,21 @@ import { useAuthPost } from "./authPost";
 import { useAuthDelete } from "./authDelete";
 import { Profile } from "../types/profile";
 export async function fetchUsers(): Promise<PaginatedResponse<User>>{
-    console.log("fetch users function called?!")
     return authFetch("/users");
 } 
 
 export async function fetchAUser(id: number): Promise<User>{
-    console.log("get a user function called!!"); 
     return authFetch(`/users/${id}`)
 }
 export async function fetchProfile( token: string): Promise<Profile>{
-    console.log("fetch profile"); 
     const response = await authFetch(`/users/profile`, {}, token)
     return response
 }
 export async function fetchAProfileById(id: number, token: string): Promise<Profile>{
-    console.log("fetch a profile by id: ", id); 
     const response = await authFetch(`/users/profile/${id}/`, {}, token)
     return response
 }
 export async function updateProfileImageAPI( imageUrl: string,  authFetch: ReturnType<typeof useAuthUpdate>){
-    console.log("UPDATE user PROFILE IMAGE");
     const response = await authFetch(`/api/users/updatePic`, {imageUrl});
     return response;
 }
@@ -44,7 +39,6 @@ export type FollowResult = {
 
 // Toggles following the given user. Mirrors likeLog's toggle-on-POST shape.
 export async function followUser(userId: number, authFetch: ReturnType<typeof useAuthPost>): Promise<FollowResult> {
-    console.log("toggling follow for user: ", userId);
     const response = await authFetch(`/api/users/${userId}/follow/`);
     return response.data;
 }

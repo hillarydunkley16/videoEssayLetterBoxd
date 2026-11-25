@@ -18,7 +18,6 @@ export async function fetchVideoEssays(token: string): Promise<PaginatedResponse
   // const clerk = useClerkAuthFetch();
   // console.log(clerk)
   
-  console.log("fetch videos essays functin called!!!");
   return authFetch("/VideoEssays/", {}, token);
 }
 
@@ -37,8 +36,6 @@ export async function fetchPopularVideoEssaysPublic(): Promise<PaginatedResponse
 }
 
 export async function getAVideoEssay(publicId: string, token: string): Promise<VideoEssayData> {
-    console.log("id received: ", publicId);
-    console.log("get a video essay function called!");
     return authFetch(`/VideoEssays/${publicId}/`, {}, token)
 }
 
@@ -114,9 +111,6 @@ export const searchYoutube = async (
  */
 export const fetchYoutubeResults = async(query: string, location='us', language='en'): Promise<SearchResult[]>=> {
   try{
-      console.log(query);
-      console.log(location);
-      console.log(language);
 
       const response = await axios.post<YouTubeSearchResponse>(`${API_BASE_URL}/search/`,
           {
@@ -184,7 +178,6 @@ export const useVideoApi = () => {
   const convertYouTubeResultToVideoEssay = async (
     result: Omit<VideoEssay, "id" | "public_id">
   ): Promise<SearchResult> => {
-    console.log("result in convertYoutubeResultToVideoEssay: ", result)
     const payload = {
       youtube_url: result.youtube_url ?? null,
       title: result.title,

@@ -11,6 +11,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { Colors, Fonts } from "@/constants/theme";
 import { LogRow } from "@/components/ui/LogRow";
+import { useRefreshOnBlockChange } from "@/src/hooks/useRefreshOnBlockChange";
 
 // Global "what people are watching" feed — every log across every user,
 // newest first (logList/ is unfiltered, ordered by Log.Meta not set so this
@@ -23,6 +24,9 @@ export default function RecentLogsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [popular, setPopular] = useState<VideoEssay[]>([]);
+  // Bumped when the user blocks or unblocks someone, to reload the feed without them.
+  const [reloadKey, setReloadKey] = useState(0);
+  useRefreshOnBlockChange(() => setReloadKey((key) => key + 1));
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const theme = Colors[useColorScheme()];
 
@@ -50,7 +54,7 @@ export default function RecentLogsScreen() {
       }
     }
     loadInitial();
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, reloadKey]);
 
   const loadMore = useCallback(async () => {
     if (!nextUrl || loadingMore) return;

@@ -1,7 +1,7 @@
 from rest_framework import serializers 
 from .models import VideoEssay, Log, Like, Comment, Collection
 from django.contrib.auth.models import User
-from users.models import Follow, Profile
+from users.models import Follow, Profile, exclude_blocked
 #a serializer defines the columns/data that will be used in the views. 
 
 ANONYMOUS = "Anonymous"
@@ -44,8 +44,14 @@ class LikeSerializer(serializers.ModelSerializer):
         fields = ['user', 'post']
 class CommentSerializer(serializers.ModelSerializer): 
     user = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
     def get_user(self, obj):
         return display_username(obj.user)
+    def get_is_mine(self, obj):
+        # Relative to whoever is viewing; False when no request is in the context.
+        request = self.context.get("request")
+        viewer = getattr(request, "user", None)
+        return bool(viewer is not None and viewer.is_authenticated and viewer.id == obj.user_id)
     log = serializers.SlugRelatedField(
         slug_field = "public_id", 
         queryset = Log.objects.all()
@@ -55,6 +61,7 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = (
             "user", 
+            "is_mine",
             "id",
             # "date", 
             "log",
@@ -164,14 +171,20 @@ class ProfileSerializer(serializers.ModelSerializer):
         # "Anonymous", so callers need this separately to tell "no username set" apart
         # from an actual user named Anonymous (see SPEC-username-onboarding.md).
         return bool(obj.display_username)
+    def _viewer(self):
+        # Whoever is viewing, or None when there is no request in the context.
+        request = self.context.get("request")
+        return getattr(request, "user", None)
     def get_user_logs(self, obj): 
-       
-        logs = Log.objects.filter(owner = obj.user)
+        # Imported here: views.api imports this module.
+        from .views.api import with_log_relations
+        logs = with_log_relations(Log.objects.filter(owner = obj.user), self._viewer())
         return LogSerializer(logs, many = True, context = self.context).data
+    # Counts are per viewer: follows involving a user blocked either way don't count.
     def get_followers_count(self, obj):
-        return Follow.objects.filter(followee=obj.user).count()
+        return exclude_blocked(Follow.objects.filter(followee=obj.user), self._viewer(), "follower").count()
     def get_following_count(self, obj):
-        return Follow.objects.filter(follower=obj.user).count()
+        return exclude_blocked(Follow.objects.filter(follower=obj.user), self._viewer(), "followee").count()
     def get_is_following(self, obj):
         # Relative to whoever is viewing; never true for your own profile.
         request = self.context.get("request")
@@ -196,6 +209,19 @@ class FollowListUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "username", "imageUrl", "is_following")
+
+
+class BlockedUserSerializer(serializers.ModelSerializer):
+    """Row for the caller's blocked-users list."""
+    imageUrl = serializers.CharField(source="profile.imageUrl", read_only=True, allow_null=True, default=None)
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, obj):
+        return display_username(obj)
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "imageUrl")
 
 
 class CollectionSerializer(serializers.ModelSerializer):

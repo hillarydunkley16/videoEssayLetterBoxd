@@ -1,5 +1,6 @@
 /**
- * Settings screen: sign out signs out via Clerk and returns to `/`.
+ * Settings screen: sign out signs out via Clerk and returns to `/`; Blocked users opens the
+ * blocked-users list.
  * Clerk and navigation are stubbed.
  */
 import React from 'react';
@@ -7,8 +8,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  router: { replace: (...a: unknown[]) => mockReplace(...a), back: () => mockBack() },
+  router: {
+    replace: (...a: unknown[]) => mockReplace(...a),
+    back: () => mockBack(),
+    push: (...a: unknown[]) => mockPush(...a),
+  },
 }));
 
 const mockSignOut = jest.fn();
@@ -56,5 +62,11 @@ describe('SettingsScreen', () => {
     render(<SettingsScreen />);
     fireEvent.press(screen.getByLabelText('Back'));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('opens the blocked users list', () => {
+    render(<SettingsScreen />);
+    fireEvent.press(screen.getByLabelText('Blocked users'));
+    expect(mockPush).toHaveBeenCalledWith('/blockedUsers');
   });
 });

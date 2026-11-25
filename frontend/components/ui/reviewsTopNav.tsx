@@ -15,7 +15,7 @@ export function ReviewsTopNav({ title }: Props) {
             <Pressable onPress={() => router.back()}>
                 <MaterialCommunityIcons name="chevron-left" size={28} color="blue" />
             </Pressable>
-            {title && <ThemedText style={styles.title}>{title}</ThemedText>}
+            {title && <ThemedText style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</ThemedText>}
             <MaterialCommunityIcons name="dots-horizontal" size={28} color="black" />
         </ThemedView>
     )
@@ -49,8 +49,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     flexShrink: 1,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
   },
   linksRow: {
     flexDirection: 'row',

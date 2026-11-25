@@ -7,8 +7,6 @@ export function useAuthUpdate() {
 
   return async (url: string, data?: any, options: any = {}) => {
     const token = await getToken();
-    console.log("token: ", token)
-    console.log("CLERK TOKEN:", token);
     //need to define method as POST or GET etc. 
     return axios({
       url: `${API_HOST}${url}`,

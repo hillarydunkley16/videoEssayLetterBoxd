@@ -7,7 +7,6 @@ export function useAuthPost() {
 
   return async (url: string, data?: any) => {
     const token = await getToken();
-    console.log("TOKEN IN useAuthPost:", token ? "exists" : "NULL");  // add this
     return axios({
       url: `${API_HOST}${url}`,
       method: 'POST',

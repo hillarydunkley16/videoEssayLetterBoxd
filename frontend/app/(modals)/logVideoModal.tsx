@@ -16,7 +16,7 @@ import { showToast } from '@/src/helpers/toast';
 import { validationErrors, validationMessage } from '@/src/helpers/validationMessage';
 
 export default function LogVideoModal() {
-  const authFetch = useAuthPost();  // ← use this instead of imported authFetch
+  const authFetch = useAuthPost();  // use this instead of imported authFetch
     const authUpdate = useAuthUpdate();
     const { getToken } = useAuth();
     const [loading, setLoading] = useState(false);

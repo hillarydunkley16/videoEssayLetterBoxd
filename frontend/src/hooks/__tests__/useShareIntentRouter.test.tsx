@@ -34,7 +34,13 @@ const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ router: { push: (...a: unknown[]) => mockPush(...a) } }));
 
 const mockAlert = jest.fn();
-jest.mock('react-native', () => ({ Alert: { alert: (...a: unknown[]) => mockAlert(...a) } }));
+// expo-modules-core reads Platform.select from react-native on import, so a mock that only
+// provides Alert crashes the suite whenever Expo's lazy fetch global loads. (Spreading the real
+// module instead pulls in native-only getters such as DevMenu, which don't exist under jest.)
+jest.mock('react-native', () => ({
+  Alert: { alert: (...a: unknown[]) => mockAlert(...a) },
+  Platform: { OS: 'ios', select: (o: Record<string, unknown>) => o.ios ?? o.default },
+}));
 
 const mockGetOrCreate = jest.fn();
 jest.mock('@/src/api/videos', () => ({

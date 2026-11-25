@@ -22,12 +22,10 @@ export default function Page() {
   const { user } = useUser()
   const { width } = useWindowDimensions()
   const showSidebar = width >= 900
-  console.log("User is undefined: ", user == undefined); 
   // If your user isn't appearing as signed in,
   // it's possible they have session tasks to complete.
   // Learn more: https://clerk.com/docs/guides/configure/session-tasks
   const { session } = useSession()
-  console.log("SESSION  CURRENT TASK: " , session?.currentTask)
   // console.log(user)
   return (
   <SafeAreaProvider>
