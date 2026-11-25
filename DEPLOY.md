@@ -371,6 +371,11 @@ from `main`.
    ```
    pg_restore --no-owner --no-privileges --dbname "<scratch-uri>" dump.pgdump
    ```
+   Use `pg_restore` 17 or newer. Homebrew's `postgresql@17` is keg-only, so
+   call it by full path (`$(brew --prefix postgresql@17)/bin/pg_restore`) or
+   put that `bin` folder on your `PATH`. One error is expected on a fresh
+   Supabase project: `schema "public" already exists`. The restore skips it and
+   finishes with "errors ignored on restore: 1". Any other error is a problem.
 4. Check it: row counts on a few tables, for example
    `SELECT count(*) FROM auth_user;` and `SELECT count(*) FROM movie_csv_log;`,
    against the live database.
@@ -380,5 +385,6 @@ from `main`.
 point `DATABASE_URL` at it or load only the tables you need. Dumps cover the
 `public` schema only; Supabase's own schemas are not included.
 
-**Last restore test:** not yet done. Record the date and result here after the
-first one.
+**Last restore test:** 2026-11-25. Restored the latest `db-backup` artifact
+into a second free Supabase project. The only error was the expected
+`schema "public" already exists`. Row counts matched production.
