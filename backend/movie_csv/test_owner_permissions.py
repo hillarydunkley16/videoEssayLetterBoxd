@@ -1,17 +1,19 @@
-"""Only a log's owner may edit or delete it via /api/logList/<uuid>/ or
-/api/logList/<uuid>/delete. `logDetail` and `DeleteLog` previously only checked
-`IsAuthenticated`, so any signed-in user could PATCH/PUT/DELETE any other user's log.
-`CollectionDetail` already enforces this (see test_collection_owner.py); this file
-covers the two remaining endpoints. ClerkAuthentication is bypassed with
-force_authenticate.
+"""Only a row's owner may modify or delete it.
+
+logDetail, DeleteLog and CollectionDetail were guarded by IsAuthenticated alone, so any
+signed-in user could PATCH/DELETE anyone's logs and collections. Reads stay open to every
+signed-in user (other people's logs and lists are meant to be viewable).
+ClerkAuthentication is bypassed with DRF's force_authenticate.
 """
+from datetime import date
+
 from django.contrib.auth import get_user_model
-from django.test import TestCase
-from rest_framework import status
+from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from movie_csv.models import Log, VideoEssay
-from movie_csv.views.api import DeleteLog, logDetail
+from movie_csv.models import Collection, Log, VideoEssay
+from movie_csv.permissions import IsOwnerOrReadOnly
+from movie_csv.views.api import CollectionDetail, DeleteLog, logDetail
 
 User = get_user_model()
 
@@ -19,92 +21,130 @@ User = get_user_model()
 class OwnerPermissionTests(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
-        self.owner = User.objects.create(username="user_2ownerClerkId")
-        self.other = User.objects.create(username="user_2otherClerkId")
-        self.essay = VideoEssay.objects.create(title="E", owner=self.owner)
+        self.owner = User.objects.create(username="owner")
+        self.other = User.objects.create(username="other")
+        self.essay = VideoEssay.objects.create(title="An Essay", owner=self.owner)
         self.log = Log.objects.create(
-            date="2026-01-01",
-            essay=self.essay,
-            owner=self.owner,
-            review_text="original",
-            rating=4,
-            rewatch=False,
+            owner=self.owner, essay=self.essay, date=date(2026, 9, 20), rating=4, review_text="mine"
         )
+        self.collection = Collection.objects.create(name="Mine", owner=self.owner)
 
-    def _detail(self, method, viewer, data=None, **kwargs):
-        request = getattr(self.factory, method)(
-            "/api/anything/", data or {}, format="json"
-        )
-        if viewer is not None:
-            force_authenticate(request, user=viewer)
-        return logDetail.as_view()(request, public_id=self.log.public_id, **kwargs)
+    def _call(self, view, method, user, data=None, **kwargs):
+        request = getattr(self.factory, method)("/api/anything/", data, format="json")
+        if user is not None:
+            force_authenticate(request, user=user)
+        return view(request, **kwargs)
 
-    def _delete_log(self, viewer):
-        request = self.factory.delete("/api/anything/")
-        if viewer is not None:
-            force_authenticate(request, user=viewer)
-        return DeleteLog.as_view()(request, public_id=self.log.public_id)
+    # --- log detail (PATCH / PUT / DELETE / GET) ---------------------------
 
-    # --- logDetail: PATCH -----------------------------------------------
-
-    def test_owner_can_patch_their_log(self):
-        response = self._detail("patch", self.owner, {"review_text": "updated"})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def test_other_user_cannot_patch_a_log(self):
+        response = self._call(logDetail.as_view(), "patch", self.other, {"review_text": "hacked"}, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 403)
         self.log.refresh_from_db()
-        self.assertEqual(self.log.review_text, "updated")
+        self.assertEqual(self.log.review_text, "mine")
 
-    def test_another_user_cannot_patch_the_log(self):
-        response = self._detail("patch", self.other, {"review_text": "hijacked"})
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_other_user_cannot_put_a_log(self):
+        payload = {"essay": str(self.essay.public_id), "date": "2026-09-20", "rating": 1, "review_text": "hacked"}
+        response = self._call(logDetail.as_view(), "put", self.other, payload, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 403)
         self.log.refresh_from_db()
-        self.assertEqual(self.log.review_text, "original")
+        self.assertEqual((self.log.rating, self.log.review_text), (4, "mine"))
 
-    # --- logDetail: PUT ---------------------------------------------------
-
-    def test_another_user_cannot_put_the_log(self):
-        response = self._detail(
-            "put",
-            self.other,
-            {
-                "date": "2026-01-02",
-                "essay": self.essay.id,
-                "review_text": "hijacked",
-                "rating": 1,
-                "rewatch": True,
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.log.refresh_from_db()
-        self.assertEqual(self.log.review_text, "original")
-
-    # --- logDetail: DELETE --------------------------------------------
-
-    def test_another_user_cannot_delete_the_log_via_detail(self):
-        response = self._detail("delete", self.other)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_other_user_cannot_delete_a_log_via_detail(self):
+        response = self._call(logDetail.as_view(), "delete", self.other, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 403)
         self.assertTrue(Log.objects.filter(pk=self.log.pk).exists())
 
+    def test_owner_can_patch_their_log(self):
+        response = self._call(logDetail.as_view(), "patch", self.owner, {"review_text": "edited"}, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 200)
+        self.log.refresh_from_db()
+        self.assertEqual(self.log.review_text, "edited")
+
     def test_owner_can_delete_their_log_via_detail(self):
-        response = self._detail("delete", self.owner)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        response = self._call(logDetail.as_view(), "delete", self.owner, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 204)
         self.assertFalse(Log.objects.filter(pk=self.log.pk).exists())
 
-    # --- logDetail: GET is unaffected --------------------------------------
+    def test_other_user_can_still_read_a_log(self):
+        response = self._call(logDetail.as_view(), "get", self.other, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 200)
 
-    def test_another_user_can_still_read_the_log(self):
-        request = self.factory.get("/api/anything/")
-        force_authenticate(request, user=self.other)
-        response = logDetail.as_view()(request, public_id=self.log.public_id)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    # --- delete log endpoint -----------------------------------------------
 
-    # --- DeleteLog ----------------------------------------------------------
-
-    def test_another_user_cannot_delete_the_log_via_delete_endpoint(self):
-        response = self._delete_log(self.other)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_other_user_cannot_delete_a_log_via_delete_endpoint(self):
+        response = self._call(DeleteLog.as_view(), "delete", self.other, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 403)
         self.assertTrue(Log.objects.filter(pk=self.log.pk).exists())
 
     def test_owner_can_delete_their_log_via_delete_endpoint(self):
-        response = self._delete_log(self.owner)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        response = self._call(DeleteLog.as_view(), "delete", self.owner, public_id=self.log.public_id)
+        self.assertEqual(response.status_code, 204)
         self.assertFalse(Log.objects.filter(pk=self.log.pk).exists())
+
+    def test_unauthenticated_cannot_delete_a_log(self):
+        response = self._call(DeleteLog.as_view(), "delete", None, public_id=self.log.public_id)
+        self.assertIn(response.status_code, (401, 403))
+        self.assertTrue(Log.objects.filter(pk=self.log.pk).exists())
+
+    # --- collection detail ---------------------------------------------------
+
+    def test_other_user_cannot_patch_a_collection(self):
+        response = self._call(CollectionDetail.as_view(), "patch", self.other, {"name": "hacked"}, public_id=self.collection.public_id)
+        self.assertEqual(response.status_code, 403)
+        self.collection.refresh_from_db()
+        self.assertEqual(self.collection.name, "Mine")
+
+    def test_other_user_cannot_put_a_collection(self):
+        response = self._call(CollectionDetail.as_view(), "put", self.other, {"name": "hacked", "description": ""}, public_id=self.collection.public_id)
+        self.assertEqual(response.status_code, 403)
+        self.collection.refresh_from_db()
+        self.assertEqual(self.collection.name, "Mine")
+
+    def test_other_user_cannot_delete_a_collection(self):
+        response = self._call(CollectionDetail.as_view(), "delete", self.other, public_id=self.collection.public_id)
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Collection.objects.filter(pk=self.collection.pk).exists())
+
+    def test_owner_can_patch_their_collection(self):
+        response = self._call(CollectionDetail.as_view(), "patch", self.owner, {"name": "Renamed"}, public_id=self.collection.public_id)
+        self.assertEqual(response.status_code, 200)
+        self.collection.refresh_from_db()
+        self.assertEqual(self.collection.name, "Renamed")
+
+    def test_owner_can_delete_their_collection(self):
+        response = self._call(CollectionDetail.as_view(), "delete", self.owner, public_id=self.collection.public_id)
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Collection.objects.filter(pk=self.collection.pk).exists())
+
+    def test_other_user_can_still_read_a_collection(self):
+        response = self._call(CollectionDetail.as_view(), "get", self.other, public_id=self.collection.public_id)
+        self.assertEqual(response.status_code, 200)
+
+
+class IsOwnerOrReadOnlyUnitTests(SimpleTestCase):
+    """The permission class itself: DRF calls has_object_permission (singular)."""
+
+    def _request(self, method, user):
+        request = getattr(APIRequestFactory(), method)("/x/")
+        request.user = user
+        return request
+
+    def test_defines_the_hook_drf_actually_calls(self):
+        # BasePermission already defines it (allow-all), so check the class overrides it.
+        self.assertIn("has_object_permission", vars(IsOwnerOrReadOnly))
+
+    def test_safe_methods_are_allowed_for_anyone(self):
+        owner, other = object(), object()
+        obj = type("Obj", (), {"owner": owner})()
+        for method in ("get", "head", "options"):
+            with self.subTest(method=method):
+                self.assertTrue(IsOwnerOrReadOnly().has_object_permission(self._request(method, other), None, obj))
+
+    def test_writes_are_allowed_only_for_the_owner(self):
+        owner, other = object(), object()
+        obj = type("Obj", (), {"owner": owner})()
+        for method in ("patch", "put", "delete"):
+            with self.subTest(method=method):
+                self.assertTrue(IsOwnerOrReadOnly().has_object_permission(self._request(method, owner), None, obj))
+                self.assertFalse(IsOwnerOrReadOnly().has_object_permission(self._request(method, other), None, obj))

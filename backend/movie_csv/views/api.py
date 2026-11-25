@@ -181,6 +181,7 @@ class logDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = LogSerializer
     authentication_classes = [ClerkAuthentication]
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    # permission_classes = [AllowAny]
     lookup_field = "public_id"
 
     def get_queryset(self):
