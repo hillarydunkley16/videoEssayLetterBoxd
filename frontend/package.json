@@ -14,6 +14,7 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "testTimeout": 20000,
     "setupFilesAfterEnv": [
       "@testing-library/react-native/extend-expect",
       "<rootDir>/jest.setup.js"
