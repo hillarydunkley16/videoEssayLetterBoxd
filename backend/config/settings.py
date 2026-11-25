@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 from pathlib import Path
 import os
+import sys
 from datetime import timedelta
 
 import dj_database_url
@@ -87,6 +88,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'config.observability.RequestLogMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -303,3 +305,13 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME_LATE_USER': timedelta(days=1),
     'SLIDING_TOKEN_LIFETIME_LATE_USER': timedelta(days=30),
 }
+
+# --- Observability ----------------------------------------------------
+# JSON logs to stdout (Render captures them) and optional Sentry. Both are
+# inert/plain by default; set SENTRY_DSN in the dashboard to turn Sentry on.
+from config.observability import build_logging_config, init_sentry  # noqa: E402
+
+LOGGING = build_logging_config(debug=DEBUG)
+if sys.argv[1:2] == ["test"]:  # keep per-request lines out of test output
+    LOGGING["loggers"] = {"movie_csv.request": {"level": "CRITICAL"}}
+init_sentry()

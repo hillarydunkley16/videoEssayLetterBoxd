@@ -82,6 +82,7 @@ same reason (closed beta traffic may be too low to keep it warm on its own).
 | `CLERK_ISSUER` | literal in `render.yaml` (currently the dev instance URL) | This is a public URL, not a secret — set literally so an unset `sync: false` var can't silently break auth. Swap when cutting over to Clerk prod (see below). |
 | `CLERK_ISSUER_LEGACY` | not set for the beta | Only needed during a dev→prod Clerk cutover window; leave unset until then. |
 | `SERPAPI_KEY` | dashboard, `sync: false` | Real secret from serpapi.com. Missing it degrades `/api/search/` to a `503`, not a crash. |
+| `SENTRY_DSN` | dashboard, `sync: false` | Optional. DSN of the backend project at sentry.io. Unset = Sentry off, nothing breaks. See section 12. |
 | `REDIS_URL` | not set for the beta | Optional. Unset -> in-process cache + synchronous (eager) Celery tasks. See "10. Cache, background jobs, and file storage" below before adding a paid Render Key Value instance. |
 | `AWS_STORAGE_BUCKET_NAME` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_S3_REGION_NAME` | not set for the beta | Optional. Unset -> local filesystem media storage (fine for a single free-tier instance; nothing in the app writes to media storage yet). Targets real AWS S3 — see "10." below for bucket/IAM setup. |
 
@@ -388,3 +389,36 @@ point `DATABASE_URL` at it or load only the tables you need. Dumps cover the
 **Last restore test:** 2026-11-25. Restored the latest `db-backup` artifact
 into a second free Supabase project. The only error was the expected
 `schema "public" already exists`. Row counts matched production.
+
+## 12. Monitoring: logs and Sentry
+
+**Logs.** The backend writes one JSON line per request to stdout; Render shows
+them under the service's **Logs** tab. A line looks like
+`{"level":"info","logger":"movie_csv.request","event":"request","request_id":"…","method":"GET","path":"/api/logList/","status":200,"duration_ms":41,"user_id":7}`.
+Query strings, headers, request bodies and tokens are never logged. `/health/`
+is only logged when it fails. Set `LOG_LEVEL` (default `INFO`) to change the
+level.
+
+**Request ids.** Every response has an `X-Request-ID` header. Given an id from a
+user's bug report or a Sentry event (tag `request_id`), search the Logs tab for
+it to see that request's lines. A client may send its own `X-Request-ID`
+(8-64 letters, digits, `.`, `_`, `-`); anything else is replaced.
+
+**Sentry (backend).** Free Developer plan at sentry.io:
+1. Create a project, platform **Django**, and copy its DSN.
+2. In Render → `videoessay-backend` → Environment, add `SENTRY_DSN` = the DSN.
+   Optional: `SENTRY_ENVIRONMENT` (default `production`) and
+   `SENTRY_TRACES_SAMPLE_RATE` (default `0`, no performance tracing).
+3. Sentry → Alerts: keep the default "new issue" email alert. Add one for
+   "issue seen more than 10 times in 1 hour" if the default is too quiet.
+4. Check it works: Sentry shows an event after you trigger a server error, for
+   example by temporarily pointing `DATABASE_URL` at a bad value in staging.
+   Don't break production to test.
+
+Sentry sends no IPs, cookies or Authorization headers (`send_default_pii` is
+off) and tags each event with the git commit (`RENDER_GIT_COMMIT`) and
+`request_id`.
+
+**Alerting.** UptimeRobot on `/health/` tells you the API is down. Sentry tells
+you it is up but erroring. Both email you; neither needs a runbook beyond: open
+the Render Logs tab, find the failing `request_id`, and read the traceback.

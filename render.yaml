@@ -49,6 +49,8 @@ services:
         value: "https://splendid-sunbird-55.clerk.accounts.dev"
       - key: SERPAPI_KEY   # real secret — set in the dashboard
         sync: false
+      - key: SENTRY_DSN    # optional; unset = Sentry off. Backend project DSN from sentry.io
+        sync: false
   # --- Expo web app (static bundle) ------------------------------------
   - name: videoessay-web
     type: web
